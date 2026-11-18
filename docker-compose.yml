@@ -1,0 +1,69 @@
+services:
+  # ─────────────────────────────────────────────────────────
+  # 1. Local PostgreSQL 16 Database
+  # Private inside internal Docker network (no host port exposed)
+  # ─────────────────────────────────────────────────────────
+  db:
+    image: postgres:16-alpine
+    container_name: ird_postgres_db
+    restart: always
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres_secure_ird_pass}
+      POSTGRES_DB: ${POSTGRES_DB:-ird_resort_db}
+    volumes:
+      - ird_pgdata:/var/lib/postgresql/data
+    networks:
+      - ird_internal_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-ird_resort_db}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  # ─────────────────────────────────────────────────────────
+  # 2. In-Room Dining Express API & Socket.IO Backend
+  # Private behind Nginx proxy; no published host ports
+  # ─────────────────────────────────────────────────────────
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: ird_backend_api
+    restart: always
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      PORT: 5001
+      DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres_secure_ird_pass}@db:5432/${POSTGRES_DB:-ird_resort_db}
+      JWT_SECRET: ${JWT_SECRET:-aura_resort_ird_prod_secret_84920491}
+    networks:
+      - ird_internal_network
+
+  # ─────────────────────────────────────────────────────────
+  # 3. Web Entry Point (Nginx + Built React Vite Frontend)
+  # Only published web port accessible from host
+  # ─────────────────────────────────────────────────────────
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: ird_web_gateway
+    restart: always
+    depends_on:
+      - backend
+    ports:
+      - "${PORT:-3000}:80"
+    networks:
+      - ird_internal_network
+
+volumes:
+  ird_pgdata:
+    name: ird_resort_pgdata
+
+networks:
+  ird_internal_network:
+    name: ird_resort_network
