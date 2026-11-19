@@ -18,6 +18,7 @@ import auditRoutes from "./routes/audit.js";
 import inventoryRoutes from "./routes/inventory.js";
 import analyticsRoutes from "./routes/analytics.js";
 import usersRoutes from "./routes/users.js";
+import housekeepingRoutes from "./routes/housekeeping.js";
 
 dotenv.config();
 
@@ -61,6 +62,7 @@ app.use("/api/audit-logs", auditRoutes);
 app.use("/api/inventory", inventoryRoutes);
 app.use("/api/analytics", analyticsRoutes);
 app.use("/api/users", usersRoutes);
+app.use("/api/housekeeping", housekeepingRoutes);
 
 // Global Error Handler
 app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {

@@ -48,6 +48,12 @@ export const PERMISSION_MODULES = [
         actions: ["view", "manage"],
     },
     {
+        id: "housekeeping",
+        name: "Housekeeping",
+        description: "Guest room cleaning, fresh linens, toiletries, and amenities requests",
+        actions: ["view", "create", "edit", "delete", "manage"],
+    },
+    {
         id: "users",
         name: "User Management",
         description: "Staff accounts, role creation, password resets, and access permissions",

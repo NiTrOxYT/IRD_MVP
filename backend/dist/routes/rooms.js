@@ -3,7 +3,7 @@ import { query } from "../db/index.js";
 import { requireStaff } from "../middleware/auth.js";
 import { generateRoomQrToken } from "../lib/tokens.js";
 const router = Router();
-router.get("/", requireStaff(["admin", "staff"]), async (req, res) => {
+router.get("/", requireStaff({ permissions: ["stays:view", "qr:view"] }), async (req, res) => {
     try {
         const result = await query(`
       SELECT r.id, r.property_id, r.room_number, r.floor, r.wing, r.qr_token, r.is_active,
@@ -38,7 +38,7 @@ router.get("/resolve-qr/:qrToken", async (req, res) => {
         res.status(500).json({ error: "Could not verify this room QR code." });
     }
 });
-router.post("/", requireStaff(["admin"]), async (req, res) => {
+router.post("/", requireStaff("stays:create"), async (req, res) => {
     const { roomNumber, floor, wing } = req.body;
     if (!roomNumber) {
         res.status(400).json({ error: "Room number is required" });

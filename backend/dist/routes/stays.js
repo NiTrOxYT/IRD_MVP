@@ -64,7 +64,7 @@ router.get("/verify", async (req, res) => {
     }
 });
 // Staff: List stays
-router.get("/", requireStaff(["admin", "staff"]), async (req, res) => {
+router.get("/", requireStaff("stays:view"), async (req, res) => {
     const statusFilter = req.query.status;
     try {
         let sql = `
@@ -89,7 +89,7 @@ router.get("/", requireStaff(["admin", "staff"]), async (req, res) => {
     }
 });
 // Staff: Check-in a stay
-router.post("/", requireStaff(["admin", "staff"]), async (req, res) => {
+router.post("/", requireStaff("stays:create"), async (req, res) => {
     const parseResult = createStaySchema.safeParse(req.body);
     if (!parseResult.success) {
         res.status(400).json({ error: parseResult.error.errors[0].message });
@@ -139,7 +139,7 @@ router.post("/", requireStaff(["admin", "staff"]), async (req, res) => {
     }
 });
 // Staff: Check-out a stay
-router.post("/:id/checkout", requireStaff(["admin", "staff"]), async (req, res) => {
+router.post("/:id/checkout", requireStaff("stays:edit"), async (req, res) => {
     const stayId = Number(req.params.id);
     const staff = req.staff;
     try {
@@ -166,7 +166,7 @@ router.post("/:id/checkout", requireStaff(["admin", "staff"]), async (req, res) 
     }
 });
 // Staff: Revoke access
-router.post("/:id/revoke", requireStaff(["admin", "staff"]), async (req, res) => {
+router.post("/:id/revoke", requireStaff("stays:edit"), async (req, res) => {
     const stayId = Number(req.params.id);
     const staff = req.staff;
     try {

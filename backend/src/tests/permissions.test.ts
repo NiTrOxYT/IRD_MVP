@@ -15,6 +15,7 @@ describe("RBAC Permissions Logic & Hierarchy", () => {
       "qr",
       "settings",
       "users",
+      "housekeeping",
     ];
 
     for (const exp of expected) {

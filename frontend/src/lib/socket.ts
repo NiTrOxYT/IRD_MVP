@@ -3,6 +3,7 @@ import { io, Socket } from "socket.io-client";
 let socket: Socket | null = null;
 let activeAdminSubscription = false;
 let activeKitchenSubscription = false;
+let activeHousekeepingSubscription = false;
 let activeStayId: number | null = null;
 const activeOrderSubscriptions = new Set<number>();
 const connectionListeners = new Set<(status: "connected" | "reconnecting" | "disconnected") => void>();
@@ -27,6 +28,9 @@ export function getSocket(): Socket {
       }
       if (activeKitchenSubscription) {
         socket?.emit("join:kitchen");
+      }
+      if (activeHousekeepingSubscription) {
+        socket?.emit("join:housekeeping");
       }
       if (activeStayId) {
         socket?.emit("join:stay", { stayId: activeStayId });
@@ -135,5 +139,29 @@ export function onStayCreated(callback: (stay: any) => void): () => void {
   s.on("stay:created", callback);
   return () => {
     s.off("stay:created", callback);
+  };
+}
+
+export function joinHousekeepingRoom(token?: string) {
+  activeHousekeepingSubscription = true;
+  const s = getSocket();
+  if (s.connected) {
+    s.emit("join:housekeeping", { token });
+  }
+}
+
+export function onHousekeepingCreated(callback: (request: any) => void): () => void {
+  const s = getSocket();
+  s.on("housekeeping:created", callback);
+  return () => {
+    s.off("housekeeping:created", callback);
+  };
+}
+
+export function onHousekeepingStatusChanged(callback: (data: { request: any; previousStatus: string }) => void): () => void {
+  const s = getSocket();
+  s.on("housekeeping:status_changed", callback);
+  return () => {
+    s.off("housekeeping:status_changed", callback);
   };
 }

@@ -7,6 +7,9 @@ import {
   placeOrder,
   getStayOrders,
   cancelGuestOrder,
+  getGuestHousekeepingRequests,
+  createGuestHousekeepingRequest,
+  HousekeepingRequest,
   MenuItem,
   MenuItemVariant,
   Category,
@@ -20,6 +23,8 @@ import {
   onStayInvalidated,
   onOrderStatusChanged,
   onOrderCreated,
+  onHousekeepingCreated,
+  onHousekeepingStatusChanged,
   subscribeConnectionStatus,
 } from "../lib/socket";
 import { DietaryBadge } from "../components/DietaryBadge";
@@ -51,6 +56,13 @@ import {
   Flame,
   Home,
   Percent,
+  Bath,
+  Bed,
+  Moon,
+  Luggage,
+  ChevronLeft,
+  History,
+  Send,
 } from "lucide-react";
 import { cn } from "../lib/utils";
 
@@ -75,6 +87,65 @@ const ORDER_STAGES = [
   { key: "delivered", label: "Delivered", desc: "Delivered to your room" },
 ];
 
+const HOUSEKEEPING_SERVICES = [
+  {
+    type: "cleaning",
+    title: "Room Cleaning & Refresh",
+    desc: "Complete suite refresh, dust & wipe, bed making, and waste clearance.",
+    icon: Sparkles,
+    badge: "Daily Refresh",
+  },
+  {
+    type: "towels",
+    title: "Fresh Bath Towels",
+    desc: "Plush bath towels, hand towels, face cloths, and absorbent bath mats.",
+    icon: Bath,
+    badge: "Bathroom",
+  },
+  {
+    type: "toiletries",
+    title: "Toiletries & Amenities",
+    desc: "Luxury bath gel, herbal shampoo, conditioner, dental kit, and vanity set.",
+    icon: Sparkles,
+    badge: "Bathroom",
+  },
+  {
+    type: "linen",
+    title: "Fresh Bed Linen",
+    desc: "Crisp cotton bed sheets and pillowcase change for all suite beds.",
+    icon: Bed,
+    badge: "Bedding",
+  },
+  {
+    type: "pillows_blankets",
+    title: "Extra Pillows & Blankets",
+    desc: "Plush hypoallergenic pillows and warm resort duvet/blanket.",
+    icon: Bed,
+    badge: "Bedding",
+  },
+  {
+    type: "turndown",
+    title: "Evening Turndown",
+    desc: "Curtains drawn, bedding turned down, ambient lighting & fresh drinking water.",
+    icon: Moon,
+    badge: "Evening",
+  },
+  {
+    type: "luggage",
+    title: "Luggage & Porter Assistance",
+    desc: "Assistance with luggage collection, room transfer, or departure transport.",
+    icon: Luggage,
+    badge: "Porter",
+  },
+  {
+    type: "other",
+    title: "Other In-Suite Assistance",
+    desc: "Special housekeeping requests, iron & board, or extra packaged water.",
+    icon: BellRing,
+    badge: "Concierge",
+  },
+];
+
 export function GuestScreen() {
   const [, setLocation] = useLocation();
 
@@ -83,6 +154,22 @@ export function GuestScreen() {
   const [property, setProperty] = useState<PropertySettings | null>(null);
   const [authLoading, setAuthLoading] = useState(true);
   const [authError, setAuthError] = useState<string | null>(null);
+
+  // Service Mode: "hub" (default service selection) | "room-service" | "housekeeping"
+  const [serviceMode, setServiceMode] = useState<"hub" | "room-service" | "housekeeping">("hub");
+
+  // Housekeeping State
+  const [housekeepingRequests, setHousekeepingRequests] = useState<HousekeepingRequest[]>([]);
+  const [hkLoading, setHkLoading] = useState(false);
+  const [selectedHkService, setSelectedHkService] = useState<{
+    type: string;
+    title: string;
+    desc: string;
+    icon: any;
+  } | null>(null);
+  const [hkGuestNote, setHkGuestNote] = useState("");
+  const [isSubmittingHk, setIsSubmittingHk] = useState(false);
+  const [hkFeedback, setHkFeedback] = useState<{ type: "success" | "error"; message: string } | null>(null);
 
   // Active View Tab: "menu" | "orders"
   const [activeTab, setActiveTab] = useState<"menu" | "orders">("menu");
@@ -168,11 +255,32 @@ export function GuestScreen() {
     }
   }, []);
 
+  const fetchHousekeepingData = useCallback(async () => {
+    try {
+      setHkLoading(true);
+      const res = await getGuestHousekeepingRequests();
+      if (res.success) {
+        setHousekeepingRequests(res.requests);
+      }
+    } catch (err) {
+      console.error("[Guest] Housekeeping fetch error:", err);
+    } finally {
+      setHkLoading(false);
+    }
+  }, []);
+
   // Mount & Auth Init
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const tokenParam = params.get("token") || params.get("stay") || params.get("t");
     const roomQrParam = params.get("roomQr");
+    const serviceParam = params.get("service");
+
+    if (serviceParam === "housekeeping" || window.location.pathname === "/stay/housekeeping") {
+      setServiceMode("housekeeping");
+    } else if (serviceParam === "menu" || serviceParam === "room-service" || window.location.pathname === "/stay/menu") {
+      setServiceMode("room-service");
+    }
 
     if (tokenParam || roomQrParam) {
       window.history.replaceState({}, document.title, window.location.pathname);
@@ -184,6 +292,7 @@ export function GuestScreen() {
         .then(() => {
           fetchMenuData();
           fetchOrdersData();
+          fetchHousekeepingData();
         })
         .catch((err: any) => {
           setAuthError(err?.message || "This room QR code could not be verified. Please contact Reception.");
@@ -198,13 +307,14 @@ export function GuestScreen() {
         .then(() => {
           fetchMenuData();
           fetchOrdersData();
+          fetchHousekeepingData();
         })
         .catch(() => {});
       return;
     }
 
     setAuthLoading(false);
-  }, [verifyToken, fetchMenuData, fetchOrdersData]);
+  }, [verifyToken, fetchMenuData, fetchOrdersData, fetchHousekeepingData]);
 
   // Realtime Socket listeners & polling fallback
   useEffect(() => {
@@ -228,21 +338,65 @@ export function GuestScreen() {
       fetchOrdersData();
     });
 
+    const unsubHkCreated = onHousekeepingCreated((req) => {
+      setHousekeepingRequests((prev) => [req, ...prev.filter((r) => r.id !== req.id)]);
+    });
+
+    const unsubHkStatus = onHousekeepingStatusChanged((data) => {
+      const updated = data.request;
+      setHousekeepingRequests((prev) => prev.map((r) => (r.id === updated.id ? updated : r)));
+    });
+
     const unsubConn = subscribeConnectionStatus(setConnStatus);
 
     // 5-second polling fallback while stay is active
     const pollInterval = setInterval(() => {
       fetchOrdersData();
+      fetchHousekeepingData();
     }, 5000);
 
     return () => {
       unsubInvalidated();
       unsubStatusChanged();
       unsubCreated();
+      unsubHkCreated();
+      unsubHkStatus();
       unsubConn();
       clearInterval(pollInterval);
     };
-  }, [stayData?.id, fetchOrdersData]);
+  }, [stayData?.id, fetchOrdersData, fetchHousekeepingData]);
+
+  // Housekeeping Submission Handler
+  const handleConfirmHousekeepingRequest = async () => {
+    if (!selectedHkService || isSubmittingHk) return;
+    setIsSubmittingHk(true);
+    setHkFeedback(null);
+    try {
+      const res = await createGuestHousekeepingRequest({
+        requestType: selectedHkService.type,
+        guestNote: hkGuestNote.trim() || undefined,
+      });
+      if (res.success) {
+        setHousekeepingRequests((prev) => [res.request, ...prev.filter((r) => r.id !== res.request.id)]);
+        setSelectedHkService(null);
+        setHkGuestNote("");
+        setHkFeedback({
+          type: "success",
+          message: `Your request for "${res.request.title}" has been placed. Our housekeeping team will attend to Suite ${stayData?.room?.roomNumber || ""} shortly.`,
+        });
+        setTimeout(() => {
+          setHkFeedback(null);
+        }, 6000);
+      }
+    } catch (err: any) {
+      setHkFeedback({
+        type: "error",
+        message: err.message || "Unable to submit request. Please try again or contact Reception.",
+      });
+    } finally {
+      setIsSubmittingHk(false);
+    }
+  };
 
   // Cart Management & Item Details Modal Handlers
   const handleOpenItemDetails = (item: MenuItem) => {
@@ -482,6 +636,16 @@ export function GuestScreen() {
     return { activeOrders: active, pastOrders: past };
   }, [orders]);
 
+  const { activeHkRequests, pastHkRequests } = useMemo(() => {
+    const active = housekeepingRequests.filter((r) =>
+      ["pending", "accepted", "in_progress"].includes(r.status)
+    );
+    const past = housekeepingRequests.filter((r) =>
+      ["completed", "declined"].includes(r.status)
+    );
+    return { activeHkRequests: active, pastHkRequests: past };
+  }, [housekeepingRequests]);
+
   const billableOrdersTotal = useMemo(
     () => orders
       .filter((order) => !["cancelled", "rejected"].includes(order.status))
@@ -560,8 +724,16 @@ export function GuestScreen() {
             </div>
           </div>
 
-          {/* Café-style quick actions, adapted for in-room dining */}
+          {/* Quick actions adapted for in-room dining and suite services */}
           <div className="flex items-center gap-2">
+            {serviceMode !== "hub" && (
+              <button
+                onClick={() => setServiceMode("hub")}
+                className="inline-flex items-center gap-1 rounded-full border border-[#ECD7A9] bg-[#FAF3E6] px-2.5 py-1 text-xs font-semibold text-[#8E6314] transition-colors hover:bg-[#F3E7CC]"
+              >
+                <ChevronLeft size={14} /> Services
+              </button>
+            )}
             <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-semibold bg-[#FAF8F5] border border-[#E5DDD1] text-[#73685C]">
               {connStatus === "connected" ? (
                 <>
@@ -575,9 +747,13 @@ export function GuestScreen() {
                 </>
               )}
             </div>
-            <button onClick={() => document.getElementById("ird-menu-search")?.focus()} aria-label="Search menu" className="hidden h-10 w-10 items-center justify-center rounded-full border border-[#E5DDD1] bg-[#FFFDF9] text-[#29231F] shadow-2xs sm:flex"><Search className="h-4 w-4" /></button>
-            <button onClick={() => setIsCartOpen(true)} aria-label="Open order cart" className="relative flex h-10 w-10 items-center justify-center rounded-full border border-[#E5DDD1] bg-[#FFFDF9] text-[#29231F] shadow-2xs"><ShoppingBag className="h-4 w-4" />{totalCartCount > 0 && <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-[#7C4D32] px-1 text-[9px] font-bold text-white">{totalCartCount}</span>}</button>
-            <button onClick={() => setActiveTab("orders")} className="inline-flex items-center gap-1.5 rounded-full border border-[#E5DDD1] bg-[#FFFDF9] px-3 py-2 text-xs font-semibold text-[#29231F] shadow-2xs"><Clock className="h-4 w-4 text-[#7C4D32]" /><span className="hidden sm:inline">Order</span></button>
+            {serviceMode === "room-service" && (
+              <>
+                <button onClick={() => document.getElementById("ird-menu-search")?.focus()} aria-label="Search menu" className="hidden h-10 w-10 items-center justify-center rounded-full border border-[#E5DDD1] bg-[#FFFDF9] text-[#29231F] shadow-2xs sm:flex"><Search className="h-4 w-4" /></button>
+                <button onClick={() => setIsCartOpen(true)} aria-label="Open order cart" className="relative flex h-10 w-10 items-center justify-center rounded-full border border-[#E5DDD1] bg-[#FFFDF9] text-[#29231F] shadow-2xs"><ShoppingBag className="h-4 w-4" />{totalCartCount > 0 && <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-[#7C4D32] px-1 text-[9px] font-bold text-white">{totalCartCount}</span>}</button>
+                <button onClick={() => setActiveTab("orders")} className="inline-flex items-center gap-1.5 rounded-full border border-[#E5DDD1] bg-[#FFFDF9] px-3 py-2 text-xs font-semibold text-[#29231F] shadow-2xs"><Clock className="h-4 w-4 text-[#7C4D32]" /><span className="hidden sm:inline">Order</span></button>
+              </>
+            )}
           </div>
         </div>
 
@@ -585,8 +761,368 @@ export function GuestScreen() {
 
       {/* ── Main Content Area ── */}
       <main className="flex-1 w-full max-w-7xl mx-auto px-3 sm:px-6 py-3 sm:py-5 space-y-4 sm:space-y-5">
-        {/* ──────────────── TAB 1: MENU VIEW ──────────────── */}
-        {activeTab === "menu" && (
+        {/* ──────────────── MODE 1: SERVICE HUB HOME ──────────────── */}
+        {serviceMode === "hub" && (
+          <div className="mx-auto max-w-md sm:max-w-2xl lg:max-w-4xl space-y-4 sm:space-y-6">
+            {/* Suite Welcome Banner */}
+            <div className="relative overflow-hidden rounded-3xl border border-[#DED4C7] bg-gradient-to-br from-[#FFFDF9] via-[#FAF3E6]/60 to-[#F5ECE0] p-6 sm:p-8 shadow-sm">
+              <div className="max-w-xl">
+                <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest bg-[#FAF3E6] text-[#8E6314] border border-[#ECD7A9] mb-3">
+                  <Sparkles className="w-3.5 h-3.5" /> In-Suite Guest Portal
+                </div>
+                <h2 className="font-serif text-2xl sm:text-3xl font-bold text-[#1E150F]">
+                  Welcome to Suite {stayData.room?.roomNumber}
+                </h2>
+                <p className="font-script text-lg text-[#8E6314] mt-0.5">
+                  Tailored luxury resort services for {stayData.guestName}
+                </p>
+                <p className="text-xs sm:text-sm text-[#73685C] mt-2 leading-relaxed">
+                  Choose an in-suite service below. Dining orders and room-service requests are sent to our team in real time.
+                </p>
+              </div>
+            </div>
+
+            {/* Active Requests Tracker Banner (if any active order or housekeeping request) */}
+            {(activeOrders.length > 0 || activeHkRequests.length > 0) && (
+              <div className="bg-[#FAF3E6] border border-[#ECD7A9] rounded-2xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-2xs">
+                <div className="space-y-1">
+                  <div className="text-[11px] font-bold uppercase tracking-wider text-[#8E6314] flex items-center gap-1.5">
+                    <Clock className="w-3.5 h-3.5 animate-pulse text-[#8E6314]" /> Active In-Suite Requests
+                  </div>
+                  <div className="text-xs text-[#29231F] flex flex-wrap gap-2">
+                    {activeOrders.length > 0 && (
+                      <span className="inline-flex items-center gap-1 bg-[#FFFDF9] px-2.5 py-1 rounded-xl border border-[#ECD7A9] font-semibold text-xs">
+                        🍽️ In Room Dining: <span className="capitalize">{activeOrders[0].status.replace(/_/g, " ")}</span> ({activeOrders.length})
+                      </span>
+                    )}
+                    {activeHkRequests.length > 0 && (
+                      <span className="inline-flex items-center gap-1 bg-[#FFFDF9] px-2.5 py-1 rounded-xl border border-[#ECD7A9] font-semibold text-xs">
+                        ✨ Room Service: <span className="capitalize">{activeHkRequests[0].status.replace(/_/g, " ")}</span> ({activeHkRequests.length})
+                      </span>
+                    )}
+                  </div>
+                </div>
+                <div className="flex items-center gap-3 self-end sm:self-center">
+                  {activeOrders.length > 0 && (
+                    <button
+                      onClick={() => {
+                        setServiceMode("room-service");
+                        setActiveTab("orders");
+                      }}
+                      className="text-xs font-bold text-[#8E6314] hover:underline"
+                    >
+                      View Order →
+                    </button>
+                  )}
+                  {activeHkRequests.length > 0 && (
+                    <button
+                      onClick={() => setServiceMode("housekeeping")}
+                      className="text-xs font-bold text-[#8E6314] hover:underline"
+                    >
+                      View Room Service →
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Two Clear Primary Service Options */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
+              {/* Option 1: In Room Dining */}
+              <div
+                onClick={() => setServiceMode("room-service")}
+                className="group relative cursor-pointer overflow-hidden rounded-3xl border border-[#E5DDD1] bg-[#FFFDF9] p-6 shadow-sm hover:border-[#B88223] hover:shadow-md transition-all flex flex-col justify-between"
+              >
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div className="w-12 h-12 rounded-2xl bg-[#54321E] text-white flex items-center justify-center shadow-xs group-hover:scale-105 transition-transform">
+                      <ChefHat className="w-6 h-6 text-[#ECD7A9]" />
+                    </div>
+                    <span className="px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider bg-[#FAF3E6] text-[#8E6314] border border-[#ECD7A9]">
+                      IN-ROOM DINING
+                    </span>
+                  </div>
+                  <div>
+                    <h3 className="font-serif text-xl sm:text-2xl font-bold text-[#1E150F] group-hover:text-[#8E6314] transition-colors">
+                      In Room Dining
+                    </h3>
+                    <p className="font-script text-base text-[#8E6314]">
+                      Artisanal Culinary Service
+                    </p>
+                    <p className="text-xs text-[#73685C] mt-2 leading-relaxed">
+                      Freshly prepared delicacies, chef specials, artisanal coffees, snacks, and private suite dining delivered to your door.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="mt-6 pt-4 border-t border-[#E5DDD1] flex items-center justify-between">
+                  <span className="text-xs font-bold text-[#54321E] group-hover:text-[#8E6314] flex items-center gap-1">
+                    Browse Menu & Order <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                  </span>
+                  {totalCartCount > 0 && (
+                    <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-[#8E6314] text-white">
+                      {totalCartCount} in cart
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              {/* Option 2: Room Service */}
+              <div
+                onClick={() => setServiceMode("housekeeping")}
+                className="group relative cursor-pointer overflow-hidden rounded-3xl border border-[#E5DDD1] bg-[#FFFDF9] p-6 shadow-sm hover:border-[#B88223] hover:shadow-md transition-all flex flex-col justify-between"
+              >
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div className="w-12 h-12 rounded-2xl bg-[#29231F] text-white flex items-center justify-center shadow-xs group-hover:scale-105 transition-transform">
+                      <Sparkles className="w-6 h-6 text-[#ECD7A9]" />
+                    </div>
+                    <span className="px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider bg-[#FAF3E6] text-[#8E6314] border border-[#ECD7A9]">
+                      ROOM SERVICE
+                    </span>
+                  </div>
+                  <div>
+                    <h3 className="font-serif text-xl sm:text-2xl font-bold text-[#1E150F] group-hover:text-[#8E6314] transition-colors">
+                      Room Service
+                    </h3>
+                    <p className="font-script text-base text-[#8E6314]">
+                      Suite Refresh & Amenities
+                    </p>
+                    <p className="text-xs text-[#73685C] mt-2 leading-relaxed">
+                      Request room cleaning, fresh towels, luxury toiletries, fresh bed linen, extra pillows, evening turndown, or luggage assistance.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="mt-6 pt-4 border-t border-[#E5DDD1] flex items-center justify-between">
+                  <span className="text-xs font-bold text-[#29231F] group-hover:text-[#8E6314] flex items-center gap-1">
+                    Request Room Service <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                  </span>
+                  {activeHkRequests.length > 0 && (
+                    <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-600 text-white">
+                      {activeHkRequests.length} active
+                    </span>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Front Desk Extension Card */}
+            <div className="rounded-2xl border border-[#E5DDD1] bg-[#FFFDF9] p-4 flex items-center justify-between gap-3 text-xs text-[#73685C] shadow-2xs">
+              <div className="flex items-center gap-3">
+                <BellRing className="w-5 h-5 text-[#8E6314] shrink-0" />
+                <div>
+                  <span className="font-bold text-[#1E150F] block">Need Special Concierge Assistance?</span>
+                  <span>Dial <strong className="text-[#1E150F]">Extension 0</strong> from your in-suite telephone. Available 24 hours.</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ──────────────── MODE 2: HOUSEKEEPING EXPERIENCE ──────────────── */}
+        {serviceMode === "housekeeping" && (
+          <div className="mx-auto max-w-md sm:max-w-2xl lg:max-w-4xl space-y-4 sm:space-y-6">
+            {/* Top Navigation Bar */}
+            <div className="flex items-center justify-between gap-2">
+              <button
+                onClick={() => setServiceMode("hub")}
+                className="inline-flex items-center gap-1 text-xs font-bold text-[#8E6314] hover:text-[#54321E] px-3 py-1.5 rounded-xl bg-[#FAF3E6] border border-[#ECD7A9] shadow-2xs"
+              >
+                <ChevronLeft size={16} /> All Services
+              </button>
+              <div className="text-[11px] text-[#73685C]">
+                Suite <strong className="text-[#29231F]">{stayData.room?.roomNumber}</strong>
+              </div>
+            </div>
+
+            {/* Housekeeping Hero Banner */}
+            <div className="relative overflow-hidden rounded-3xl border border-[#DED4C7] bg-[#FFFDF9] p-6 sm:p-8 shadow-sm">
+              <div className="max-w-xl">
+                <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest bg-[#FAF3E6] text-[#8E6314] border border-[#ECD7A9] mb-3">
+                  <Sparkles className="w-3.5 h-3.5" /> Suite Replenishment
+                </div>
+                <h2 className="font-serif text-2xl sm:text-3xl font-bold text-[#1E150F]">
+                  Room Service & In-Suite Care
+                </h2>
+                <p className="text-xs sm:text-sm text-[#73685C] mt-2 leading-relaxed">
+                  Select an item below to place a request. Our room-service team is ready to assist Suite {stayData.room?.roomNumber}.
+                </p>
+              </div>
+            </div>
+
+            {/* Feedback Alert */}
+            {hkFeedback && (
+              <div
+                className={`p-4 rounded-2xl border text-xs flex items-start gap-3 shadow-sm animate-in fade-in ${
+                  hkFeedback.type === "success"
+                    ? "bg-emerald-50 border-emerald-200 text-emerald-900"
+                    : "bg-red-50 border-red-200 text-red-900"
+                }`}
+              >
+                {hkFeedback.type === "success" ? (
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+                ) : (
+                  <AlertCircle className="w-4 h-4 text-red-600 shrink-0 mt-0.5" />
+                )}
+                <span className="leading-relaxed">{hkFeedback.message}</span>
+              </div>
+            )}
+
+            {/* Services Grid */}
+            <div>
+              <h3 className="font-serif text-lg font-bold text-[#29231F] mb-3 flex items-center gap-2">
+                <Sparkles className="w-4 h-4 text-[#8E6314]" /> Request a Service
+              </h3>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
+                {HOUSEKEEPING_SERVICES.map((srv) => {
+                  const Icon = srv.icon;
+                  return (
+                    <div
+                      key={srv.type}
+                      onClick={() => setSelectedHkService(srv)}
+                      className="group cursor-pointer bg-[#FFFDF9] border border-[#E5DDD1] rounded-2xl p-4 shadow-2xs hover:border-[#B88223] hover:shadow-md transition-all flex flex-col justify-between text-left"
+                    >
+                      <div>
+                        <div className="flex items-center justify-between mb-3">
+                          <div className="w-10 h-10 rounded-xl bg-[#FAF3E6] border border-[#ECD7A9] text-[#8E6314] flex items-center justify-center group-hover:scale-105 transition-transform">
+                            <Icon className="w-5 h-5" />
+                          </div>
+                          <span className="text-[9px] font-bold uppercase tracking-wider text-[#73685C] bg-[#FAF8F5] border border-[#E5DDD1] px-2 py-0.5 rounded-full">
+                            {srv.badge}
+                          </span>
+                        </div>
+                        <h4 className="font-serif text-sm font-bold text-[#1E150F] group-hover:text-[#8E6314] transition-colors leading-snug">
+                          {srv.title}
+                        </h4>
+                        <p className="text-[11px] text-[#73685C] mt-1 line-clamp-2 leading-relaxed">
+                          {srv.desc}
+                        </p>
+                      </div>
+                      <div className="mt-4 pt-2.5 border-t border-[#E5DDD1]/70 flex items-center justify-between text-[11px] font-bold text-[#8E6314]">
+                        <span>Request Service</span>
+                        <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Current & Recent Requests List */}
+            <div className="pt-4">
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="font-serif text-lg font-bold text-[#29231F] flex items-center gap-2">
+                  <Clock className="w-4 h-4 text-[#8E6314]" /> Current & Recent Requests
+                </h3>
+                {housekeepingRequests.length > 0 && (
+                  <span className="text-[11px] text-[#73685C]">
+                    {housekeepingRequests.length} request{housekeepingRequests.length > 1 ? "s" : ""}
+                  </span>
+                )}
+              </div>
+
+              {housekeepingRequests.length === 0 ? (
+                <div className="bg-[#FFFDF9] border border-[#E5DDD1] rounded-2xl p-8 text-center shadow-xs">
+                  <Sparkles className="w-8 h-8 text-[#D4C3A3] mx-auto mb-2" />
+                  <p className="text-xs font-semibold text-[#29231F]">No housekeeping requests placed yet</p>
+                  <p className="text-[11px] text-[#73685C] mt-0.5">
+                    Select a service above to request amenities or in-suite care.
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {housekeepingRequests.map((req) => (
+                    <div
+                      key={req.id}
+                      className="bg-[#FFFDF9] border border-[#E5DDD1] rounded-2xl p-4 shadow-xs"
+                    >
+                      <div className="flex items-start justify-between gap-2 mb-2">
+                        <div>
+                          <span className="text-[10px] font-bold uppercase tracking-wider text-[#73685C] block">
+                            Suite {req.room_number} · #{req.id}
+                          </span>
+                          <h4 className="font-serif text-sm font-bold text-[#29231F]">
+                            {req.title}
+                          </h4>
+                        </div>
+                        <div>
+                          {req.status === "pending" && (
+                            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-amber-50 text-amber-700 border border-amber-200">
+                              <Clock className="w-3 h-3" /> Received
+                            </span>
+                          )}
+                          {req.status === "accepted" && (
+                            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-blue-50 text-blue-700 border border-blue-200">
+                              <CheckCircle2 className="w-3 h-3" /> Accepted
+                            </span>
+                          )}
+                          {req.status === "in_progress" && (
+                            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-indigo-50 text-indigo-700 border border-indigo-200">
+                              <Sparkles className="w-3 h-3 animate-spin" /> In Progress
+                            </span>
+                          )}
+                          {req.status === "completed" && (
+                            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-emerald-50 text-emerald-700 border border-emerald-200">
+                              <CheckCircle2 className="w-3 h-3" /> Completed
+                            </span>
+                          )}
+                          {req.status === "declined" && (
+                            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-red-50 text-red-700 border border-red-200">
+                              Declined
+                            </span>
+                          )}
+                        </div>
+                      </div>
+
+                      {req.guest_note && (
+                        <p className="text-[11px] text-[#73685C] italic bg-[#FAF8F5] p-2.5 rounded-xl border border-[#E5DDD1] mb-2">
+                          "{req.guest_note}"
+                        </p>
+                      )}
+
+                      {req.staff_notes && (
+                        <p className="text-[11px] text-[#8E6314] bg-[#FAF3E6] p-2.5 rounded-xl border border-[#ECD7A9] mb-2">
+                          <strong>Staff Note:</strong> {req.staff_notes}
+                        </p>
+                      )}
+
+                      <div className="flex items-center justify-between text-[10px] text-[#73685C] pt-2 border-t border-[#E5DDD1]/70">
+                        <span>Requested at {new Date(req.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</span>
+                        {req.completed_at && (
+                          <span className="text-emerald-700 font-semibold">
+                            Completed at {new Date(req.completed_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* ──────────────── MODE 3: ROOM SERVICE (IN-ROOM DINING) ──────────────── */}
+        {serviceMode === "room-service" && (
+          <>
+            <div className="mx-auto max-w-md sm:max-w-2xl lg:max-w-4xl flex items-center justify-between gap-2">
+              <button
+                onClick={() => setServiceMode("hub")}
+                className="inline-flex items-center gap-1 text-xs font-bold text-[#8E6314] hover:text-[#54321E] px-3 py-1.5 rounded-xl bg-[#FAF3E6] border border-[#ECD7A9] shadow-2xs"
+              >
+                <ChevronLeft size={16} /> All Services
+              </button>
+              <button
+                onClick={() => setServiceMode("housekeeping")}
+                className="inline-flex items-center gap-1 text-xs font-semibold text-[#766B61] hover:text-[#29231F] px-2.5 py-1 rounded-xl bg-[#FFFDF9] border border-[#E5DDD1]"
+              >
+                <Sparkles size={13} className="text-[#8E6314]" /> Room Service
+              </button>
+            </div>
+
+            {/* ──────────────── TAB 1: MENU VIEW ──────────────── */}
+            {activeTab === "menu" && (
           <div className="mx-auto max-w-md space-y-3.5 sm:max-w-2xl sm:space-y-5 lg:max-w-4xl">
             {/* Hero Banner Section (styled to match cafe reference with resort room service adaptation) */}
             <section className="relative flex min-h-[300px] items-center overflow-hidden rounded-[22px] border border-[#DED4C7] bg-[#F7F3EB] shadow-[0_4px_20px_rgba(70,48,34,0.05)] sm:min-h-[340px] sm:rounded-[28px] md:min-h-[380px]">
@@ -594,7 +1130,7 @@ export function GuestScreen() {
               <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none">
                 <img
                   src="/banner.png"
-                  alt="Artisanal Room Service"
+                  alt="Artisanal In-Room Dining"
                   loading="eager"
                   decoding="async"
                   className="w-full h-full object-cover object-right sm:object-center"
@@ -615,7 +1151,7 @@ export function GuestScreen() {
 
                 {/* Main Heading */}
                 <h2 className="font-serif text-[30px] font-bold leading-[1.02] tracking-tight text-[#191410] sm:text-[40px] md:text-[48px]">
-                  Artisanal Room Service
+                  Artisanal In-Room Dining
                 </h2>
 
                 {/* Subtitle */}
@@ -1183,18 +1719,49 @@ export function GuestScreen() {
             )}
           </div>
         )}
+          </>
+        )}
       </main>
 
       <nav aria-label="Guest navigation" className="fixed inset-x-0 bottom-0 z-30 border-t border-[#E5DDD1] bg-[#FFFDF9]/95 px-4 pb-[env(safe-area-inset-bottom)] pt-2 backdrop-blur-md">
         <div className="mx-auto grid max-w-md grid-cols-3">
-          <button onClick={() => { setActiveTab("menu"); window.scrollTo({ top: 0, behavior: "smooth" }); }} className={cn("flex flex-col items-center gap-0.5 py-1.5 text-[11px]", activeTab === "menu" ? "font-semibold text-[#7C4D32]" : "text-[#766B61]")}><Home className="h-5 w-5" />Home{activeTab === "menu" && <span className="h-1 w-1 rounded-full bg-[#7C4D32]" />}</button>
-          <button onClick={() => { setActiveTab("menu"); document.getElementById("ird-menu-items")?.scrollIntoView({ behavior: "smooth" }); }} className="flex flex-col items-center gap-0.5 py-1.5 text-[11px] text-[#766B61]"><Utensils className="h-5 w-5" />Menu</button>
-          <button onClick={() => setActiveTab("orders")} className={cn("flex flex-col items-center gap-0.5 py-1.5 text-[11px]", activeTab === "orders" ? "font-semibold text-[#7C4D32]" : "text-[#766B61]")}><Receipt className="h-5 w-5" />Orders{activeTab === "orders" && <span className="h-1 w-1 rounded-full bg-[#7C4D32]" />}</button>
+          <button
+            onClick={() => {
+              setServiceMode("hub");
+              window.scrollTo({ top: 0, behavior: "smooth" });
+            }}
+            className={cn("flex flex-col items-center gap-0.5 py-1.5 text-[11px]", serviceMode === "hub" ? "font-semibold text-[#7C4D32]" : "text-[#766B61]")}
+          >
+            <Home className="h-5 w-5" />
+            Services
+            {serviceMode === "hub" && <span className="h-1 w-1 rounded-full bg-[#7C4D32]" />}
+          </button>
+          <button
+            onClick={() => {
+              setServiceMode("room-service");
+              setActiveTab("menu");
+            }}
+            className={cn("flex flex-col items-center gap-0.5 py-1.5 text-[11px]", serviceMode === "room-service" && activeTab === "menu" ? "font-semibold text-[#7C4D32]" : "text-[#766B61]")}
+          >
+            <Utensils className="h-5 w-5" />
+            In Room Dining
+            {serviceMode === "room-service" && activeTab === "menu" && <span className="h-1 w-1 rounded-full bg-[#7C4D32]" />}
+          </button>
+          <button
+            onClick={() => {
+              setServiceMode("housekeeping");
+            }}
+            className={cn("flex flex-col items-center gap-0.5 py-1.5 text-[11px]", serviceMode === "housekeeping" ? "font-semibold text-[#7C4D32]" : "text-[#766B61]")}
+          >
+            <Sparkles className="h-5 w-5" />
+            Room Service
+            {serviceMode === "housekeeping" && <span className="h-1 w-1 rounded-full bg-[#7C4D32]" />}
+          </button>
         </div>
       </nav>
 
       {/* ── Floating Mobile Cart Bar (Sticky Bottom) ── */}
-      {cart.length > 0 && activeTab === "menu" && (
+      {cart.length > 0 && serviceMode === "room-service" && activeTab === "menu" && (
         <div className="fixed bottom-[5.2rem] inset-x-0 z-30 px-4 max-w-md mx-auto">
           <button
             onClick={() => setIsCartOpen(true)}
@@ -1551,6 +2118,94 @@ export function GuestScreen() {
             )}
           </button>
         </div>
+      </Modal>
+
+      {/* ── Housekeeping Request Confirmation Modal ── */}
+      <Modal
+        isOpen={Boolean(selectedHkService)}
+        onClose={() => {
+          if (!isSubmittingHk) {
+            setSelectedHkService(null);
+            setHkGuestNote("");
+          }
+        }}
+        title=""
+      >
+        {selectedHkService && (
+          <div className="space-y-4 text-xs">
+            <div className="text-center pt-1 pb-2 border-b border-[#E5DDD1]">
+              <div className="w-12 h-12 rounded-2xl bg-[#FAF3E6] border border-[#ECD7A9] text-[#8E6314] flex items-center justify-center mx-auto mb-2 shadow-2xs">
+                {React.createElement(selectedHkService.icon, { className: "w-6 h-6" })}
+              </div>
+              <h3 className="font-serif text-lg font-bold text-[#1E150F]">
+                {selectedHkService.title}
+              </h3>
+              <p className="text-xs text-[#73685C] mt-0.5">
+                {selectedHkService.desc}
+              </p>
+            </div>
+
+            <div className="bg-[#FAF8F5] border border-[#E5DDD1] rounded-2xl p-3.5 space-y-2">
+              <div className="flex justify-between items-center text-[11px]">
+                <span className="text-[#73685C]">Destination Suite:</span>
+                <span className="font-bold text-[#1E150F]">Suite {stayData.room?.roomNumber}</span>
+              </div>
+              <div className="flex justify-between items-center text-[11px]">
+                <span className="text-[#73685C]">Guest Name:</span>
+                <span className="font-semibold text-[#1E150F]">{stayData.guestName}</span>
+              </div>
+              <div className="flex justify-between items-center text-[11px]">
+                <span className="text-[#73685C]">Service Charge:</span>
+                <span className="font-semibold text-emerald-700">Complimentary In-Suite Care</span>
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-[11px] font-bold uppercase tracking-wider text-[#1E150F] mb-1.5">
+                Special Instructions or Notes (Optional)
+              </label>
+              <textarea
+                rows={3}
+                placeholder="e.g. Please leave fresh towels on bathroom vanity, or deliver in 20 minutes..."
+                value={hkGuestNote}
+                onChange={(e) => setHkGuestNote(e.target.value)}
+                className="w-full p-3 bg-[#FAF8F5] border border-[#E5DDD1] rounded-2xl text-xs text-[#1E150F] focus:outline-none focus:ring-2 focus:ring-[#B88223]/30 placeholder-[#73685C]"
+              />
+            </div>
+
+            <div className="flex gap-2 pt-2">
+              <button
+                type="button"
+                disabled={isSubmittingHk}
+                onClick={() => {
+                  setSelectedHkService(null);
+                  setHkGuestNote("");
+                }}
+                className="flex-1 py-3 rounded-2xl border border-[#E5DDD1] text-xs font-semibold text-[#73685C] hover:bg-[#FAF8F5] transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={isSubmittingHk}
+                onClick={handleConfirmHousekeepingRequest}
+                className="flex-1 py-3 rounded-2xl bg-[#54321E] hover:bg-[#3D2314] text-white text-xs font-bold transition-all shadow-md flex items-center justify-center gap-1.5 disabled:opacity-50"
+              >
+                {isSubmittingHk ? (
+                  <>
+                    <Sparkles className="w-4 h-4 animate-spin text-[#ECD7A9]" />
+                    <span>Transmitting Request...</span>
+                  </>
+                ) : (
+                  <>
+                    <Send className="w-3.5 h-3.5 text-[#ECD7A9]" />
+                    <span>Confirm Request</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        )}
       </Modal>
     </div>
   );

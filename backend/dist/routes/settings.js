@@ -31,7 +31,7 @@ router.get("/", async (_req, res) => {
         res.status(500).json({ error: "Failed to load settings" });
     }
 });
-router.put("/", requireStaff(["admin"]), async (req, res) => {
+router.put("/", requireStaff("settings:manage"), async (req, res) => {
     const parse = settingsSchema.safeParse(req.body);
     if (!parse.success) {
         res.status(400).json({ error: parse.error.errors[0].message });

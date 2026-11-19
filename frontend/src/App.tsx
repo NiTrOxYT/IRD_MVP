@@ -17,6 +17,7 @@ import { AdminSettings } from "./pages/AdminSettings";
 import { AdminRoomQR } from "./pages/AdminRoomQR";
 import { AdminAnalytics } from "./pages/AdminAnalytics";
 import { KitchenKOT } from "./pages/KitchenKOT";
+import { HousekeepingStaff } from "./pages/HousekeepingStaff";
 
 export function App() {
   return (
@@ -28,6 +29,7 @@ export function App() {
           <Route path="/" component={GuestScreen} />
           <Route path="/stay" component={GuestScreen} />
           <Route path="/stay/menu" component={GuestScreen} />
+          <Route path="/stay/housekeeping" component={GuestScreen} />
           <Route path="/order/:id" component={GuestOrderTracking} />
           <Route path="/orders" component={GuestScreen} />
 
@@ -38,6 +40,9 @@ export function App() {
           {/* 3. Kitchen/KOT Experience (https://ird.theaveniq.site/kot) */}
           <Route path="/kot" component={KitchenKOT} />
           <Route path="/kitchen" component={KitchenKOT} />
+
+          {/* 3b. Housekeeping Console (https://ird.theaveniq.site/housekeeping) */}
+          <Route path="/housekeeping" component={HousekeepingStaff} />
 
           {/* 4. Admin Experience (https://ird.theaveniq.site/admin) */}
           <Route path="/admin" component={AdminOrders} />

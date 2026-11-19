@@ -6,7 +6,7 @@ const router = Router();
 // ==========================================
 // 1. INVENTORY SUMMARY & KPI ALERTS
 // ==========================================
-router.get("/summary", requireStaff(["admin", "staff"]), async (req, res) => {
+router.get("/summary", requireStaff("inventory:view"), async (req, res) => {
     try {
         // 1a. Menu Items Portion Summary
         const itemStockRes = await query(`
@@ -118,7 +118,7 @@ router.get("/summary", requireStaff(["admin", "staff"]), async (req, res) => {
 // ==========================================
 // 2. MENU ITEMS PORTION INVENTORY
 // ==========================================
-router.get("/items", requireStaff(["admin", "staff"]), async (req, res) => {
+router.get("/items", requireStaff("inventory:view"), async (req, res) => {
     try {
         const { categoryId, status, search } = req.query;
         const conditions = [];
@@ -191,7 +191,7 @@ router.get("/items", requireStaff(["admin", "staff"]), async (req, res) => {
     }
 });
 // Update inventory settings for a menu item
-router.patch("/items/:id/settings", requireStaff(["admin", "staff"]), async (req, res) => {
+router.patch("/items/:id/settings", requireStaff("inventory:edit"), async (req, res) => {
     const id = Number(req.params.id);
     const { trackInventory, inventoryQuantity, inventoryUnit, lowStockThreshold } = req.body;
     const staff = req.staff;
@@ -247,7 +247,7 @@ router.patch("/items/:id/settings", requireStaff(["admin", "staff"]), async (req
     }
 });
 // Manual stock adjustment for a menu item portion
-router.post("/items/adjust", requireStaff(["admin", "staff"]), async (req, res) => {
+router.post("/items/adjust", requireStaff("inventory:edit"), async (req, res) => {
     const { menuItemId, movementType, quantity, reason } = req.body;
     const staff = req.staff;
     if (!menuItemId || !movementType || quantity === undefined) {
@@ -318,7 +318,7 @@ router.post("/items/adjust", requireStaff(["admin", "staff"]), async (req, res) 
     }
 });
 // Menu item portion movements audit history
-router.get("/movements", requireStaff(["admin", "staff"]), async (req, res) => {
+router.get("/movements", requireStaff("inventory:view"), async (req, res) => {
     try {
         const { menuItemId, movementType, limit = 50, offset = 0 } = req.query;
         const conditions = [];
@@ -359,7 +359,7 @@ router.get("/movements", requireStaff(["admin", "staff"]), async (req, res) => {
 // ==========================================
 // 3. RAW MATERIALS & INGREDIENTS
 // ==========================================
-router.get("/raw-materials", requireStaff(["admin", "staff"]), async (req, res) => {
+router.get("/raw-materials", requireStaff("inventory:view"), async (req, res) => {
     try {
         const { category, supplier, status, search } = req.query;
         const conditions = ["r.is_archived = false"];
@@ -430,7 +430,7 @@ router.get("/raw-materials", requireStaff(["admin", "staff"]), async (req, res) 
     }
 });
 // Create new raw material
-router.post("/raw-materials", requireStaff(["admin", "staff"]), async (req, res) => {
+router.post("/raw-materials", requireStaff("inventory:create"), async (req, res) => {
     const { name, category = "Ingredients", sku, baseUnit = "kg", currentStock = 0, lowStockThreshold = 2, supplier, unitCost, batchNumber, expiryDate, } = req.body;
     const staff = req.staff;
     if (!name || !String(name).trim()) {
@@ -497,7 +497,7 @@ router.post("/raw-materials", requireStaff(["admin", "staff"]), async (req, res)
     }
 });
 // Update raw material details
-router.put("/raw-materials/:id", requireStaff(["admin", "staff"]), async (req, res) => {
+router.put("/raw-materials/:id", requireStaff("inventory:edit"), async (req, res) => {
     const id = Number(req.params.id);
     const { name, category, sku, lowStockThreshold, supplier, unitCost, batchNumber, expiryDate, isArchived, } = req.body;
     try {
@@ -537,7 +537,7 @@ router.put("/raw-materials/:id", requireStaff(["admin", "staff"]), async (req, r
     }
 });
 // Adjust raw material stock (Stock In, Stock Out, Wastage, Adjustment)
-router.post("/raw-materials/:id/adjust", requireStaff(["admin", "staff"]), async (req, res) => {
+router.post("/raw-materials/:id/adjust", requireStaff("inventory:edit"), async (req, res) => {
     const id = Number(req.params.id);
     const { movementType, quantity, unit, reason, supplier, invoiceRef, unitCost, batchNumber, expiryDate, } = req.body;
     const staff = req.staff;
@@ -637,7 +637,7 @@ router.post("/raw-materials/:id/adjust", requireStaff(["admin", "staff"]), async
     }
 });
 // Raw material movement audit history
-router.get("/raw-materials/movements", requireStaff(["admin", "staff"]), async (req, res) => {
+router.get("/raw-materials/movements", requireStaff("inventory:view"), async (req, res) => {
     try {
         const { rawMaterialId, movementType, limit = 50, offset = 0 } = req.query;
         const conditions = [];
@@ -678,7 +678,7 @@ router.get("/raw-materials/movements", requireStaff(["admin", "staff"]), async (
 // 4. DISH RECIPES (BILL OF MATERIALS)
 // ==========================================
 // List all dish recipes grouped by menu item
-router.get("/recipes", requireStaff(["admin", "staff"]), async (_req, res) => {
+router.get("/recipes", requireStaff("inventory:view"), async (_req, res) => {
     try {
         const recipesRes = await query(`
         SELECT 
@@ -723,7 +723,7 @@ router.get("/recipes", requireStaff(["admin", "staff"]), async (_req, res) => {
     }
 });
 // Get recipe for a specific menu item
-router.get("/recipes/:menuItemId", requireStaff(["admin", "staff"]), async (req, res) => {
+router.get("/recipes/:menuItemId", requireStaff("inventory:view"), async (req, res) => {
     const menuItemId = Number(req.params.menuItemId);
     try {
         const itemRes = await query("SELECT id, name, price FROM menu_items WHERE id = $1", [menuItemId]);
@@ -762,7 +762,7 @@ router.get("/recipes/:menuItemId", requireStaff(["admin", "staff"]), async (req,
     }
 });
 // Configure / replace recipe ingredients for a menu item
-router.put("/recipes/:menuItemId", requireStaff(["admin", "staff"]), async (req, res) => {
+router.put("/recipes/:menuItemId", requireStaff("inventory:edit"), async (req, res) => {
     const menuItemId = Number(req.params.menuItemId);
     const { ingredients } = req.body; // Array of { rawMaterialId, quantity, unit, notes }
     if (!Array.isArray(ingredients)) {

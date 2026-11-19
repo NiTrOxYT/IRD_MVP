@@ -14,6 +14,7 @@ describe("RBAC Permissions Logic & Hierarchy", () => {
             "qr",
             "settings",
             "users",
+            "housekeeping",
         ];
         for (const exp of expected) {
             assert.ok(moduleIds.includes(exp), `Missing expected module: ${exp}`);

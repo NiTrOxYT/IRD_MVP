@@ -849,3 +849,66 @@ export async function deleteRole(id: number) {
 export async function getPermissionsCatalog() {
   return request<{ success: boolean; modules: any[] }>("/users/permissions-catalog");
 }
+
+// -------------------------------------------------------------
+// Housekeeping Management API
+// -------------------------------------------------------------
+
+export type HousekeepingStatus = "pending" | "accepted" | "in_progress" | "completed" | "declined";
+
+export interface HousekeepingRequest {
+  id: number;
+  stay_id: number;
+  room_id: number;
+  room_number: string;
+  guest_name: string;
+  request_type: string;
+  title: string;
+  guest_note: string | null;
+  status: HousekeepingStatus;
+  assigned_staff_id: number | null;
+  assigned_staff_name: string | null;
+  staff_notes: string | null;
+  created_at: string;
+  accepted_at: string | null;
+  started_at: string | null;
+  completed_at: string | null;
+  declined_at: string | null;
+}
+
+export interface HousekeepingSummary {
+  pendingCount: number;
+  inProgressCount: number;
+  completedTodayCount: number;
+}
+
+export async function getGuestHousekeepingRequests() {
+  return request<{ success: boolean; requests: HousekeepingRequest[] }>("/housekeeping/guest");
+}
+
+export async function createGuestHousekeepingRequest(data: { requestType: string; guestNote?: string }) {
+  return request<{ success: boolean; request: HousekeepingRequest; message: string }>("/housekeeping/guest", {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
+}
+
+export async function getStaffHousekeepingRequests(filters?: { status?: string; room?: string; requestType?: string }) {
+  const params = new URLSearchParams();
+  if (filters?.status && filters.status !== "all") params.set("status", filters.status);
+  if (filters?.room) params.set("room", filters.room);
+  if (filters?.requestType && filters.requestType !== "all") params.set("requestType", filters.requestType);
+  const q = params.toString() ? `?${params.toString()}` : "";
+  return request<{ success: boolean; requests: HousekeepingRequest[] }>(`/housekeeping${q}`);
+}
+
+export async function updateHousekeepingStatus(id: number, data: { status: string; staffNotes?: string }) {
+  return request<{ success: boolean; request: HousekeepingRequest; message: string }>(`/housekeeping/${id}/status`, {
+    method: "PATCH",
+    body: JSON.stringify(data),
+  });
+}
+
+export async function getHousekeepingSummary() {
+  return request<{ success: boolean; summary: HousekeepingSummary }>("/housekeeping/summary");
+}

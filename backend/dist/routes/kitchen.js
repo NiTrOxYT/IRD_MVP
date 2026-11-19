@@ -4,7 +4,7 @@ import { requireStaff } from "../middleware/auth.js";
 import { broadcastOrderStatusChanged } from "../socket.js";
 const router = Router();
 // Kitchen: Get active kitchen tickets
-router.get("/tickets", requireStaff(["kitchen", "admin"]), async (_req, res) => {
+router.get("/tickets", requireStaff("orders:view"), async (_req, res) => {
     try {
         const result = await query(`
       SELECT o.id, o.order_number, o.room_number, o.guest_name, o.status,
@@ -41,7 +41,7 @@ router.get("/tickets", requireStaff(["kitchen", "admin"]), async (_req, res) => 
     }
 });
 // Kitchen: Advance ticket status
-router.post("/tickets/:id/advance", requireStaff(["kitchen", "admin"]), async (req, res) => {
+router.post("/tickets/:id/advance", requireStaff("orders:edit"), async (req, res) => {
     const orderId = Number(req.params.id);
     const staff = req.staff;
     try {

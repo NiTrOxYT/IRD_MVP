@@ -1,6 +1,8 @@
 import { Server as SocketIOServer } from "socket.io";
 import cookie from "cookie";
 import { verifyStaffToken } from "./lib/auth.js";
+import { hasPermission } from "./lib/permissions.js";
+import { query } from "./db/index.js";
 let io = null;
 export function initSocket(server) {
     io = new SocketIOServer(server, {
@@ -53,6 +55,52 @@ export function initSocket(server) {
                 }
             }
             socket.emit("error", { message: "Unauthorized kitchen session" });
+        });
+        // 2b. Join Housekeeping Console Room
+        socket.on("join:housekeeping", async () => {
+            const rawCookie = socket.handshake.headers.cookie;
+            let token = "";
+            if (rawCookie) {
+                const parsed = cookie.parse(rawCookie);
+                token = parsed.staff_session;
+            }
+            if (!token && socket.handshake.auth?.token) {
+                token = socket.handshake.auth.token;
+            }
+            if (token) {
+                const payload = verifyStaffToken(token);
+                if (payload) {
+                    try {
+                        const userRes = await query(`SELECT u.property_id, u.is_active, u.token_version, u.role,
+                      r.slug AS role_slug, r.permissions
+               FROM staff_users u
+               LEFT JOIN roles r ON r.id = u.role_id
+               WHERE u.id = $1`, [payload.id]);
+                        const user = userRes.rows[0];
+                        let permissions = Array.isArray(user?.permissions) ? user.permissions : [];
+                        if (typeof user?.permissions === "string") {
+                            try {
+                                permissions = JSON.parse(user.permissions);
+                            }
+                            catch {
+                                permissions = [];
+                            }
+                        }
+                        if (user?.role === "admin" || user?.role_slug === "admin")
+                            permissions = ["*", ...permissions];
+                        const sessionIsCurrent = payload.tokenVersion === undefined || user?.token_version === payload.tokenVersion;
+                        if (user?.is_active && sessionIsCurrent && hasPermission(permissions, "housekeeping:view")) {
+                            socket.join(`housekeeping:${user.property_id}`);
+                            socket.emit("joined:housekeeping", { success: true });
+                            return;
+                        }
+                    }
+                    catch (error) {
+                        console.error("[Socket] Housekeeping authorization failed:", error);
+                    }
+                }
+            }
+            socket.emit("error", { message: "Unauthorized housekeeping session" });
         });
         // 3. Join Stay Room (For guest devices in the room)
         socket.on("join:stay", ({ stayId }) => {
@@ -113,4 +161,14 @@ export function broadcastStayCreated(stay) {
     if (!io)
         return;
     io.to("admin").emit("stay:created", stay);
+}
+export function broadcastHousekeepingCreated(request) {
+    if (!io)
+        return;
+    io.to(`housekeeping:${request.property_id || request.propertyId}`).emit("housekeeping:created", request);
+}
+export function broadcastHousekeepingStatusChanged(request, previousStatus) {
+    if (!io)
+        return;
+    io.to(`housekeeping:${request.property_id || request.propertyId}`).emit("housekeeping:status_changed", { request, previousStatus });
 }

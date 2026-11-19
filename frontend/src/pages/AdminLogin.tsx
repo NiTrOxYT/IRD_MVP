@@ -26,6 +26,8 @@ export function AdminLogin() {
       const res = await loginStaff(username, password);
       if (res.user.role === "kitchen") {
         setLocation("/kitchen");
+      } else if (res.user.role === "housekeeping") {
+        setLocation("/housekeeping");
       } else {
         setLocation("/admin/orders");
       }

@@ -286,7 +286,7 @@ router.post("/:id/cancel", requireActiveStay, async (req, res) => {
     }
 });
 // Staff / Reception: List all orders with filters
-router.get("/", requireStaff(["admin", "staff"]), async (req, res) => {
+router.get("/", requireStaff("orders:view"), async (req, res) => {
     const { status, room, date } = req.query;
     try {
         let sql = `
@@ -331,7 +331,7 @@ router.get("/", requireStaff(["admin", "staff"]), async (req, res) => {
     }
 });
 // Staff / Kitchen: Advance or update order status
-router.patch("/:id/status", requireStaff(["admin", "staff", "kitchen"]), async (req, res) => {
+router.patch("/:id/status", requireStaff("orders:edit"), async (req, res) => {
     const orderId = Number(req.params.id);
     const staff = req.staff;
     const parse = updateOrderStatusSchema.safeParse(req.body);

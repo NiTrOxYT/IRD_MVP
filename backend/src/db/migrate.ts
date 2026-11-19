@@ -296,6 +296,32 @@ export async function runMigrations() {
       ALTER TABLE staff_users ADD COLUMN IF NOT EXISTS role_id INT REFERENCES roles(id) ON DELETE SET NULL;
       ALTER TABLE staff_users ADD COLUMN IF NOT EXISTS token_version INT NOT NULL DEFAULT 1;
       CREATE INDEX IF NOT EXISTS idx_staff_users_role_id ON staff_users(role_id);
+
+      -- 18. Housekeeping Requests
+      CREATE TABLE IF NOT EXISTS housekeeping_requests (
+        id SERIAL PRIMARY KEY,
+        property_id INT NOT NULL DEFAULT 1 REFERENCES properties(id) ON DELETE CASCADE,
+        stay_id INT NOT NULL REFERENCES stays(id) ON DELETE RESTRICT,
+        room_id INT NOT NULL REFERENCES rooms(id) ON DELETE RESTRICT,
+        room_number TEXT NOT NULL,
+        guest_name TEXT NOT NULL,
+        request_type TEXT NOT NULL, -- cleaning, towels, toiletries, linen, pillows_blankets, luggage, turndown, other
+        title TEXT NOT NULL,
+        guest_note TEXT,
+        status TEXT NOT NULL DEFAULT 'pending', -- pending, accepted, in_progress, completed, declined
+        assigned_staff_id INT REFERENCES staff_users(id) ON DELETE SET NULL,
+        assigned_staff_name TEXT,
+        staff_notes TEXT,
+        created_at TIMESTAMP WITHOUT TIME ZONE NOT NULL DEFAULT NOW(),
+        accepted_at TIMESTAMP WITHOUT TIME ZONE,
+        started_at TIMESTAMP WITHOUT TIME ZONE,
+        completed_at TIMESTAMP WITHOUT TIME ZONE,
+        declined_at TIMESTAMP WITHOUT TIME ZONE
+      );
+      CREATE INDEX IF NOT EXISTS idx_hk_property ON housekeeping_requests(property_id);
+      CREATE INDEX IF NOT EXISTS idx_hk_stay ON housekeeping_requests(stay_id);
+      CREATE INDEX IF NOT EXISTS idx_hk_status ON housekeeping_requests(status);
+      CREATE INDEX IF NOT EXISTS idx_hk_created ON housekeeping_requests(created_at);
     `);
 
     // Seed default property
@@ -311,7 +337,8 @@ export async function runMigrations() {
       VALUES
         (1, 1, 'Administrator', 'admin', 'Full access to all resort dining operations, configurations, and user management.', TRUE, '["*"]'::jsonb),
         (2, 1, 'Front Desk / Reception', 'staff', 'Live guest order monitoring, stay verification, room service dispatch, and guest billing.', TRUE, '["overview:view", "orders:view", "orders:create", "orders:edit", "stays:view", "stays:manage", "menu:view", "analytics:view", "qr:view"]'::jsonb),
-        (3, 1, 'Kitchen / Culinary', 'kitchen', 'Kitchen display system, KOT tickets preparation, and station order advancement.', TRUE, '["orders:view", "orders:edit"]'::jsonb)
+        (3, 1, 'Kitchen / Culinary', 'kitchen', 'Kitchen display system, KOT tickets preparation, and station order advancement.', TRUE, '["orders:view", "orders:edit"]'::jsonb),
+        (4, 1, 'Housekeeping', 'housekeeping', 'Suite refresh, linens, guest amenity requests, and room cleaning management.', TRUE, '["housekeeping:view", "housekeeping:edit", "housekeeping:manage", "stays:view"]'::jsonb)
       ON CONFLICT (property_id, slug) DO UPDATE SET
         permissions = EXCLUDED.permissions,
         description = EXCLUDED.description;
@@ -321,7 +348,6 @@ export async function runMigrations() {
     const adminHash = hashPassword("admin123");
     const staffHash = hashPassword("staff123");
     const kitchenHash = hashPassword("kitchen123");
-
     await client.query(
       `
       INSERT INTO staff_users (id, property_id, username, password_hash, full_name, role, role_id)
@@ -493,6 +519,7 @@ export async function runMigrations() {
       'raw_material_movements',
       'menu_item_recipes',
       'roles',
+      'housekeeping_requests',
     ];
     for (const t of tables) {
       await client.query(`

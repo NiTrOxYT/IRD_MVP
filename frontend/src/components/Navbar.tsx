@@ -12,6 +12,7 @@ import {
   LogOut,
   QrCode,
   Settings,
+  Sparkles,
   UserCheck,
   UtensilsCrossed,
   Users,
@@ -27,6 +28,7 @@ export function Navbar() {
   const isGuestRoute = location === "/" || location.startsWith("/stay") || location.startsWith("/order") || location === "/orders";
   const isReception = location.startsWith("/reception");
   const isKot = location.startsWith("/kot") || location.startsWith("/kitchen");
+  const isHousekeeping = location.startsWith("/housekeeping");
   const isAdmin = location.startsWith("/admin");
   const propertyName = usePropertyName(!isGuestRoute);
 
@@ -38,19 +40,36 @@ export function Navbar() {
   }, [location, isGuestRoute]);
 
   const navItems = useMemo<NavItem[]>(() => {
+    const perms = staffUser?.permissions || [];
+    const isSuperAdmin = staffUser?.role === "admin" || perms.includes("*");
+
+    if (isHousekeeping) {
+      const items: NavItem[] = [
+        { href: "/housekeeping", label: "Housekeeping", icon: <Sparkles size={16} /> }
+      ];
+      if (isSuperAdmin || hasPermission(perms, "stays:view")) {
+        items.push({ href: "/reception/stays", label: "Stays & Rooms", icon: <Users size={16} /> });
+      }
+      if (isSuperAdmin) {
+        items.push({ href: "/admin", label: "Admin", icon: <LayoutDashboard size={16} /> });
+      }
+      return items;
+    }
+
     if (isReception) return [
       { href: "/reception", label: "Live Orders", icon: <ClipboardList size={16} /> },
       { href: "/reception/stays", label: "Stays & Rooms", icon: <Users size={16} /> },
+      ...((isSuperAdmin || hasPermission(perms, "housekeeping:view")) ? [{ href: "/housekeeping", label: "Housekeeping", icon: <Sparkles size={16} /> }] : [])
     ];
     if (isKot) return [];
     if (isAdmin) {
-      const perms = staffUser?.permissions || [];
-      const isSuperAdmin = staffUser?.role === "admin" || perms.includes("*");
-
       const items: NavItem[] = [];
 
       if (isSuperAdmin || hasPermission(perms, "overview:view")) {
         items.push({ href: "/admin", label: "Overview", icon: <LayoutDashboard size={16} /> });
+      }
+      if (isSuperAdmin || hasPermission(perms, "housekeeping:view")) {
+        items.push({ href: "/housekeeping", label: "Housekeeping", icon: <Sparkles size={16} /> });
       }
       if (isSuperAdmin || hasPermission(perms, "menu:view")) {
         items.push({ href: "/admin/menu", label: "Menu", icon: <UtensilsCrossed size={16} /> });
@@ -90,7 +109,13 @@ export function Navbar() {
     setLocation("/admin/login");
   };
 
-  const sectionLabel = isReception ? "Reception Console" : isKot ? "Kitchen KOT Display" : "Admin Management";
+  const sectionLabel = isReception
+    ? "Reception Console"
+    : isKot
+    ? "Kitchen KOT Display"
+    : isHousekeeping
+    ? "Housekeeping Console"
+    : "Admin Management";
 
   return (
     <header className="sticky top-0 z-40 border-b border-[#E5DDD1] bg-[#F8F5EF]/95 shadow-xs backdrop-blur-md">

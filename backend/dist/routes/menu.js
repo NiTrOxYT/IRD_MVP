@@ -70,7 +70,7 @@ router.get("/", async (_req, res) => {
     }
 });
 // Staff / Admin: View full menu with all categories, item counts, and inactive items
-router.get("/admin", requireStaff(["admin", "staff"]), async (_req, res) => {
+router.get("/admin", requireStaff("menu:view"), async (_req, res) => {
     try {
         const catRes = await query(`
       SELECT c.id, c.property_id, c.name, c.description, c.sort_order, c.is_active,
@@ -131,7 +131,7 @@ router.get("/admin", requireStaff(["admin", "staff"]), async (_req, res) => {
     }
 });
 // Admin: Create Category
-router.get("/categories", requireStaff(["admin", "staff"]), async (_req, res) => {
+router.get("/categories", requireStaff("menu:view"), async (_req, res) => {
     try {
         const result = await query(`
       SELECT c.id, c.property_id, c.name, c.description, c.sort_order, c.is_active,
@@ -148,7 +148,7 @@ router.get("/categories", requireStaff(["admin", "staff"]), async (_req, res) =>
         res.status(500).json({ error: "Failed to fetch menu categories" });
     }
 });
-router.post("/categories", requireStaff(["admin"]), async (req, res) => {
+router.post("/categories", requireStaff("menu:create"), async (req, res) => {
     const parse = categorySchema.safeParse(req.body);
     if (!parse.success) {
         res.status(400).json({ error: parse.error.errors[0].message });
@@ -165,7 +165,7 @@ router.post("/categories", requireStaff(["admin"]), async (req, res) => {
     }
 });
 // Admin: Update Category
-router.put("/categories/:id", requireStaff(["admin"]), async (req, res) => {
+router.put("/categories/:id", requireStaff("menu:edit"), async (req, res) => {
     const catId = Number(req.params.id);
     const parse = categorySchema.safeParse(req.body);
     if (!parse.success) {
@@ -190,7 +190,7 @@ router.put("/categories/:id", requireStaff(["admin"]), async (req, res) => {
     }
 });
 // Admin: Toggle Category Active Status
-router.patch("/categories/:id/status", requireStaff(["admin"]), async (req, res) => {
+router.patch("/categories/:id/status", requireStaff("menu:edit"), async (req, res) => {
     const catId = Number(req.params.id);
     const { isActive } = req.body;
     try {
@@ -206,7 +206,7 @@ router.patch("/categories/:id/status", requireStaff(["admin"]), async (req, res)
     }
 });
 // Admin: Reorder Categories
-router.patch("/categories/reorder", requireStaff(["admin"]), async (req, res) => {
+router.patch("/categories/reorder", requireStaff("menu:edit"), async (req, res) => {
     const parse = reorderCategoriesSchema.safeParse(req.body);
     if (!parse.success) {
         res.status(400).json({ error: parse.error.errors[0].message });
@@ -231,7 +231,7 @@ router.patch("/categories/reorder", requireStaff(["admin"]), async (req, res) =>
     }
 });
 // Admin: Delete Category (with items safeguard & reassignment)
-router.delete("/categories/:id", requireStaff(["admin"]), async (req, res) => {
+router.delete("/categories/:id", requireStaff("menu:delete"), async (req, res) => {
     const catId = Number(req.params.id);
     const reassignToId = req.body?.reassignToId || req.query.reassignToId ? Number(req.body?.reassignToId || req.query.reassignToId) : null;
     const client = await pool.connect();
@@ -282,7 +282,7 @@ router.delete("/categories/:id", requireStaff(["admin"]), async (req, res) => {
     }
 });
 // Admin: Create Item (with optional variants)
-router.post("/items", requireStaff(["admin"]), async (req, res) => {
+router.post("/items", requireStaff("menu:create"), async (req, res) => {
     const parse = menuItemSchema.safeParse(req.body);
     if (!parse.success) {
         res.status(400).json({ error: parse.error.errors[0].message });
@@ -343,7 +343,7 @@ router.post("/items", requireStaff(["admin"]), async (req, res) => {
     }
 });
 // Admin: Update Item (with variants)
-router.put("/items/:id", requireStaff(["admin"]), async (req, res) => {
+router.put("/items/:id", requireStaff("menu:edit"), async (req, res) => {
     const itemId = Number(req.params.id);
     const parse = menuItemSchema.safeParse(req.body);
     if (!parse.success) {
@@ -415,7 +415,7 @@ router.put("/items/:id", requireStaff(["admin"]), async (req, res) => {
     }
 });
 // Staff / Admin: Toggle item availability (86-ing an item)
-router.patch("/items/:id/availability", requireStaff(["admin", "staff"]), async (req, res) => {
+router.patch("/items/:id/availability", requireStaff("menu:edit"), async (req, res) => {
     const itemId = Number(req.params.id);
     const { available } = req.body;
     try {
@@ -431,7 +431,7 @@ router.patch("/items/:id/availability", requireStaff(["admin", "staff"]), async 
     }
 });
 // Admin: Delete item
-router.delete("/items/:id", requireStaff(["admin"]), async (req, res) => {
+router.delete("/items/:id", requireStaff("menu:delete"), async (req, res) => {
     const itemId = Number(req.params.id);
     try {
         await query("DELETE FROM menu_items WHERE id = $1", [itemId]);

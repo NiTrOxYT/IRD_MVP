@@ -20,7 +20,7 @@ const previousRangeSql = {
     prevMonth: "created_at >= DATE_TRUNC('month', CURRENT_DATE) - INTERVAL '2 months' AND created_at < DATE_TRUNC('month', CURRENT_DATE) - INTERVAL '1 month'",
 };
 const billableStatusSql = "status NOT IN ('cancelled', 'rejected')";
-router.get("/", requireStaff(["admin", "staff"]), async (req, res) => {
+router.get("/", requireStaff("analytics:view"), async (req, res) => {
     const range = typeof req.query.range === "string" && currentRangeSql[req.query.range]
         ? req.query.range
         : "7d";
