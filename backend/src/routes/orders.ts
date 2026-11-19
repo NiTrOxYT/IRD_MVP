@@ -369,10 +369,44 @@ router.post("/:id/cancel", requireActiveStay, async (req: Request, res: Response
 
 // Staff / Reception: List all orders with filters
 router.get("/", requireStaff("orders:view"), async (req: Request, res: Response): Promise<void> => {
-  const { status, room, date } = req.query;
+  const { status, room, dateFrom, dateTo } = req.query;
+  const limit = Math.min(Math.max(Number(req.query.limit) || 50, 1), 100);
+  const offset = Math.max(Number(req.query.offset) || 0, 0);
+
+  const isDate = (value: unknown) => typeof value === "string" && /^\d{4}-\d{2}-\d{2}$/.test(value);
+  if ((dateFrom && !isDate(dateFrom)) || (dateTo && !isDate(dateTo))) {
+    res.status(400).json({ error: "Dates must use YYYY-MM-DD format." });
+    return;
+  }
 
   try {
-    let sql = `
+    let whereSql = " WHERE o.property_id = $1";
+    const params: any[] = [req.staff!.propertyId];
+
+    if (status) {
+      params.push(status);
+      whereSql += ` AND o.status = $${params.length}`;
+    }
+
+    if (room) {
+      params.push(`%${room}%`);
+      whereSql += ` AND o.room_number ILIKE $${params.length}`;
+    }
+
+    if (dateFrom) {
+      params.push(dateFrom);
+      whereSql += ` AND o.created_at >= $${params.length}::date`;
+    }
+
+    if (dateTo) {
+      params.push(dateTo);
+      whereSql += ` AND o.created_at < ($${params.length}::date + INTERVAL '1 day')`;
+    }
+
+    const countRes = await query(`SELECT COUNT(*)::int AS total FROM orders o${whereSql}`, params);
+    const total = Number(countRes.rows[0]?.total || 0);
+    const pageParams = [...params, limit, offset];
+    const sql = `
       SELECT o.*,
              json_agg(
                json_build_object(
@@ -390,29 +424,13 @@ router.get("/", requireStaff("orders:view"), async (req: Request, res: Response)
              ) as items
       FROM orders o
       LEFT JOIN order_items oi ON o.id = oi.order_id
-      WHERE 1=1
+      ${whereSql}
+      GROUP BY o.id
+      ORDER BY o.id DESC
+      LIMIT $${pageParams.length - 1} OFFSET $${pageParams.length}
     `;
-    const params: any[] = [];
-
-    if (status) {
-      params.push(status);
-      sql += ` AND o.status = $${params.length}`;
-    }
-
-    if (room) {
-      params.push(`%${room}%`);
-      sql += ` AND o.room_number ILIKE $${params.length}`;
-    }
-
-    if (date) {
-      params.push(date);
-      sql += ` AND DATE(o.created_at) = $${params.length}`;
-    }
-
-    sql += " GROUP BY o.id ORDER BY o.id DESC LIMIT 150";
-
-    const result = await query(sql, params);
-    res.json({ orders: result.rows });
+    const result = await query(sql, pageParams);
+    res.json({ orders: result.rows, total });
   } catch (err) {
     res.status(500).json({ error: "Failed to fetch orders" });
   }

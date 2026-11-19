@@ -23,11 +23,46 @@ import {
 } from "lucide-react";
 import { cn } from "../lib/utils";
 
+const ORDER_PAGE_SIZE = 50;
+const DATE_SHORTCUTS = [
+  { id: "today", label: "Today" },
+  { id: "yesterday", label: "Yesterday" },
+  { id: "7days", label: "7 days" },
+  { id: "30days", label: "30 days" },
+  { id: "all", label: "All time" },
+] as const;
+
+function localDateString(date: Date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+function getDateRange(shortcut: string) {
+  if (shortcut === "all") return { dateFrom: undefined, dateTo: undefined };
+  const today = new Date();
+  const to = new Date(today);
+  const from = new Date(today);
+  if (shortcut === "yesterday") {
+    from.setDate(from.getDate() - 1);
+    to.setDate(to.getDate() - 1);
+  } else if (shortcut === "7days") {
+    from.setDate(from.getDate() - 6);
+  } else if (shortcut === "30days") {
+    from.setDate(from.getDate() - 29);
+  }
+  return { dateFrom: localDateString(from), dateTo: localDateString(to) };
+}
+
 export function AdminOrders() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [roomFilter, setRoomFilter] = useState("");
+  const [dateShortcut, setDateShortcut] = useState<string>("all");
+  const [page, setPage] = useState(0);
+  const [totalOrders, setTotalOrders] = useState(0);
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [rejectModalOrder, setRejectModalOrder] = useState<Order | null>(null);
   const [rejectionReason, setRejectionReason] = useState("");
@@ -35,17 +70,23 @@ export function AdminOrders() {
 
   const fetchOrders = useCallback(async () => {
     try {
+      const { dateFrom, dateTo } = getDateRange(dateShortcut);
       const res = await listAdminOrders({
         status: statusFilter !== "all" ? statusFilter : undefined,
         room: roomFilter.trim() || undefined,
+        dateFrom,
+        dateTo,
+        limit: ORDER_PAGE_SIZE,
+        offset: page * ORDER_PAGE_SIZE,
       });
       setOrders(res.orders);
+      setTotalOrders(res.total);
       setLoading(false);
     } catch (err) {
       console.error(err);
       setLoading(false);
     }
-  }, [statusFilter, roomFilter]);
+  }, [statusFilter, roomFilter, dateShortcut, page]);
 
   useEffect(() => {
     fetchOrders();
@@ -125,11 +166,12 @@ export function AdminOrders() {
       </div>
 
       {/* Filter Toolbar */}
-      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4">
+        <div className="space-y-3">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4">
         {/* Status Tabs with Cafe Gold Active Styling */}
         <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0 text-xs no-scrollbar">
           {[
-            { id: "all", label: "All Orders", count: orders.length },
+            { id: "all", label: "All Orders", count: totalOrders },
             { id: "pending", label: "Pending Reception", count: pendingCount },
             { id: "accepted", label: "Accepted" },
             { id: "preparing", label: "In Kitchen" },
@@ -139,7 +181,7 @@ export function AdminOrders() {
           ].map((tab) => (
             <button
               key={tab.id}
-              onClick={() => setStatusFilter(tab.id)}
+              onClick={() => { setStatusFilter(tab.id); setPage(0); }}
               className={cn(
                 "px-3.5 py-2 rounded-xl font-semibold whitespace-nowrap transition-all btn-smooth-press flex items-center gap-1.5 cursor-pointer",
                 statusFilter === tab.id
@@ -158,15 +200,37 @@ export function AdminOrders() {
         </div>
 
         {/* Room Search */}
-        <div className="relative max-w-xs shrink-0">
+        <div className="relative w-full max-w-xs shrink-0">
           <Search className="w-4 h-4 text-[#73685C] absolute left-3 top-2.5 pointer-events-none" />
           <input
             type="text"
             placeholder="Search Suite #..."
             value={roomFilter}
-            onChange={(e) => setRoomFilter(e.target.value)}
+            onChange={(e) => { setRoomFilter(e.target.value); setPage(0); }}
             className="w-full pl-9 pr-3 py-2 bg-[#FFFDF9] border border-[#E5DDD1] rounded-2xl text-xs text-[#1E150F] focus:outline-none focus:ring-2 focus:ring-[#B88223]/30 shadow-2xs"
           />
+        </div>
+        </div>
+        <div className="flex flex-wrap items-center gap-2" aria-label="Filter orders by date">
+          <span className="mr-1 inline-flex items-center gap-1 text-[11px] font-semibold text-[#73685C]">
+            <Filter className="h-3.5 w-3.5" /> Date
+          </span>
+          {DATE_SHORTCUTS.map((shortcut) => (
+            <button
+              key={shortcut.id}
+              type="button"
+              onClick={() => { setDateShortcut(shortcut.id); setPage(0); }}
+              aria-pressed={dateShortcut === shortcut.id}
+              className={cn(
+                "rounded-full border px-3 py-1.5 text-[11px] font-semibold transition-colors",
+                dateShortcut === shortcut.id
+                  ? "border-[#ECD7A9] bg-[#FAF3E6] text-[#8E6314]"
+                  : "border-[#E5DDD1] bg-[#FFFDF9] text-[#73685C] hover:bg-[#FAF8F5]"
+              )}
+            >
+              {shortcut.label}
+            </button>
+          ))}
         </div>
       </div>
 
@@ -302,6 +366,31 @@ export function AdminOrders() {
               </div>
             </div>
           ))}
+        </div>
+      )}
+
+      {!loading && totalOrders > 0 && (
+        <div className="flex flex-col gap-3 border-t border-[#E5DDD1] pt-4 sm:flex-row sm:items-center sm:justify-between">
+          <p className="text-xs text-[#73685C]">
+            Showing {page * ORDER_PAGE_SIZE + 1}–{Math.min((page + 1) * ORDER_PAGE_SIZE, totalOrders)} of {totalOrders} orders
+          </p>
+          {totalOrders > ORDER_PAGE_SIZE && (
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                disabled={page === 0}
+                onClick={() => setPage((current) => Math.max(0, current - 1))}
+                className="rounded-xl border border-[#E5DDD1] bg-[#FFFDF9] px-3 py-2 text-xs font-semibold text-[#73685C] disabled:opacity-40"
+              >Previous</button>
+              <span className="px-1 text-xs text-[#73685C]">Page {page + 1} of {Math.ceil(totalOrders / ORDER_PAGE_SIZE)}</span>
+              <button
+                type="button"
+                disabled={(page + 1) * ORDER_PAGE_SIZE >= totalOrders}
+                onClick={() => setPage((current) => current + 1)}
+                className="rounded-xl border border-[#E5DDD1] bg-[#FFFDF9] px-3 py-2 text-xs font-semibold text-[#73685C] disabled:opacity-40"
+              >Next</button>
+            </div>
+          )}
         </div>
       )}
 

@@ -251,15 +251,15 @@ export function AdminAnalytics() {
           </section>
 
           <section className="grid grid-cols-2 gap-3 xl:grid-cols-4 sm:gap-4">
-            <MetricCard icon={<BedDouble className="h-5 w-5" />} label="Guest stays" value={String(report.summary.totalStays)} detail={`${report.summary.newStays} single-order stays`} />
-            <MetricCard icon={<Users className="h-5 w-5" />} label="Repeat-order stays" value={`${report.summary.repeatStayRate.toFixed(1)}%`} detail={`${report.summary.returningStays} stays placed multiple orders`} />
+            <MetricCard icon={<BedDouble className="h-5 w-5" />} label="Stays with orders" value={String(report.summary.totalStays)} detail={`${report.summary.newStays} stays with one billable order`} />
+            <MetricCard icon={<Users className="h-5 w-5" />} label="Repeat-order stays" value={`${report.summary.repeatStayRate.toFixed(1)}%`} detail={`${report.summary.returningStays} stays placed multiple billable orders`} />
             <MetricCard icon={<TrendingUp className="h-5 w-5" />} label="Active order value" value={formatINR(report.summary.activeValue)} detail={`${report.summary.activeOrderCount} orders in progress`} />
             <MetricCard icon={<XCircle className="h-5 w-5" />} label="Cancelled / declined" value={formatINR(report.summary.cancelledValue)} detail={`${report.summary.cancelledOrderCount} orders`} />
           </section>
 
           <section className="grid gap-4 lg:grid-cols-[1.6fr_1fr]">
-            <Panel title="Revenue & order trend" subtitle={range === "today" || range === "yesterday" ? "Hourly performance · select a metric to explore" : range === "all" ? "Weekly performance · latest 90 weeks" : "Daily performance · select a metric to explore"}>
-              <div className="mb-4 flex items-center gap-2 text-[10px] text-[#766B61]"><span className="h-2 w-2 rounded-full bg-[#8A563B]" />Billable orders {range !== "all" && <span className="ml-auto inline-flex items-center gap-1 font-semibold"><span className={report.summary.revenueDelta >= 0 ? "text-emerald-700" : "text-rose-700"}>{report.summary.revenueDelta >= 0 ? <ArrowUpRight className="inline h-3 w-3" /> : <ArrowDownRight className="inline h-3 w-3" />}{Math.abs(report.summary.revenueDelta).toFixed(0)}%</span><span>vs previous period</span></span>}</div>
+            <Panel title="Revenue & order trend" subtitle={range === "today" || range === "yesterday" ? "Hourly performance · select a metric to explore" : range === "all" ? "Weekly performance · all recorded history" : "Daily performance · select a metric to explore"}>
+              <div className="mb-4 flex items-center gap-2 text-[10px] text-[#766B61]"><span className="h-2 w-2 rounded-full bg-[#8A563B]" />Billable orders {range !== "all" && <span className="ml-auto inline-flex items-center gap-1 font-semibold">{report.summary.revenueDelta === null ? <span>No previous-period revenue</span> : <><span className={report.summary.revenueDelta >= 0 ? "text-emerald-700" : "text-rose-700"}>{report.summary.revenueDelta >= 0 ? <ArrowUpRight className="inline h-3 w-3" /> : <ArrowDownRight className="inline h-3 w-3" />}{Math.abs(report.summary.revenueDelta).toFixed(0)}%</span><span>vs previous period</span></>}</span>}</div>
               <RevenueChart rows={report.trend} metric={trendMetric} onMetricChange={setTrendMetric} />
             </Panel>
             <div className="grid gap-4 sm:grid-cols-3 lg:grid-cols-1">
@@ -288,13 +288,13 @@ export function AdminAnalytics() {
             <Panel title="Top suites" subtitle="Room-level order concentration.">
               <RankList rows={report.topRooms.map((row) => ({ name: `Suite ${row.room}`, revenue: row.revenue, orders: row.orders }))} kind="sales" />
             </Panel>
-            <Panel title="Category share" subtitle="Revenue contribution by menu category.">
+            <Panel title="Category share" subtitle="Item sales before tax and service charge.">
               <RankList rows={report.categories} kind="sales" />
             </Panel>
           </section>
 
           <section className="grid gap-4 lg:grid-cols-2">
-            <Panel title="Menu winners by revenue" subtitle="Dishes generating the most order value."><RankList rows={report.topItems} kind="sales" /></Panel>
+            <Panel title="Menu winners by item sales" subtitle="Item subtotal before tax and service charge."><RankList rows={report.topItems} kind="sales" /></Panel>
             <Panel title="Most ordered dishes" subtitle="Guest favourites by quantity."><RankList rows={report.topItems} kind="quantity" /></Panel>
           </section>
 

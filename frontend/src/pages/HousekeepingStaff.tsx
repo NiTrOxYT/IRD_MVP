@@ -317,11 +317,13 @@ export function HousekeepingStaff() {
 
           <div className="flex flex-col sm:flex-row gap-2.5 items-center">
             {/* Category Dropdown */}
-            <div className="relative w-full sm:w-auto">
+            <div className="flex w-full min-w-0 items-center gap-2 sm:w-auto sm:min-w-[220px]">
+              <Filter className="h-4 w-4 shrink-0 text-[#766B61]" aria-hidden="true" />
               <select
                 value={typeFilter}
                 onChange={(e) => setTypeFilter(e.target.value)}
-                className="w-full sm:w-auto pl-8 pr-8 py-2 bg-[#FAF8F5] border border-[#E5DDD1] rounded-xl text-xs font-medium text-[#29231F] focus:outline-none focus:ring-1 focus:ring-[#B88223]"
+                aria-label="Filter by request category"
+                className="min-w-0 flex-1 px-3 py-2 bg-[#FAF8F5] border border-[#E5DDD1] rounded-xl text-xs font-medium text-[#29231F] focus:outline-none focus:ring-1 focus:ring-[#B88223]"
               >
                 {REQUEST_TYPE_OPTIONS.map((opt) => (
                   <option key={opt.value} value={opt.value}>
@@ -329,7 +331,6 @@ export function HousekeepingStaff() {
                   </option>
                 ))}
               </select>
-              <Filter className="w-3.5 h-3.5 text-[#766B61] absolute left-2.5 top-2.5 pointer-events-none" />
             </div>
 
             {/* Room / Keyword Search */}

@@ -353,13 +353,23 @@ export async function cancelGuestOrder(orderId: number) {
   });
 }
 
-export async function listAdminOrders(filters?: { status?: string; room?: string; date?: string }) {
+export async function listAdminOrders(filters?: {
+  status?: string;
+  room?: string;
+  dateFrom?: string;
+  dateTo?: string;
+  limit?: number;
+  offset?: number;
+}) {
   const params = new URLSearchParams();
   if (filters?.status && filters.status !== "all") params.set("status", filters.status);
   if (filters?.room) params.set("room", filters.room);
-  if (filters?.date) params.set("date", filters.date);
+  if (filters?.dateFrom) params.set("dateFrom", filters.dateFrom);
+  if (filters?.dateTo) params.set("dateTo", filters.dateTo);
+  if (filters?.limit !== undefined) params.set("limit", String(filters.limit));
+  if (filters?.offset !== undefined) params.set("offset", String(filters.offset));
   const q = params.toString() ? `?${params.toString()}` : "";
-  return request<{ orders: Order[] }>(`/orders${q}`);
+  return request<{ orders: Order[]; total: number }>(`/orders${q}`);
 }
 
 export async function updateOrderStatus(orderId: number, status: string, rejectionReason?: string) {
@@ -687,6 +697,7 @@ export interface AnalyticsReport {
   range: AnalyticsRange;
   summary: {
     orderCount: number;
+    billableOrderCount: number;
     activeOrderCount: number;
     completedOrderCount: number;
     cancelledOrderCount: number;
@@ -698,7 +709,7 @@ export interface AnalyticsReport {
     completionRate: number;
     todayRevenue: number;
     yesterdayRevenue: number;
-    revenueDelta: number;
+    revenueDelta: number | null;
     totalStays: number;
     returningStays: number;
     newStays: number;
