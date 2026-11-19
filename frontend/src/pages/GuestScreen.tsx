@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useCallback } from "react";
+import React, { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { useLocation } from "wouter";
 import {
   verifyStay,
@@ -65,6 +65,7 @@ import {
   Send,
 } from "lucide-react";
 import { cn } from "../lib/utils";
+import { usePropertyLogo } from "../lib/usePropertyName";
 
 interface CartLineItem {
   cartItemId: string;
@@ -147,6 +148,8 @@ const HOUSEKEEPING_SERVICES = [
 ];
 
 export function GuestScreen() {
+  const loadingLogo = usePropertyLogo();
+  const initialLoadStartedAt = useRef(performance.now());
   const [, setLocation] = useLocation();
 
   // Authentication & Stay State
@@ -213,6 +216,22 @@ export function GuestScreen() {
     document.title = property?.name ? `${property.name} · In-Room Dining` : "In-Room Dining";
   }, [property?.name]);
 
+  useEffect(() => {
+    const icon = document.querySelector<HTMLLinkElement>('link[rel="icon"]');
+    if (!icon) return;
+    icon.href = property?.logoUrl || "/cafe-favicon.svg";
+    icon.type = property?.logoUrl?.startsWith("data:image/webp") ? "image/webp" : "image/svg+xml";
+  }, [property?.logoUrl]);
+
+  useEffect(() => {
+    const onLogoUpdated = (event: Event) => {
+      const logoUrl = (event as CustomEvent<string | null>).detail;
+      setProperty((current) => current ? { ...current, logoUrl } : current);
+    };
+    window.addEventListener("property-logo-updated", onLogoUpdated);
+    return () => window.removeEventListener("property-logo-updated", onLogoUpdated);
+  }, []);
+
   // 1. Initial Stay Verification
   const verifyToken = useCallback(async (token: string) => {
     setAuthLoading(true);
@@ -229,6 +248,9 @@ export function GuestScreen() {
       setAuthError(err.message || "Invalid or expired in-room dining access.");
       throw err;
     } finally {
+      const minVisibleMs = window.matchMedia("(prefers-reduced-motion: reduce)").matches ? 450 : 2300;
+      const remainingMs = Math.max(0, minVisibleMs - (performance.now() - initialLoadStartedAt.current));
+      if (remainingMs > 0) await new Promise<void>((resolve) => window.setTimeout(resolve, remainingMs));
       setAuthLoading(false);
     }
   }, []);
@@ -656,11 +678,35 @@ export function GuestScreen() {
   // ── Render Case 1: Initial Loading ──
   if (authLoading) {
     return (
-      <div className="min-h-[100dvh] bg-[#FAF8F5] flex flex-col items-center justify-center p-6 text-center">
-        <div className="w-12 h-12 rounded-full border-3 border-[#B88223] border-t-transparent animate-spin mb-4" />
-        <h2 className="font-serif text-xl font-bold text-[#1E150F]">In-Room Dining</h2>
-        <p className="font-script text-base text-[#8E6314] mt-0.5">In-Room Dining Service</p>
-        <p className="text-xs text-[#73685C] mt-2">Connecting to suite...</p>
+      <div className="relative isolate flex min-h-[100dvh] flex-col items-center justify-center overflow-hidden bg-[#302015] px-6 py-10 text-center" role="status" aria-live="polite">
+        <img src="/suite-loader-scene.jpg" alt="" aria-hidden="true" className="suite-loader-scene pointer-events-none absolute inset-0 z-0 h-full w-full object-cover object-[58%_center]" />
+        <div aria-hidden="true" className="pointer-events-none absolute inset-0 z-0 bg-[linear-gradient(180deg,rgba(30,19,12,0.42)_0%,rgba(33,21,14,0.34)_48%,rgba(30,18,11,0.52)_100%)]" />
+        <div aria-hidden="true" className="pointer-events-none absolute inset-0 z-0 bg-[radial-gradient(ellipse_at_50%_49%,rgba(34,21,14,0.38)_0%,rgba(34,21,14,0.1)_48%,transparent_72%)]" />
+        <div className="pointer-events-none absolute inset-0 z-[1] overflow-hidden" aria-hidden="true">
+          <div className="suite-loader-piece suite-loader-piece-dining absolute left-[5%] top-[8%] h-[76px] w-[108px] overflow-hidden rounded-2xl border-2 border-[#F5EAD5]/80 shadow-2xl sm:left-[14%] sm:top-[10%] sm:h-28 sm:w-40">
+            <img src="/in-room-dining-card.jpg" alt="" className="h-full w-full object-cover object-[68%_center]" />
+          </div>
+          <div className="suite-loader-piece suite-loader-piece-room absolute right-[5%] top-[12%] h-[84px] w-[72px] overflow-hidden rounded-2xl border-2 border-[#F5EAD5]/80 shadow-2xl sm:right-[14%] sm:top-[13%] sm:h-32 sm:w-28">
+            <img src="/room-service-card.jpg" alt="" className="h-full w-full object-cover object-[68%_center]" />
+          </div>
+          <div className="suite-loader-piece suite-loader-piece-suite absolute bottom-[8%] left-[7%] h-[68px] w-[104px] overflow-hidden rounded-2xl border-2 border-[#F5EAD5]/80 shadow-2xl sm:bottom-[10%] sm:left-[18%] sm:h-20 sm:w-32">
+            <img src="/suite-welcome-card.jpg" alt="" className="h-full w-full object-cover object-[68%_center]" />
+          </div>
+          <div className="suite-loader-piece suite-loader-piece-amenities absolute bottom-[19%] right-[6%] h-[76px] w-[108px] overflow-hidden rounded-2xl border-2 border-[#F5EAD5]/80 shadow-2xl sm:bottom-[18%] sm:right-[18%] sm:h-24 sm:w-36">
+            <img src="/suite-loader-amenities.jpg" alt="" className="h-full w-full object-cover object-center" />
+          </div>
+        </div>
+        <div className="relative z-10 flex flex-col items-center">
+        <div className="suite-loader-mark relative mb-6 flex h-24 w-24 items-center justify-center overflow-hidden rounded-[26px] border border-[#E2C98F] bg-[#FFFDF9] p-3 shadow-[0_8px_28px_rgba(20,12,8,0.38)]" aria-hidden="true">
+            <img src={loadingLogo || "/kusum-kunja-cafe-logo.png"} alt="" className="h-full w-full object-contain" />
+        </div>
+        <h2 className="suite-loader-copy font-serif text-3xl font-semibold tracking-tight text-[#FFF9EF] sm:text-4xl">Preparing your suite</h2>
+        <p className="suite-loader-copy mt-2 max-w-[90vw] font-script text-lg text-[#E9C77D]">Your stay is almost ready</p>
+        <p className="suite-loader-copy mt-3 text-xs tracking-wide text-[#F3E9DB]">Connecting to your stay</p>
+        <span className="suite-loader-trace mt-7 h-px w-36 overflow-hidden rounded-full bg-[#F3E9DB]/30" aria-hidden="true">
+          <span className="block h-full w-1/2 rounded-full bg-[#E9C77D]" />
+        </span>
+        </div>
       </div>
     );
   }
@@ -670,7 +716,7 @@ export function GuestScreen() {
     return (
       <div className="min-h-[100dvh] bg-[#FAF8F5] flex flex-col justify-center items-center px-4 py-8">
         <div className="w-full max-w-sm bg-[#FFFDF9] border border-[#E5DDD1] rounded-3xl p-6 sm:p-8 shadow-xl text-center animate-in fade-in zoom-in-95 duration-200">
-          <img src="/kusum-kunja-cafe-logo.png" alt="Kusum Kunja Café" className="mx-auto mb-4 h-16 w-16 rounded-full border border-[#ECD7A9] object-cover shadow-xs" />
+          <img src={property?.logoUrl || "/kusum-kunja-cafe-logo.png"} alt={`${property?.name || "Property"} logo`} className="mx-auto mb-4 h-16 w-16 rounded-2xl border border-[#ECD7A9] bg-[#FFFDF9] p-1 object-contain shadow-xs" />
 
           <h1 className="font-serif text-2xl font-bold text-[#1E150F] mb-1">
             In-Room Dining
@@ -708,7 +754,7 @@ export function GuestScreen() {
       <header className="sticky top-0 z-40 bg-[#F8F5EF]/95 backdrop-blur-md border-b border-[#E5DDD1] shadow-xs">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 py-3 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <img src="/kusum-kunja-cafe-logo.png" alt="Kusum Kunja Café" className="w-8 h-8 rounded-full border border-[#ECD7A9] object-cover shadow-2xs" />
+            <img src={property?.logoUrl || "/kusum-kunja-cafe-logo.png"} alt={`${property?.name || "Property"} logo`} className="w-8 h-8 rounded-xl border border-[#ECD7A9] bg-[#FFFDF9] p-0.5 object-contain shadow-2xs" />
             <div>
               <div className="flex items-center gap-2">
                 <span className="font-serif text-[17px] font-bold leading-tight tracking-tight text-[#29231F] sm:text-[19px]">
@@ -765,18 +811,32 @@ export function GuestScreen() {
         {serviceMode === "hub" && (
           <div className="mx-auto max-w-md sm:max-w-2xl lg:max-w-4xl space-y-4 sm:space-y-6">
             {/* Suite Welcome Banner */}
-            <div className="relative overflow-hidden rounded-3xl border border-[#DED4C7] bg-gradient-to-br from-[#FFFDF9] via-[#FAF3E6]/60 to-[#F5ECE0] p-6 sm:p-8 shadow-sm">
-              <div className="max-w-xl">
-                <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest bg-[#FAF3E6] text-[#8E6314] border border-[#ECD7A9] mb-3">
+            <div className="relative isolate min-h-[250px] overflow-hidden rounded-[28px] border border-[#7A5A3D] bg-[#302015] p-6 shadow-md sm:min-h-[270px] sm:p-8">
+              <img
+                src="/suite-welcome-card.jpg"
+                alt=""
+                aria-hidden="true"
+                className="pointer-events-none absolute inset-0 z-0 h-full w-full object-cover object-[62%_center]"
+              />
+              <div
+                aria-hidden="true"
+                className="pointer-events-none absolute inset-0 z-0 bg-[linear-gradient(90deg,rgba(39,25,17,0.94)_0%,rgba(47,31,20,0.84)_48%,rgba(43,29,20,0.4)_100%)]"
+              />
+              <div
+                aria-hidden="true"
+                className="pointer-events-none absolute inset-0 z-0 bg-[linear-gradient(0deg,rgba(30,19,13,0.42)_0%,transparent_58%)]"
+              />
+              <div className="relative z-10 max-w-xl">
+                <div className="mb-4 inline-flex items-center gap-1.5 rounded-full border border-[#E4C889]/55 bg-[#2D2118]/55 px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.18em] text-[#F2D99F]">
                   <Sparkles className="w-3.5 h-3.5" /> In-Suite Guest Portal
                 </div>
-                <h2 className="font-serif text-2xl sm:text-3xl font-bold text-[#1E150F]">
+                <h2 className="font-serif text-2xl font-bold leading-tight text-[#FFF9EF] sm:text-4xl">
                   Welcome to Suite {stayData.room?.roomNumber}
                 </h2>
-                <p className="font-script text-lg text-[#8E6314] mt-0.5">
+                <p className="mt-1 font-script text-lg text-[#E9C77D] sm:text-xl">
                   Tailored luxury resort services for {stayData.guestName}
                 </p>
-                <p className="text-xs sm:text-sm text-[#73685C] mt-2 leading-relaxed">
+                <p className="mt-3 max-w-lg text-xs leading-relaxed text-[#F3E9DB] sm:text-sm">
                   Choose an in-suite service below. Dining orders and room-service requests are sent to our team in real time.
                 </p>
               </div>
@@ -831,9 +891,23 @@ export function GuestScreen() {
               {/* Option 1: In Room Dining */}
               <div
                 onClick={() => setServiceMode("room-service")}
-                className="group relative cursor-pointer overflow-hidden rounded-3xl border border-[#E5DDD1] bg-[#FFFDF9] p-6 shadow-sm hover:border-[#B88223] hover:shadow-md transition-all flex flex-col justify-between"
+                className="group relative isolate flex min-h-[300px] cursor-pointer flex-col justify-between overflow-hidden rounded-3xl border border-[#E5DDD1] bg-[#FFFDF9] p-6 shadow-sm transition-all hover:border-[#B88223] hover:shadow-md"
               >
-                <div className="space-y-3">
+                <img
+                  src="/in-room-dining-card.jpg"
+                  alt=""
+                  aria-hidden="true"
+                  className="pointer-events-none absolute inset-0 z-0 h-full w-full object-cover object-[62%_center] transition-transform duration-700 group-hover:scale-[1.025]"
+                />
+                <div
+                  aria-hidden="true"
+                  className="pointer-events-none absolute inset-0 z-0 bg-[linear-gradient(90deg,rgba(255,253,249,0.97)_0%,rgba(255,253,249,0.91)_42%,rgba(255,253,249,0.48)_72%,rgba(255,253,249,0.08)_100%)]"
+                />
+                <div
+                  aria-hidden="true"
+                  className="pointer-events-none absolute inset-0 z-0 bg-[linear-gradient(0deg,rgba(255,253,249,0.7)_0%,transparent_42%)]"
+                />
+                <div className="relative z-10 space-y-3">
                   <div className="flex items-center justify-between">
                     <div className="w-12 h-12 rounded-2xl bg-[#54321E] text-white flex items-center justify-center shadow-xs group-hover:scale-105 transition-transform">
                       <ChefHat className="w-6 h-6 text-[#ECD7A9]" />
@@ -855,7 +929,7 @@ export function GuestScreen() {
                   </div>
                 </div>
 
-                <div className="mt-6 pt-4 border-t border-[#E5DDD1] flex items-center justify-between">
+                <div className="relative z-10 mt-6 flex items-center justify-between border-t border-[#8E725D]/25 pt-4">
                   <span className="text-xs font-bold text-[#54321E] group-hover:text-[#8E6314] flex items-center gap-1">
                     Browse Menu & Order <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
                   </span>
@@ -870,9 +944,23 @@ export function GuestScreen() {
               {/* Option 2: Room Service */}
               <div
                 onClick={() => setServiceMode("housekeeping")}
-                className="group relative cursor-pointer overflow-hidden rounded-3xl border border-[#E5DDD1] bg-[#FFFDF9] p-6 shadow-sm hover:border-[#B88223] hover:shadow-md transition-all flex flex-col justify-between"
+                className="group relative isolate flex min-h-[300px] cursor-pointer flex-col justify-between overflow-hidden rounded-3xl border border-[#E5DDD1] bg-[#FFFDF9] p-6 shadow-sm transition-all hover:border-[#B88223] hover:shadow-md"
               >
-                <div className="space-y-3">
+                <img
+                  src="/room-service-card.jpg"
+                  alt=""
+                  aria-hidden="true"
+                  className="pointer-events-none absolute inset-0 z-0 h-full w-full object-cover object-[62%_center] transition-transform duration-700 group-hover:scale-[1.025]"
+                />
+                <div
+                  aria-hidden="true"
+                  className="pointer-events-none absolute inset-0 z-0 bg-[linear-gradient(90deg,rgba(255,253,249,0.97)_0%,rgba(255,253,249,0.91)_42%,rgba(255,253,249,0.48)_72%,rgba(255,253,249,0.08)_100%)]"
+                />
+                <div
+                  aria-hidden="true"
+                  className="pointer-events-none absolute inset-0 z-0 bg-[linear-gradient(0deg,rgba(255,253,249,0.7)_0%,transparent_42%)]"
+                />
+                <div className="relative z-10 space-y-3">
                   <div className="flex items-center justify-between">
                     <div className="w-12 h-12 rounded-2xl bg-[#29231F] text-white flex items-center justify-center shadow-xs group-hover:scale-105 transition-transform">
                       <Sparkles className="w-6 h-6 text-[#ECD7A9]" />
@@ -894,7 +982,7 @@ export function GuestScreen() {
                   </div>
                 </div>
 
-                <div className="mt-6 pt-4 border-t border-[#E5DDD1] flex items-center justify-between">
+                <div className="relative z-10 mt-6 flex items-center justify-between border-t border-[#8E725D]/25 pt-4">
                   <span className="text-xs font-bold text-[#29231F] group-hover:text-[#8E6314] flex items-center gap-1">
                     Request Room Service <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
                   </span>
@@ -1169,7 +1257,7 @@ export function GuestScreen() {
                 </div>
 
                 {/* Operating Hours Note */}
-                {property && (
+                {property?.openingTime?.trim() && property?.closingTime?.trim() && (
                   <div className="pt-0.5 flex items-center gap-1.5 text-[10px] sm:text-[11px] font-mono text-[#73685C]">
                     <Clock className="w-3 h-3 text-[#B88223]" />
                     <span>Service: {property.openingTime} – {property.closingTime}</span>

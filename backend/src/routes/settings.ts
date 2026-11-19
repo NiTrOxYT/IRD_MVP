@@ -40,7 +40,7 @@ router.put("/", requireStaff("settings:manage"), async (req: Request, res: Respo
     return;
   }
 
-  const { name, currency, taxRatePercent, serviceChargePercent, irdEnabled, openingTime, closingTime, contactNumber } = parse.data;
+  const { name, currency, taxRatePercent, serviceChargePercent, irdEnabled, openingTime, closingTime, contactNumber, logoUrl } = parse.data;
   const staff = req.staff!;
 
   try {
@@ -53,20 +53,34 @@ router.put("/", requireStaff("settings:manage"), async (req: Request, res: Respo
            ird_enabled = COALESCE($5, ird_enabled),
            opening_time = COALESCE($6, opening_time),
            closing_time = COALESCE($7, closing_time),
-           contact_number = COALESCE($8, contact_number)
+           contact_number = COALESCE($8, contact_number),
+           logo_url = CASE WHEN $9 THEN $10 ELSE logo_url END
        WHERE id = 1
        RETURNING *`,
-      [name, currency, taxRatePercent, serviceChargePercent, irdEnabled, openingTime, closingTime, contactNumber]
+      [name, currency, taxRatePercent, serviceChargePercent, irdEnabled, openingTime, closingTime, contactNumber, logoUrl !== undefined, logoUrl]
     );
 
     // Audit log
     await query(
       `INSERT INTO audit_logs (property_id, staff_user_id, staff_username, action, target_type, target_id, details)
        VALUES ($1, $2, $3, 'SETTINGS_UPDATE', 'settings', '1', $4)`,
-      [staff.propertyId, staff.id, staff.username, JSON.stringify(parse.data)]
+      [staff.propertyId, staff.id, staff.username, JSON.stringify({ ...parse.data, logoUrl: undefined, logoUpdated: logoUrl !== undefined })]
     );
 
-    res.json({ success: true, property: result.rows[0] });
+    const row = result.rows[0];
+    res.json({ success: true, property: {
+      id: row.id,
+      name: row.name,
+      code: row.code,
+      currency: row.currency,
+      taxRatePercent: Number(row.tax_rate_percent),
+      serviceChargePercent: Number(row.service_charge_percent),
+      irdEnabled: row.ird_enabled,
+      openingTime: row.opening_time,
+      closingTime: row.closing_time,
+      logoUrl: row.logo_url,
+      contactNumber: row.contact_number,
+    } });
   } catch (err) {
     res.status(500).json({ error: "Failed to update settings" });
   }

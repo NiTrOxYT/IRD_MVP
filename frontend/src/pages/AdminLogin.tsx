@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { useLocation } from "wouter";
 import { loginStaff } from "../lib/api";
-import { usePropertyName } from "../lib/usePropertyName";
+import { usePropertyLogo, usePropertyName } from "../lib/usePropertyName";
 import { Lock, User, ArrowRight } from "lucide-react";
 
 export function AdminLogin() {
@@ -11,6 +11,7 @@ export function AdminLogin() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const propertyName = usePropertyName();
+  const propertyLogo = usePropertyLogo();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -42,7 +43,7 @@ export function AdminLogin() {
     <div className="min-h-[calc(100vh-4rem)] bg-[#FAF8F5] flex flex-col justify-center items-center px-4 py-12">
       <div className="max-w-md w-full bg-[#FFFDF9] border border-[#E5DDD1] rounded-3xl p-8 shadow-xl animate-in fade-in zoom-in-95 duration-200">
         <div className="text-center mb-8">
-          <img src="/kusum-kunja-cafe-logo.png" alt="Kusum Kunja Café" className="mx-auto mb-4 h-16 w-16 rounded-full border border-[#ECD7A9] object-cover shadow-xs" />
+          <img src={propertyLogo || "/kusum-kunja-cafe-logo.png"} alt={`${propertyName || "Property"} logo`} className="mx-auto mb-4 h-16 w-16 rounded-2xl border border-[#ECD7A9] bg-[#FFFDF9] p-1 object-contain shadow-xs" />
           {propertyName && <span className="text-[10px] font-bold uppercase tracking-widest text-[#8E6314] block mb-1">{propertyName}</span>}
           <h1 className="font-serif text-2xl font-bold text-[#1E150F]">
             Staff Operations Portal

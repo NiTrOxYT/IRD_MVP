@@ -258,6 +258,77 @@ body,
   bottom: max(env(safe-area-inset-bottom), 16px);
 }
 
+@keyframes suite-loader-scene {
+  from { transform: scale(1.02); }
+  to { transform: scale(1.1); }
+}
+
+@keyframes suite-loader-piece-dining {
+  0% { opacity: 0; transform: translate3d(-34vw, -2vh, 0) rotate(-12deg) scale(0.82); }
+  24% { opacity: 1; }
+  48% { opacity: 1; transform: translate3d(0, 0, 0) rotate(-6deg) scale(1); }
+  68% { opacity: 0.7; transform: translate3d(0, -1vh, 0) rotate(-3deg) scale(0.96); }
+  78%, 100% { opacity: 0; transform: translate3d(-2vw, -2vh, 0) rotate(0) scale(0.9); }
+}
+
+@keyframes suite-loader-piece-room {
+  0% { opacity: 0; transform: translate3d(34vw, -2vh, 0) rotate(12deg) scale(0.82); }
+  24% { opacity: 1; }
+  48% { opacity: 1; transform: translate3d(0, 0, 0) rotate(6deg) scale(1); }
+  68% { opacity: 0.7; transform: translate3d(0, -1vh, 0) rotate(3deg) scale(0.96); }
+  78%, 100% { opacity: 0; transform: translate3d(2vw, -2vh, 0) rotate(0) scale(0.9); }
+}
+
+@keyframes suite-loader-piece-suite {
+  0% { opacity: 0; transform: translate3d(-28vw, 2vh, 0) rotate(10deg) scale(0.82); }
+  32% { opacity: 1; }
+  54% { opacity: 1; transform: translate3d(0, 0, 0) rotate(-5deg) scale(1); }
+  72% { opacity: 0.55; transform: translate3d(0, 1vh, 0) rotate(-2deg) scale(0.96); }
+  82%, 100% { opacity: 0; transform: translate3d(-1vw, 2vh, 0) rotate(0) scale(0.9); }
+}
+
+@keyframes suite-loader-piece-amenities {
+  0% { opacity: 0; transform: translate3d(30vw, 3vh, 0) rotate(10deg) scale(0.82); }
+  34% { opacity: 1; }
+  56% { opacity: 1; transform: translate3d(0, 0, 0) rotate(5deg) scale(1); }
+  74% { opacity: 0.55; transform: translate3d(0, 1vh, 0) rotate(2deg) scale(0.96); }
+  84%, 100% { opacity: 0; transform: translate3d(2vw, 2vh, 0) rotate(0) scale(0.9); }
+}
+
+@keyframes suite-loader-mark-in {
+  0%, 24% { opacity: 0; transform: scale(0.72) translateY(8px); }
+  68% { opacity: 1; transform: scale(1.04) translateY(0); }
+  84%, 100% { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+@keyframes suite-loader-copy-in {
+  from { opacity: 0; transform: translate3d(0, 12px, 0); }
+  to { opacity: 1; transform: translate3d(0, 0, 0); }
+}
+
+@keyframes suite-loader-trace {
+  from { transform: translateX(-110%); }
+  to { transform: translateX(210%); }
+}
+
+.suite-loader-scene { animation: suite-loader-scene 18s ease-in-out infinite alternate; }
+.suite-loader-piece-dining { animation: suite-loader-piece-dining 1.8s cubic-bezier(0.16, 1, 0.3, 1) both; }
+.suite-loader-piece-room { animation: suite-loader-piece-room 1.8s cubic-bezier(0.16, 1, 0.3, 1) both; }
+.suite-loader-piece-suite { animation: suite-loader-piece-suite 1.8s cubic-bezier(0.16, 1, 0.3, 1) both; }
+.suite-loader-piece-amenities { animation: suite-loader-piece-amenities 1.8s cubic-bezier(0.16, 1, 0.3, 1) both; }
+.suite-loader-mark { animation: suite-loader-mark-in 1.5s cubic-bezier(0.16, 1, 0.3, 1) 180ms both; }
+.suite-loader-copy { animation: suite-loader-copy-in 450ms cubic-bezier(0.16, 1, 0.3, 1) 550ms both; }
+.suite-loader-trace > span { animation: suite-loader-trace 1.6s cubic-bezier(0.16, 1, 0.3, 1) infinite; }
+
+@media (prefers-reduced-motion: reduce) {
+  .suite-loader-mark,
+  .suite-loader-scene,
+  .suite-loader-piece,
+  .suite-loader-copy,
+  .suite-loader-trace > span { animation: none; }
+  .suite-loader-piece { opacity: 0.2; }
+}
+
 @media (min-width: 1024px) {
   .floating-order-bar {
     bottom: 24px;

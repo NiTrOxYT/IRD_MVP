@@ -3,7 +3,7 @@ import { Link, useLocation } from "wouter";
 import { subscribeConnectionStatus } from "../lib/socket";
 import { getStaffMe, logoutStaff, StaffUser } from "../lib/api";
 import { hasPermission } from "../lib/permissions";
-import { usePropertyName } from "../lib/usePropertyName";
+import { usePropertyLogo, usePropertyName } from "../lib/usePropertyName";
 import {
   BarChart3,
   Boxes,
@@ -31,6 +31,7 @@ export function Navbar() {
   const isHousekeeping = location.startsWith("/housekeeping");
   const isAdmin = location.startsWith("/admin");
   const propertyName = usePropertyName(!isGuestRoute);
+  const propertyLogo = usePropertyLogo(!isGuestRoute);
 
   useEffect(() => {
     if (isGuestRoute) return;
@@ -121,7 +122,7 @@ export function Navbar() {
     <header className="sticky top-0 z-40 border-b border-[#E5DDD1] bg-[#F8F5EF]/95 shadow-xs backdrop-blur-md">
         <div className="mx-auto flex h-16 max-w-7xl items-center justify-between gap-3 px-4 sm:gap-4 sm:px-6">
         <div className="flex min-w-0 items-center gap-3 xl:shrink-0">
-          <img src="/kusum-kunja-cafe-logo.png" alt="Kusum Kunja Café" className="h-9 w-9 shrink-0 rounded-full border border-[#ECD7A9] object-cover shadow-2xs" />
+          <img src={propertyLogo || "/kusum-kunja-cafe-logo.png"} alt={`${propertyName || "Property"} logo`} className="h-9 w-9 shrink-0 rounded-xl border border-[#ECD7A9] bg-[#FFFDF9] p-0.5 object-contain shadow-2xs" />
           <div className="min-w-0">
             <h1 className="whitespace-nowrap font-serif text-base font-bold tracking-tight text-[#29231F] sm:text-lg">{propertyName || "In-Room Dining"}</h1>
             <div className="flex items-center gap-2">

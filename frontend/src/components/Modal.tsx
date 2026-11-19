@@ -56,6 +56,16 @@ export function Modal({
           className
         )}
       >
+        {!title && (
+          <button
+            type="button"
+            onClick={onClose}
+            className="absolute right-3 top-3 z-20 flex h-11 w-11 items-center justify-center rounded-full border border-[#E5DDD1] bg-[#FFFDF9]/95 text-[#39291F] shadow-md backdrop-blur-sm transition-colors hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#B88223]"
+            aria-label="Close dialog"
+          >
+            <X className="h-5 w-5" />
+          </button>
+        )}
         {title && (
           <div className="relative px-6 py-5 border-b border-[#E5DDD1] bg-[#FAF8F5]/80">
             <div className="flex items-start justify-between gap-4">

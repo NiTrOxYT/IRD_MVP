@@ -88,4 +88,5 @@ export const settingsSchema = z.object({
   openingTime: z.string().regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/).optional(),
   closingTime: z.string().regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/).optional(),
   contactNumber: z.string().optional(),
+  logoUrl: z.string().max(70_000).nullable().optional(),
 });

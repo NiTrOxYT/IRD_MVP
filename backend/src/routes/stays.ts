@@ -20,7 +20,7 @@ router.get("/verify", async (req: Request, res: Response): Promise<void> => {
       `SELECT s.id, s.property_id, s.guest_name, s.guest_phone, s.stay_token,
               s.check_in_at, s.check_out_at, s.status, s.notes,
               r.id as room_id, r.room_number, r.floor, r.wing,
-              p.name as property_name, p.currency, p.tax_rate_percent, p.service_charge_percent, p.ird_enabled
+              p.name as property_name, p.currency, p.tax_rate_percent, p.service_charge_percent, p.ird_enabled, p.logo_url
        FROM stays s
        JOIN rooms r ON s.room_id = r.id
        JOIN properties p ON s.property_id = p.id
@@ -64,6 +64,7 @@ router.get("/verify", async (req: Request, res: Response): Promise<void> => {
         taxRatePercent: Number(row.tax_rate_percent),
         serviceChargePercent: Number(row.service_charge_percent),
         irdEnabled: row.ird_enabled,
+        logoUrl: row.logo_url,
       },
     });
   } catch (err) {

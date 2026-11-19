@@ -15,8 +15,40 @@ import {
   FileText,
   RotateCcw,
   Sparkles,
+  Upload,
+  Trash2,
 } from "lucide-react";
 import { cn } from "../lib/utils";
+
+async function compressLogo(file: File): Promise<string> {
+  if (!["image/png", "image/jpeg", "image/webp"].includes(file.type)) {
+    throw new Error("Choose a PNG, JPG, or WebP image.");
+  }
+  if (file.size > 10 * 1024 * 1024) throw new Error("The image must be smaller than 10 MB.");
+
+  const objectUrl = URL.createObjectURL(file);
+  try {
+    const image = new Image();
+    image.src = objectUrl;
+    await image.decode();
+    if (image.naturalWidth > 12000 || image.naturalHeight > 12000) {
+      throw new Error("This image is too large to process. Choose a smaller logo.");
+    }
+
+    for (const maxSize of [512, 384, 256]) {
+      const scale = Math.min(1, maxSize / Math.max(image.naturalWidth, image.naturalHeight));
+      const canvas = document.createElement("canvas");
+      canvas.width = Math.max(1, Math.round(image.naturalWidth * scale));
+      canvas.height = Math.max(1, Math.round(image.naturalHeight * scale));
+      canvas.getContext("2d")!.drawImage(image, 0, 0, canvas.width, canvas.height);
+      const dataUrl = canvas.toDataURL("image/webp", 0.72);
+      if (dataUrl.length <= 70_000) return dataUrl;
+    }
+    throw new Error("This logo could not be compressed enough. Choose a simpler image.");
+  } finally {
+    URL.revokeObjectURL(objectUrl);
+  }
+}
 
 export function AdminSettings() {
   const [settings, setSettings] = useState<PropertySettings | null>(null);
@@ -24,6 +56,10 @@ export function AdminSettings() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [savedSuccess, setSavedSuccess] = useState(false);
+  const [logoDraft, setLogoDraft] = useState<string | null | undefined>(undefined);
+  const [logoSaving, setLogoSaving] = useState(false);
+  const [logoError, setLogoError] = useState("");
+  const [logoSaved, setLogoSaved] = useState(false);
 
   // Form
   const [name, setName] = useState("");
@@ -93,6 +129,35 @@ export function AdminSettings() {
     }
   };
 
+  const handleLogoFile = async (file?: File) => {
+    if (!file) return;
+    setLogoError("");
+    setLogoSaved(false);
+    try {
+      setLogoDraft(await compressLogo(file));
+    } catch (err: any) {
+      setLogoError(err.message || "Could not process this image.");
+    }
+  };
+
+  const handleSaveLogo = async () => {
+    if (logoDraft === undefined) return;
+    setLogoSaving(true);
+    setLogoError("");
+    try {
+      const res = await updatePropertySettings({ logoUrl: logoDraft });
+      setSettings(res.property);
+      window.dispatchEvent(new CustomEvent("property-logo-updated", { detail: logoDraft }));
+      setLogoDraft(undefined);
+      setLogoSaved(true);
+      setTimeout(() => setLogoSaved(false), 3000);
+    } catch (err: any) {
+      setLogoError(err.message || "Failed to save the logo.");
+    } finally {
+      setLogoSaving(false);
+    }
+  };
+
   return (
     <div className="min-h-[100dvh] bg-[#FAF8F5] py-8 px-4 sm:px-6 max-w-7xl mx-auto space-y-8">
       {/* Header matching Cafe Command Center */}
@@ -122,7 +187,40 @@ export function AdminSettings() {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Settings Form */}
-        <div className="lg:col-span-1 bg-[#FFFDF9] border border-[#E5DDD1] rounded-3xl p-6 shadow-xs h-fit space-y-6">
+        <div className="lg:col-span-1 space-y-6">
+        <section className="bg-[#FFFDF9] border border-[#E5DDD1] rounded-3xl p-6 shadow-xs space-y-4">
+          <div className="pb-3 border-b border-[#E5DDD1]">
+            <h2 className="font-serif text-xl font-bold text-[#1E150F]">Property Logo</h2>
+            <p className="mt-1 text-xs text-[#73685C]">Upload a logo to use across guest and staff screens.</p>
+          </div>
+          <div className="flex items-center gap-4">
+            <div className="flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-[#E5DDD1] bg-[#FAF8F5] p-2">
+              {(logoDraft === undefined ? settings?.logoUrl : logoDraft) ? (
+                <img src={logoDraft === undefined ? settings?.logoUrl || undefined : logoDraft || undefined} alt="Property logo preview" className="h-full w-full object-contain" />
+              ) : <Sparkles className="h-7 w-7 text-[#B88223]" />}
+            </div>
+            <div className="min-w-0 space-y-2">
+              <label className="inline-flex cursor-pointer items-center gap-2 rounded-xl border border-[#E5DDD1] bg-[#FAF8F5] px-3 py-2 text-xs font-semibold text-[#1E150F] hover:bg-[#F2EBE1]">
+                <Upload className="h-4 w-4 text-[#8E6314]" /> Choose logo
+                <input type="file" accept="image/png,image/jpeg,image/webp" className="sr-only" onChange={(e) => { void handleLogoFile(e.target.files?.[0]); e.currentTarget.value = ""; }} />
+              </label>
+              <p className="text-[10px] text-[#73685C]">PNG, JPG, or WebP · up to 10 MB</p>
+            </div>
+          </div>
+          {logoError && <p role="alert" className="text-xs text-red-700">{logoError}</p>}
+          {logoSaved && <p role="status" className="text-xs font-medium text-emerald-700">Logo updated successfully.</p>}
+          <div className="flex gap-2">
+            <button type="button" onClick={() => void handleSaveLogo()} disabled={logoDraft === undefined || logoSaving} className="flex-1 rounded-xl bg-[#1E150F] px-4 py-2.5 text-xs font-bold text-white shadow-sm transition hover:bg-[#39271C] disabled:cursor-not-allowed disabled:opacity-45">
+              {logoSaving ? "Saving logo…" : "Save Logo"}
+            </button>
+            {(logoDraft !== undefined ? logoDraft !== null : !!settings?.logoUrl) && (
+              <button type="button" onClick={() => { setLogoDraft(null); setLogoError(""); setLogoSaved(false); }} className="inline-flex items-center gap-1.5 rounded-xl border border-[#E5DDD1] px-3 py-2 text-xs font-semibold text-[#73685C] hover:bg-[#FAF8F5]">
+                <Trash2 className="h-3.5 w-3.5" /> Remove
+              </button>
+            )}
+          </div>
+        </section>
+        <div className="bg-[#FFFDF9] border border-[#E5DDD1] rounded-3xl p-6 shadow-xs h-fit space-y-6">
           <div className="flex items-center justify-between pb-3 border-b border-[#E5DDD1]">
             <h2 className="font-serif text-xl font-bold text-[#1E150F] flex items-center gap-2">
               <Settings className="w-5 h-5 text-[#B88223]" />
@@ -243,6 +341,7 @@ export function AdminSettings() {
               {saving ? "Saving Changes..." : "Save Operating Settings"}
             </button>
           </form>
+        </div>
         </div>
 
         {/* Audit Log Table */}
