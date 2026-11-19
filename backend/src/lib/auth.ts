@@ -6,8 +6,10 @@ const JWT_SECRET = process.env.JWT_SECRET || "ird_resort_dev_secret_key_84920491
 export interface StaffSessionPayload {
   id: number;
   username: string;
-  role: "admin" | "staff" | "kitchen";
+  role: string;
+  roleId?: number;
   propertyId: number;
+  tokenVersion?: number;
 }
 
 export function hashPassword(plainText: string): string {

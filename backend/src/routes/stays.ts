@@ -73,7 +73,7 @@ router.get("/verify", async (req: Request, res: Response): Promise<void> => {
 });
 
 // Staff: List stays
-router.get("/", requireStaff(["admin", "staff"]), async (req: Request, res: Response): Promise<void> => {
+router.get("/", requireStaff("stays:view"), async (req: Request, res: Response): Promise<void> => {
   const statusFilter = req.query.status as string | undefined;
 
   try {
@@ -101,7 +101,7 @@ router.get("/", requireStaff(["admin", "staff"]), async (req: Request, res: Resp
 });
 
 // Staff: Check-in a stay
-router.post("/", requireStaff(["admin", "staff"]), async (req: Request, res: Response): Promise<void> => {
+router.post("/", requireStaff("stays:create"), async (req: Request, res: Response): Promise<void> => {
   const parseResult = createStaySchema.safeParse(req.body);
   if (!parseResult.success) {
     res.status(400).json({ error: parseResult.error.errors[0].message });
@@ -171,7 +171,7 @@ router.post("/", requireStaff(["admin", "staff"]), async (req: Request, res: Res
 });
 
 // Staff: Check-out a stay
-router.post("/:id/checkout", requireStaff(["admin", "staff"]), async (req: Request, res: Response): Promise<void> => {
+router.post("/:id/checkout", requireStaff("stays:edit"), async (req: Request, res: Response): Promise<void> => {
   const stayId = Number(req.params.id);
   const staff = req.staff!;
 
@@ -210,7 +210,7 @@ router.post("/:id/checkout", requireStaff(["admin", "staff"]), async (req: Reque
 });
 
 // Staff: Revoke access
-router.post("/:id/revoke", requireStaff(["admin", "staff"]), async (req: Request, res: Response): Promise<void> => {
+router.post("/:id/revoke", requireStaff("stays:edit"), async (req: Request, res: Response): Promise<void> => {
   const stayId = Number(req.params.id);
   const staff = req.staff!;
 

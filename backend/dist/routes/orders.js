@@ -5,6 +5,7 @@ import { requireStaff } from "../middleware/auth.js";
 import { createOrderSchema, updateOrderStatusSchema } from "../lib/validation.js";
 import { generateOrderNumber, generateGuestOrderToken } from "../lib/tokens.js";
 import { broadcastOrderCreated, broadcastOrderStatusChanged } from "../socket.js";
+import { deductOrderStock, reverseOrderStock } from "../services/inventory.js";
 const router = Router();
 // Guest: Place order (strictly requires active stay context)
 router.post("/", requireActiveStay, async (req, res) => {
@@ -45,6 +46,25 @@ router.post("/", requireActiveStay, async (req, res) => {
                 return;
             }
             let itemUnitPrice = Number(dbItem.price);
+            let variantId = null;
+            let variantName = null;
+            if (item.variantId) {
+                const variantRes = await client.query("SELECT id, name, price, available FROM menu_item_variants WHERE id = $1 AND menu_item_id = $2", [item.variantId, item.menuItemId]);
+                if (variantRes.rows.length === 0) {
+                    await client.query("ROLLBACK");
+                    res.status(400).json({ error: `Selected size/variant for "${dbItem.name}" does not exist.` });
+                    return;
+                }
+                const variant = variantRes.rows[0];
+                if (!variant.available) {
+                    await client.query("ROLLBACK");
+                    res.status(400).json({ error: `"${dbItem.name} (${variant.name})" is currently unavailable.` });
+                    return;
+                }
+                itemUnitPrice = Number(variant.price);
+                variantId = variant.id;
+                variantName = variant.name;
+            }
             const selectedMods = [];
             if (item.modifierIds && item.modifierIds.length > 0) {
                 const modRes = await client.query("SELECT id, group_name, name, price_delta FROM item_modifiers WHERE id = ANY($1::int[]) AND menu_item_id = $2", [item.modifierIds, item.menuItemId]);
@@ -64,6 +84,8 @@ router.post("/", requireActiveStay, async (req, res) => {
             validatedOrderItems.push({
                 menuItemId: dbItem.id,
                 itemName: dbItem.name,
+                variantId,
+                variantName,
                 unitPrice: itemUnitPrice,
                 quantity: item.quantity,
                 selectedModifiers: selectedMods,
@@ -111,12 +133,14 @@ router.post("/", requireActiveStay, async (req, res) => {
         // Insert order line items
         for (const line of validatedOrderItems) {
             await client.query(`INSERT INTO order_items (
-          order_id, menu_item_id, item_name, unit_price, quantity,
+          order_id, menu_item_id, item_name, variant_id, variant_name, unit_price, quantity,
           selected_modifiers, line_total, notes
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`, [
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`, [
                 createdOrder.id,
                 line.menuItemId,
                 line.itemName,
+                line.variantId || null,
+                line.variantName || null,
                 line.unitPrice,
                 line.quantity,
                 JSON.stringify(line.selectedModifiers),
@@ -124,6 +148,8 @@ router.post("/", requireActiveStay, async (req, res) => {
                 line.notes || null,
             ]);
         }
+        // Atomically deduct inventory portions and recipe raw materials
+        await deductOrderStock(client, createdOrder.id, items);
         await client.query("COMMIT");
         const completeOrder = {
             ...createdOrder,
@@ -141,7 +167,11 @@ router.post("/", requireActiveStay, async (req, res) => {
     catch (err) {
         await client.query("ROLLBACK");
         console.error("[Orders] Create order error:", err);
-        res.status(500).json({ error: "Failed to place order" });
+        const status = err.status || 500;
+        res.status(status).json({
+            error: err.message || "Failed to place order",
+            code: err.code,
+        });
     }
     finally {
         client.release();
@@ -157,6 +187,8 @@ router.get("/stay", requireActiveStay, async (req, res) => {
                   'id', oi.id,
                   'menuItemId', oi.menu_item_id,
                   'itemName', oi.item_name,
+                  'variantId', oi.variant_id,
+                  'variantName', oi.variant_name,
                   'unitPrice', oi.unit_price,
                   'quantity', oi.quantity,
                   'selectedModifiers', oi.selected_modifiers,
@@ -187,6 +219,8 @@ router.get("/:id", async (req, res) => {
                   'id', oi.id,
                   'menuItemId', oi.menu_item_id,
                   'itemName', oi.item_name,
+                  'variantId', oi.variant_id,
+                  'variantName', oi.variant_name,
                   'unitPrice', oi.unit_price,
                   'quantity', oi.quantity,
                   'selectedModifiers', oi.selected_modifiers,
@@ -212,30 +246,43 @@ router.get("/:id", async (req, res) => {
 router.post("/:id/cancel", requireActiveStay, async (req, res) => {
     const orderId = Number(req.params.id);
     const stay = req.stay;
+    const client = await pool.connect();
     try {
-        const orderRes = await query("SELECT id, status, stay_id FROM orders WHERE id = $1", [orderId]);
+        await client.query("BEGIN");
+        const orderRes = await client.query("SELECT id, status, stay_id FROM orders WHERE id = $1 FOR UPDATE", [orderId]);
         if (orderRes.rows.length === 0) {
+            await client.query("ROLLBACK");
             res.status(404).json({ error: "Order not found" });
             return;
         }
         const order = orderRes.rows[0];
         if (order.stay_id !== stay.id) {
+            await client.query("ROLLBACK");
             res.status(403).json({ error: "Unauthorized access to this order" });
             return;
         }
         if (order.status !== "pending") {
+            await client.query("ROLLBACK");
             res.status(400).json({
                 error: `Order cannot be cancelled because it is already ${order.status}. Please contact room service reception directly.`,
             });
             return;
         }
-        const updateRes = await query("UPDATE orders SET status = 'cancelled', cancelled_at = NOW() WHERE id = $1 RETURNING *", [orderId]);
+        const updateRes = await client.query("UPDATE orders SET status = 'cancelled', cancelled_at = NOW() WHERE id = $1 RETURNING *", [orderId]);
+        // Atomically reverse portion inventory and recipe ingredient deductions
+        await reverseOrderStock(client, orderId, "guest_cancellation");
+        await client.query("COMMIT");
         const updated = updateRes.rows[0];
         broadcastOrderStatusChanged(updated, "pending");
         res.json({ success: true, message: "Order cancelled", order: updated });
     }
     catch (err) {
+        await client.query("ROLLBACK");
+        console.error("[Orders] Cancel order error:", err);
         res.status(500).json({ error: "Failed to cancel order" });
+    }
+    finally {
+        client.release();
     }
 });
 // Staff / Reception: List all orders with filters
@@ -249,6 +296,8 @@ router.get("/", requireStaff(["admin", "staff"]), async (req, res) => {
                  'id', oi.id,
                  'menuItemId', oi.menu_item_id,
                  'itemName', oi.item_name,
+                 'variantId', oi.variant_id,
+                 'variantName', oi.variant_name,
                  'unitPrice', oi.unit_price,
                  'quantity', oi.quantity,
                  'selectedModifiers', oi.selected_modifiers,
@@ -291,9 +340,12 @@ router.patch("/:id/status", requireStaff(["admin", "staff", "kitchen"]), async (
         return;
     }
     const { status: nextStatus, rejectionReason } = parse.data;
+    const client = await pool.connect();
     try {
-        const currentRes = await query("SELECT * FROM orders WHERE id = $1", [orderId]);
+        await client.query("BEGIN");
+        const currentRes = await client.query("SELECT * FROM orders WHERE id = $1 FOR UPDATE", [orderId]);
         if (currentRes.rows.length === 0) {
+            await client.query("ROLLBACK");
             res.status(404).json({ error: "Order not found" });
             return;
         }
@@ -304,6 +356,7 @@ router.patch("/:id/status", requireStaff(["admin", "staff", "kitchen"]), async (
             // Kitchen can only move accepted -> preparing, or preparing -> ready
             if (!(prevStatus === "accepted" && nextStatus === "preparing") &&
                 !(prevStatus === "preparing" && nextStatus === "ready")) {
+                await client.query("ROLLBACK");
                 res.status(403).json({
                     error: `Kitchen staff can only advance orders from 'accepted' to 'preparing' or 'preparing' to 'ready'. Current state: ${prevStatus}, requested: ${nextStatus}`,
                 });
@@ -323,6 +376,7 @@ router.patch("/:id/status", requireStaff(["admin", "staff", "kitchen"]), async (
                 cancelled: [],
             };
             if (!allowedTransitions[prevStatus]?.includes(nextStatus)) {
+                await client.query("ROLLBACK");
                 res.status(400).json({
                     error: `Invalid status transition from '${prevStatus}' to '${nextStatus}'.`,
                 });
@@ -348,10 +402,20 @@ router.patch("/:id/status", requireStaff(["admin", "staff", "kitchen"]), async (
       WHERE id = $3
       RETURNING *
     `;
-        const updateRes = await query(updateSql, [nextStatus, rejectionReason || null, orderId]);
+        const updateRes = await client.query(updateSql, [nextStatus, rejectionReason || null, orderId]);
         const updatedOrder = updateRes.rows[0];
+        // Inventory reversal on cancellation or rejection
+        if (nextStatus === "cancelled" || nextStatus === "rejected") {
+            await reverseOrderStock(client, orderId, staff.username);
+        }
+        else if ((prevStatus === "cancelled" || prevStatus === "rejected") &&
+            (nextStatus === "accepted" || nextStatus === "preparing" || nextStatus === "pending")) {
+            // Re-deduct if reinstated
+            const itemsRes = await client.query("SELECT menu_item_id, item_name, quantity FROM order_items WHERE order_id = $1", [orderId]);
+            await deductOrderStock(client, orderId, itemsRes.rows);
+        }
         // Audit log
-        await query(`INSERT INTO audit_logs (property_id, staff_user_id, staff_username, action, target_type, target_id, details)
+        await client.query(`INSERT INTO audit_logs (property_id, staff_user_id, staff_username, action, target_type, target_id, details)
        VALUES ($1, $2, $3, 'ORDER_STATUS_UPDATE', 'order', $4, $5)`, [
             staff.propertyId,
             staff.id,
@@ -360,17 +424,23 @@ router.patch("/:id/status", requireStaff(["admin", "staff", "kitchen"]), async (
             JSON.stringify({ from: prevStatus, to: nextStatus, rejectionReason }),
         ]);
         // Fetch items to broadcast rich payload
-        const itemsRes = await query(`SELECT id, menu_item_id as "menuItemId", item_name as "itemName",
+        const itemsRes = await client.query(`SELECT id, menu_item_id as "menuItemId", item_name as "itemName",
+              variant_id as "variantId", variant_name as "variantName",
               unit_price as "unitPrice", quantity, selected_modifiers as "selectedModifiers",
               line_total as "lineTotal", notes
        FROM order_items WHERE order_id = $1`, [orderId]);
         updatedOrder.items = itemsRes.rows;
+        await client.query("COMMIT");
         broadcastOrderStatusChanged(updatedOrder, prevStatus);
         res.json({ success: true, order: updatedOrder });
     }
     catch (err) {
+        await client.query("ROLLBACK");
         console.error("[Orders] Status update error:", err);
-        res.status(500).json({ error: "Failed to update order status" });
+        res.status(err.status || 500).json({ error: err.message || "Failed to update order status" });
+    }
+    finally {
+        client.release();
     }
 });
 export default router;

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Link } from "wouter";
 import { getStayOrders, Order } from "../lib/api";
+import { formatINR } from "../lib/currency";
 import { StatusBadge } from "../components/StatusBadge";
 import { ArrowLeft, Clock, Eye, Utensils, AlertCircle } from "lucide-react";
 
@@ -71,7 +72,7 @@ export function GuestOrdersList() {
 
                 <div className="text-xs text-[#73685C] space-y-0.5">
                   <p>
-                    {order.items?.map((it: any) => `${it.quantity}× ${it.itemName}`).join(", ")}
+                    {order.items?.map((it: any) => `${it.quantity}× ${it.itemName}${it.variantName ? ` (${it.variantName})` : ""}`).join(", ")}
                   </p>
                   <p className="flex items-center gap-1 text-[11px]">
                     <Clock className="w-3 h-3" />
@@ -81,8 +82,8 @@ export function GuestOrdersList() {
               </div>
 
               <div className="flex items-center justify-between sm:justify-end gap-4 pt-3 sm:pt-0 border-t sm:border-0 border-[#E5DDD1]">
-                <span className="font-mono text-base font-bold text-[#1E150F]">
-                  ${Number(order.total_amount).toFixed(2)}
+                <span className="font-sans text-[14px] font-extrabold text-[#29231F] sm:text-[15px]">
+                  {formatINR(order.total_amount)}
                 </span>
                 <Link
                   href={`/order/${order.id}`}

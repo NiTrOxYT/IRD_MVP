@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { useRoute, Link, useLocation } from "wouter";
 import { getOrder, cancelGuestOrder, Order } from "../lib/api";
+import { formatINR } from "../lib/currency";
 import { joinOrderRoom, onOrderStatusChanged, subscribeConnectionStatus } from "../lib/socket";
 import { StatusBadge } from "../components/StatusBadge";
 import { playOrderChime } from "../lib/audio";
@@ -256,6 +257,9 @@ export function GuestOrderTracking() {
                   <div className="pr-4">
                     <span className="font-medium text-xs text-[#1E150F]">
                       <span className="font-bold text-[#B88223]">{item.quantity}×</span> {item.itemName}
+                      {item.variantName && (
+                        <span className="ml-1 text-[10px] font-bold text-[#8E6314]">({item.variantName})</span>
+                      )}
                     </span>
                     {item.selectedModifiers && item.selectedModifiers.length > 0 && (
                       <p className="text-[11px] text-[#73685C]">
@@ -267,7 +271,7 @@ export function GuestOrderTracking() {
                     )}
                   </div>
                   <span className="font-serif text-xs font-bold text-[#1E150F] shrink-0">
-                    ${Number(item.lineTotal).toFixed(2)}
+                    {formatINR(item.lineTotal)}
                   </span>
                 </div>
               ))}
@@ -284,7 +288,7 @@ export function GuestOrderTracking() {
             {/* Total */}
             <div className="pt-3 border-t border-[#E5DDD1] flex justify-between items-baseline font-bold text-sm text-[#1E150F]">
               <span className="font-serif">Room Folio Total</span>
-              <span className="font-serif text-lg font-bold">${Number(order.total_amount).toFixed(2)}</span>
+              <span className="font-serif text-lg font-bold">{formatINR(order.total_amount)}</span>
             </div>
           </div>
 

@@ -11,8 +11,11 @@ import { AdminLogin } from "./pages/AdminLogin";
 import { AdminOrders } from "./pages/AdminOrders";
 import { AdminStays } from "./pages/AdminStays";
 import { AdminMenu } from "./pages/AdminMenu";
+import { AdminInventory } from "./pages/AdminInventory";
+import { AdminUsers } from "./pages/AdminUsers";
 import { AdminSettings } from "./pages/AdminSettings";
 import { AdminRoomQR } from "./pages/AdminRoomQR";
+import { AdminAnalytics } from "./pages/AdminAnalytics";
 import { KitchenKOT } from "./pages/KitchenKOT";
 
 export function App() {
@@ -40,8 +43,11 @@ export function App() {
           <Route path="/admin" component={AdminOrders} />
           <Route path="/admin/login" component={AdminLogin} />
           <Route path="/admin/orders" component={AdminOrders} />
+          <Route path="/admin/analytics" component={AdminAnalytics} />
           <Route path="/admin/stays" component={AdminStays} />
           <Route path="/admin/menu" component={AdminMenu} />
+          <Route path="/admin/inventory" component={AdminInventory} />
+          <Route path="/admin/users" component={AdminUsers} />
           <Route path="/admin/settings" component={AdminSettings} />
           <Route path="/admin/qr" component={AdminRoomQR} />
 

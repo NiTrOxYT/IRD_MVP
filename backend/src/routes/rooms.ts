@@ -5,7 +5,7 @@ import { generateRoomQrToken } from "../lib/tokens.js";
 
 const router = Router();
 
-router.get("/", requireStaff(["admin", "staff"]), async (req: Request, res: Response): Promise<void> => {
+router.get("/", requireStaff({ permissions: ["stays:view", "qr:view"] }), async (req: Request, res: Response): Promise<void> => {
   try {
     const result = await query(`
       SELECT r.id, r.property_id, r.room_number, r.floor, r.wing, r.qr_token, r.is_active,
@@ -44,7 +44,7 @@ router.get("/resolve-qr/:qrToken", async (req: Request, res: Response): Promise<
   }
 });
 
-router.post("/", requireStaff(["admin"]), async (req: Request, res: Response): Promise<void> => {
+router.post("/", requireStaff("stays:create"), async (req: Request, res: Response): Promise<void> => {
   const { roomNumber, floor, wing } = req.body;
   if (!roomNumber) {
     res.status(400).json({ error: "Room number is required" });

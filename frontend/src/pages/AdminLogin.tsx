@@ -1,8 +1,8 @@
 import React, { useState } from "react";
 import { useLocation } from "wouter";
 import { loginStaff } from "../lib/api";
-import { Lock, User, ShieldCheck, ArrowRight, Sparkles, ChefHat, Bell, Crown } from "lucide-react";
-import { cn } from "../lib/utils";
+import { usePropertyName } from "../lib/usePropertyName";
+import { Lock, User, ArrowRight } from "lucide-react";
 
 export function AdminLogin() {
   const [, setLocation] = useLocation();
@@ -10,6 +10,7 @@ export function AdminLogin() {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const propertyName = usePropertyName();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -35,33 +36,12 @@ export function AdminLogin() {
     }
   };
 
-  const handleQuickLogin = async (u: string, p: string) => {
-    setUsername(u);
-    setPassword(p);
-    setLoading(true);
-    setError(null);
-    try {
-      const res = await loginStaff(u, p);
-      if (res.user.role === "kitchen") {
-        setLocation("/kitchen");
-      } else {
-        setLocation("/admin/orders");
-      }
-    } catch (err: any) {
-      setError(err.message || "Login failed");
-    } finally {
-      setLoading(false);
-    }
-  };
-
   return (
     <div className="min-h-[calc(100vh-4rem)] bg-[#FAF8F5] flex flex-col justify-center items-center px-4 py-12">
       <div className="max-w-md w-full bg-[#FFFDF9] border border-[#E5DDD1] rounded-3xl p-8 shadow-xl animate-in fade-in zoom-in-95 duration-200">
         <div className="text-center mb-8">
           <img src="/kusum-kunja-cafe-logo.png" alt="Kusum Kunja Café" className="mx-auto mb-4 h-16 w-16 rounded-full border border-[#ECD7A9] object-cover shadow-xs" />
-          <span className="text-[10px] font-bold uppercase tracking-widest text-[#8E6314] block mb-1">
-            The Aveniq Resort
-          </span>
+          {propertyName && <span className="text-[10px] font-bold uppercase tracking-widest text-[#8E6314] block mb-1">{propertyName}</span>}
           <h1 className="font-serif text-2xl font-bold text-[#1E150F]">
             Staff Operations Portal
           </h1>
@@ -119,44 +99,6 @@ export function AdminLogin() {
           </button>
         </form>
 
-        {/* Demo Quick Logins matching Cafe Admin */}
-        <div className="mt-8 pt-6 border-t border-[#E5DDD1] space-y-2">
-          <span className="block text-[10px] font-bold uppercase tracking-widest text-[#8E6314] text-center mb-2.5">
-            One-Click Demo Roles
-          </span>
-          <div className="grid grid-cols-1 gap-2">
-            <button
-              onClick={() => handleQuickLogin("reception", "staff123")}
-              className="w-full py-2.5 px-3.5 text-xs font-semibold text-[#1E150F] bg-[#FAF8F5] hover:bg-[#F0ECE1] border border-[#E5DDD1] rounded-2xl transition-all flex items-center justify-between btn-smooth-press cursor-pointer"
-            >
-              <span className="flex items-center gap-2">
-                <Bell className="w-3.5 h-3.5 text-[#B88223]" />
-                <span>Front Desk / Reception</span>
-              </span>
-              <span className="font-mono text-[10px] text-[#73685C]">reception / staff123</span>
-            </button>
-            <button
-              onClick={() => handleQuickLogin("chef", "kitchen123")}
-              className="w-full py-2.5 px-3.5 text-xs font-semibold text-[#8E6314] bg-[#FAF3E6] hover:bg-[#F5EAD4] border border-[#ECD7A9] rounded-2xl transition-all flex items-center justify-between btn-smooth-press cursor-pointer shadow-2xs"
-            >
-              <span className="flex items-center gap-2">
-                <ChefHat className="w-3.5 h-3.5 text-[#B88223]" />
-                <span>Kitchen Console (KOT)</span>
-              </span>
-              <span className="font-mono text-[10px] text-[#8E6314]">chef / kitchen123</span>
-            </button>
-            <button
-              onClick={() => handleQuickLogin("admin", "admin123")}
-              className="w-full py-2.5 px-3.5 text-xs font-semibold text-[#1E150F] bg-[#FAF8F5] hover:bg-[#F0ECE1] border border-[#E5DDD1] rounded-2xl transition-all flex items-center justify-between btn-smooth-press cursor-pointer"
-            >
-              <span className="flex items-center gap-2">
-                <Crown className="w-3.5 h-3.5 text-[#B88223]" />
-                <span>General Manager (Admin)</span>
-              </span>
-              <span className="font-mono text-[10px] text-[#73685C]">admin / admin123</span>
-            </button>
-          </div>
-        </div>
       </div>
     </div>
   );

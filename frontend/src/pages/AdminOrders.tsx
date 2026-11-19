@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { Link } from "wouter";
 import { listAdminOrders, updateOrderStatus, Order } from "../lib/api";
+import { formatINR } from "../lib/currency";
 import { joinAdminRoom, onOrderCreated, onOrderStatusChanged } from "../lib/socket";
 import { StatusBadge } from "../components/StatusBadge";
 import { Modal } from "../components/Modal";
@@ -220,9 +221,12 @@ export function AdminOrders() {
                     <div key={i} className="flex justify-between items-baseline">
                       <span className="text-[#1E150F] font-medium truncate pr-2">
                         <span className="font-bold text-[#B88223]">{item.quantity}×</span> {item.itemName}
+                        {item.variantName && (
+                          <span className="ml-1 text-[10px] font-bold text-[#8E6314]">({item.variantName})</span>
+                        )}
                       </span>
                       <span className="font-mono text-[11px] text-[#73685C] shrink-0">
-                        ${Number(item.lineTotal).toFixed(2)}
+                        {formatINR(item.lineTotal)}
                       </span>
                     </div>
                   ))}
@@ -243,7 +247,7 @@ export function AdminOrders() {
                     {new Date(order.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
                   </span>
                   <span className="font-serif font-bold text-[#1E150F] text-base">
-                    ${Number(order.total_amount).toFixed(2)}
+                    {formatINR(order.total_amount)}
                   </span>
                 </div>
               </div>
@@ -375,17 +379,24 @@ export function AdminOrders() {
                 {selectedOrder.items?.map((item: any, i: number) => (
                   <div key={i} className="py-2.5 flex justify-between">
                     <div>
-                      <span className="font-bold text-[#1E150F]">
-                        {item.quantity}× {item.itemName}
-                      </span>
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <span className="font-bold text-[#1E150F]">
+                          {item.quantity}× {item.itemName}
+                        </span>
+                        {item.variantName && (
+                          <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-[#FAF3E6] text-[#8E6314] border border-[#ECD7A9]">
+                            {item.variantName}
+                          </span>
+                        )}
+                      </div>
                       {item.selectedModifiers && item.selectedModifiers.length > 0 && (
                         <p className="text-[11px] text-[#73685C]">
-                          {item.selectedModifiers.map((m: any) => `${m.name} (+$${m.priceDelta})`).join(", ")}
+                          {item.selectedModifiers.map((m: any) => `${m.name} (+${formatINR(m.priceDelta)})`).join(", ")}
                         </p>
                       )}
                       {item.notes && <p className="text-[#8E6314] italic">Note: {item.notes}</p>}
                     </div>
-                    <span className="font-serif font-bold text-sm">${Number(item.lineTotal).toFixed(2)}</span>
+                    <span className="font-serif font-bold text-sm">{formatINR(item.lineTotal)}</span>
                   </div>
                 ))}
               </div>
@@ -395,19 +406,19 @@ export function AdminOrders() {
             <div className="p-4 bg-[#FAF8F5] rounded-2xl border border-[#E5DDD1] space-y-2">
               <div className="flex justify-between text-[#73685C]">
                 <span>Subtotal</span>
-                <span className="font-mono">${Number(selectedOrder.subtotal).toFixed(2)}</span>
+                <span className="font-mono">{formatINR(selectedOrder.subtotal)}</span>
               </div>
               <div className="flex justify-between text-[#73685C]">
                 <span>Tax</span>
-                <span className="font-mono">${Number(selectedOrder.tax_amount).toFixed(2)}</span>
+                <span className="font-mono">{formatINR(selectedOrder.tax_amount)}</span>
               </div>
               <div className="flex justify-between text-[#73685C]">
                 <span>Service Charge</span>
-                <span className="font-mono">${Number(selectedOrder.service_charge).toFixed(2)}</span>
+                <span className="font-mono">{formatINR(selectedOrder.service_charge)}</span>
               </div>
               <div className="flex justify-between font-bold text-[#1E150F] pt-2 border-t border-[#E5DDD1]">
                 <span className="font-serif text-sm">Folio Total</span>
-                <span className="font-serif text-base">${Number(selectedOrder.total_amount).toFixed(2)}</span>
+                <span className="font-serif text-base">{formatINR(selectedOrder.total_amount)}</span>
               </div>
             </div>
 

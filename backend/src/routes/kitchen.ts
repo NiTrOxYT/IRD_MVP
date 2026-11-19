@@ -6,7 +6,7 @@ import { broadcastOrderStatusChanged } from "../socket.js";
 const router = Router();
 
 // Kitchen: Get active kitchen tickets
-router.get("/tickets", requireStaff(["kitchen", "admin"]), async (_req: Request, res: Response): Promise<void> => {
+router.get("/tickets", requireStaff("orders:view"), async (_req: Request, res: Response): Promise<void> => {
   try {
     const result = await query(`
       SELECT o.id, o.order_number, o.room_number, o.guest_name, o.status,
@@ -16,6 +16,7 @@ router.get("/tickets", requireStaff(["kitchen", "admin"]), async (_req: Request,
                json_build_object(
                  'id', oi.id,
                  'itemName', oi.item_name,
+                 'variantName', oi.variant_name,
                  'quantity', oi.quantity,
                  'selectedModifiers', oi.selected_modifiers,
                  'notes', oi.notes
@@ -43,7 +44,7 @@ router.get("/tickets", requireStaff(["kitchen", "admin"]), async (_req: Request,
 });
 
 // Kitchen: Advance ticket status
-router.post("/tickets/:id/advance", requireStaff(["kitchen", "admin"]), async (req: Request, res: Response): Promise<void> => {
+router.post("/tickets/:id/advance", requireStaff("orders:edit"), async (req: Request, res: Response): Promise<void> => {
   const orderId = Number(req.params.id);
   const staff = req.staff!;
 
@@ -92,7 +93,7 @@ router.post("/tickets/:id/advance", requireStaff(["kitchen", "admin"]), async (r
     );
 
     const itemsRes = await query(
-      `SELECT id, item_name as "itemName", quantity, selected_modifiers as "selectedModifiers", notes
+      `SELECT id, item_name as "itemName", variant_name as "variantName", quantity, selected_modifiers as "selectedModifiers", notes
        FROM order_items WHERE order_id = $1`,
       [orderId]
     );

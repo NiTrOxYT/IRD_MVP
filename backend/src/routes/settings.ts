@@ -33,7 +33,7 @@ router.get("/", async (_req: Request, res: Response): Promise<void> => {
   }
 });
 
-router.put("/", requireStaff(["admin"]), async (req: Request, res: Response): Promise<void> => {
+router.put("/", requireStaff("settings:manage"), async (req: Request, res: Response): Promise<void> => {
   const parse = settingsSchema.safeParse(req.body);
   if (!parse.success) {
     res.status(400).json({ error: parse.error.errors[0].message });

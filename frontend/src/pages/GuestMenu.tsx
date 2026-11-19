@@ -9,6 +9,7 @@ import {
   ItemModifier,
   PropertySettings,
 } from "../lib/api";
+import { formatINR } from "../lib/currency";
 import { joinStayRoom, onStayInvalidated } from "../lib/socket";
 import { DietaryBadge } from "../components/DietaryBadge";
 import { Modal } from "../components/Modal";
@@ -258,7 +259,7 @@ export function GuestMenu() {
               Active Room Service Session
             </div>
             <h1 className="font-serif text-2xl sm:text-3xl font-bold tracking-tight">
-              Suite {stayData?.room?.roomNumber} · {stayData?.room?.wing || "Aura Resort"}
+              Suite {stayData?.room?.roomNumber}{stayData?.room?.wing ? ` · ${stayData.room.wing}` : ""}
             </h1>
             <p className="text-sm text-[#D5C9B8]">
               Welcoming {stayData?.guestName} · Room service ordering hours: {property?.openingTime} – {property?.closingTime}
@@ -407,7 +408,7 @@ export function GuestMenu() {
                         {item.name}
                       </h3>
                       <span className="font-mono text-base font-bold text-[#1E150F] shrink-0">
-                        ${Number(item.price).toFixed(2)}
+                        {formatINR(item.price)}
                       </span>
                     </div>
 
@@ -464,7 +465,7 @@ export function GuestMenu() {
               </div>
             </div>
             <div className="flex items-center gap-2">
-              <span className="font-mono text-base font-bold">${subtotal.toFixed(2)}</span>
+              <span className="font-mono text-base font-bold">{formatINR(subtotal)}</span>
               <ArrowRight className="w-5 h-5 text-[#B88223]" />
             </div>
           </button>
@@ -517,7 +518,7 @@ export function GuestMenu() {
                         >
                           <span className="font-semibold">{mod.name}</span>
                           <span className="font-mono text-[#825C15]">
-                            {mod.priceDelta > 0 ? `+$${Number(mod.priceDelta).toFixed(2)}` : "Included"}
+                            {mod.priceDelta > 0 ? `+${formatINR(mod.priceDelta)}` : "Included"}
                           </span>
                         </button>
                       );
@@ -546,11 +547,10 @@ export function GuestMenu() {
               <div>
                 <span className="block text-[11px] text-[#73685C]">Calculated Item Price</span>
                 <span className="font-mono text-lg font-bold text-[#1E150F]">
-                  $
-                  {(
+                  {formatINR(
                     Number(customizingItem.price) +
                     Object.values(selectedMods).reduce((acc, m) => acc + Number(m.priceDelta), 0)
-                  ).toFixed(2)}
+                  )}
                 </span>
               </div>
               <button
@@ -587,7 +587,7 @@ export function GuestMenu() {
                       {line.item.name}
                     </h4>
                     <span className="font-mono text-xs font-bold text-[#1E150F] ml-2">
-                      ${line.lineTotal.toFixed(2)}
+                      {formatINR(line.lineTotal)}
                     </span>
                   </div>
                   {line.selectedModifiers.length > 0 && (
@@ -639,19 +639,19 @@ export function GuestMenu() {
           <div className="p-4 bg-[#F8F5EF] border border-[#E5DDD1] rounded-2xl space-y-2 text-xs">
             <div className="flex justify-between text-[#73685C]">
               <span>Culinary Subtotal</span>
-              <span className="font-mono">${subtotal.toFixed(2)}</span>
+              <span className="font-mono">{formatINR(subtotal)}</span>
             </div>
             <div className="flex justify-between text-[#73685C]">
               <span>Resort Tax ({property?.taxRatePercent || 10}%)</span>
-              <span className="font-mono">${taxAmount.toFixed(2)}</span>
+              <span className="font-mono">{formatINR(taxAmount)}</span>
             </div>
             <div className="flex justify-between text-[#73685C]">
               <span>In-Room Service Charge ({property?.serviceChargePercent || 5}%)</span>
-              <span className="font-mono">${serviceCharge.toFixed(2)}</span>
+              <span className="font-mono">{formatINR(serviceCharge)}</span>
             </div>
             <div className="pt-2 border-t border-[#E5DDD1] flex justify-between font-bold text-sm text-[#1E150F]">
               <span>Total Posted to Room Folio</span>
-              <span className="font-mono text-base text-[#1E150F]">${totalAmount.toFixed(2)}</span>
+              <span className="font-mono text-base text-[#1E150F]">{formatINR(totalAmount)}</span>
             </div>
           </div>
 

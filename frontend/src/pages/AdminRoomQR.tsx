@@ -3,10 +3,12 @@ import QRCode from "qrcode";
 import { Download, LoaderCircle, Printer, QrCode, RefreshCw, Sparkles } from "lucide-react";
 import { listRooms, Room } from "../lib/api";
 import { cn } from "../lib/utils";
+import { usePropertyName } from "../lib/usePropertyName";
 
 type RoomCode = { room: Room; dataUrl: string };
 
 export function AdminRoomQR() {
+  const propertyName = usePropertyName();
   const [codes, setCodes] = useState<RoomCode[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -120,7 +122,7 @@ export function AdminRoomQR() {
                 <div className="w-8 h-8 rounded-full bg-[#1E150F] text-[#B88223] flex items-center justify-center font-serif text-sm font-bold mx-auto mb-2 border border-[#ECD7A9]">
                   A
                 </div>
-                <p className="text-[10px] font-bold uppercase tracking-widest text-[#8E6314]">The Aveniq Resort</p>
+                <p className="text-[10px] font-bold uppercase tracking-widest text-[#8E6314]">{propertyName || "Property"}</p>
                 <h2 className="mt-1 font-serif text-2xl font-bold text-[#1E150F]">Suite {room.room_number}</h2>
                 <p className="text-xs text-[#73685C]">{room.wing || "Deluxe Suite"}</p>
 

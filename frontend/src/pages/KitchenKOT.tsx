@@ -15,6 +15,7 @@ import {
   Sparkles,
 } from "lucide-react";
 import { cn } from "../lib/utils";
+import { usePropertyName } from "../lib/usePropertyName";
 
 interface Ticket {
   id: number;
@@ -29,6 +30,7 @@ interface Ticket {
   items: Array<{
     id: number;
     itemName: string;
+    variantName?: string | null;
     quantity: number;
     selectedModifiers: any[];
     notes?: string;
@@ -36,6 +38,7 @@ interface Ticket {
 }
 
 export function KitchenKOT() {
+  const propertyName = usePropertyName();
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [loading, setLoading] = useState(true);
   const [now, setNow] = useState(Date.now());
@@ -134,7 +137,7 @@ export function KitchenKOT() {
                 </span>
               </div>
               <p className="text-xs text-[#A89886] mt-0.5">
-                The Aveniq Resort · Tablet-optimized live order ticket system
+                {propertyName ? `${propertyName} · ` : ""}Tablet-optimized live order ticket system
               </p>
             </div>
           </div>
@@ -257,13 +260,18 @@ export function KitchenKOT() {
                           key={idx}
                           className="p-3.5 bg-[#1E150F] rounded-2xl border border-[#3D3025] shadow-2xs"
                         >
-                          <div className="flex items-baseline gap-2.5">
+                          <div className="flex items-baseline gap-2.5 flex-wrap">
                             <span className="font-mono text-lg font-black text-[#B88223]">
                               {item.quantity}×
                             </span>
                             <span className="font-serif text-base font-bold text-white">
                               {item.itemName}
                             </span>
+                            {item.variantName && (
+                              <span className="px-2 py-0.5 rounded-md text-xs font-bold bg-[#B88223]/25 text-[#ECD7A9] border border-[#B88223]/40">
+                                {item.variantName}
+                              </span>
+                            )}
                           </div>
 
                           {/* Modifiers */}

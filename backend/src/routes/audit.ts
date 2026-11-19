@@ -4,7 +4,7 @@ import { requireStaff } from "../middleware/auth.js";
 
 const router = Router();
 
-router.get("/", requireStaff(["admin"]), async (_req: Request, res: Response): Promise<void> => {
+router.get("/", requireStaff("settings:view"), async (_req: Request, res: Response): Promise<void> => {
   try {
     const result = await query(
       "SELECT * FROM audit_logs ORDER BY id DESC LIMIT 100"

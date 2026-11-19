@@ -2,8 +2,11 @@ import React, { useEffect, useMemo, useState } from "react";
 import { Link, useLocation } from "wouter";
 import { subscribeConnectionStatus } from "../lib/socket";
 import { getStaffMe, logoutStaff, StaffUser } from "../lib/api";
+import { hasPermission } from "../lib/permissions";
+import { usePropertyName } from "../lib/usePropertyName";
 import {
   BarChart3,
+  Boxes,
   ClipboardList,
   LayoutDashboard,
   LogOut,
@@ -25,6 +28,7 @@ export function Navbar() {
   const isReception = location.startsWith("/reception");
   const isKot = location.startsWith("/kot") || location.startsWith("/kitchen");
   const isAdmin = location.startsWith("/admin");
+  const propertyName = usePropertyName(!isGuestRoute);
 
   useEffect(() => {
     if (isGuestRoute) return;
@@ -39,16 +43,44 @@ export function Navbar() {
       { href: "/reception/stays", label: "Stays & Rooms", icon: <Users size={16} /> },
     ];
     if (isKot) return [];
-    if (isAdmin) return [
-      { href: "/admin", label: "Overview", icon: <LayoutDashboard size={16} /> },
-      { href: "/admin/menu", label: "Menu", icon: <UtensilsCrossed size={16} /> },
-      { href: "/admin/orders", label: "Orders", icon: <ClipboardList size={16} /> },
-      { href: "/admin/stays", label: "Stays", icon: <Users size={16} /> },
-      { href: "/admin/qr", label: "QR Codes", icon: <QrCode size={16} /> },
-      { href: "/admin/settings", label: "Settings", icon: <Settings size={16} /> },
-    ];
+    if (isAdmin) {
+      const perms = staffUser?.permissions || [];
+      const isSuperAdmin = staffUser?.role === "admin" || perms.includes("*");
+
+      const items: NavItem[] = [];
+
+      if (isSuperAdmin || hasPermission(perms, "overview:view")) {
+        items.push({ href: "/admin", label: "Overview", icon: <LayoutDashboard size={16} /> });
+      }
+      if (isSuperAdmin || hasPermission(perms, "menu:view")) {
+        items.push({ href: "/admin/menu", label: "Menu", icon: <UtensilsCrossed size={16} /> });
+      }
+      if (isSuperAdmin || hasPermission(perms, "inventory:view")) {
+        items.push({ href: "/admin/inventory", label: "Inventory", icon: <Boxes size={16} /> });
+      }
+      if (isSuperAdmin || hasPermission(perms, "orders:view")) {
+        items.push({ href: "/admin/orders", label: "Orders", icon: <ClipboardList size={16} /> });
+      }
+      if (isSuperAdmin || hasPermission(perms, "analytics:view")) {
+        items.push({ href: "/admin/analytics", label: "Analytics", icon: <BarChart3 size={16} /> });
+      }
+      if (isSuperAdmin || hasPermission(perms, "stays:view")) {
+        items.push({ href: "/admin/stays", label: "Stays", icon: <Users size={16} /> });
+      }
+      if (isSuperAdmin || hasPermission(perms, "qr:view")) {
+        items.push({ href: "/admin/qr", label: "QR Codes", icon: <QrCode size={16} /> });
+      }
+      if (isSuperAdmin || hasPermission(perms, "users:view")) {
+        items.push({ href: "/admin/users", label: "Users & Roles", icon: <UserCheck size={16} /> });
+      }
+      if (isSuperAdmin || hasPermission(perms, "settings:view")) {
+        items.push({ href: "/admin/settings", label: "Settings", icon: <Settings size={16} /> });
+      }
+
+      return items;
+    }
     return [];
-  }, [isAdmin, isKot, isReception]);
+  }, [isAdmin, isKot, isReception, staffUser]);
 
   if (isGuestRoute) return null;
 
@@ -62,13 +94,13 @@ export function Navbar() {
 
   return (
     <header className="sticky top-0 z-40 border-b border-[#E5DDD1] bg-[#F8F5EF]/95 shadow-xs backdrop-blur-md">
-      <div className="mx-auto flex h-16 max-w-7xl items-center justify-between gap-4 px-4 sm:px-6">
-        <div className="flex min-w-0 items-center gap-3">
+        <div className="mx-auto flex h-16 max-w-7xl items-center justify-between gap-3 px-4 sm:gap-4 sm:px-6">
+        <div className="flex min-w-0 items-center gap-3 xl:shrink-0">
           <img src="/kusum-kunja-cafe-logo.png" alt="Kusum Kunja Café" className="h-9 w-9 shrink-0 rounded-full border border-[#ECD7A9] object-cover shadow-2xs" />
           <div className="min-w-0">
-            <h1 className="whitespace-nowrap font-serif text-base font-bold tracking-tight text-[#29231F] sm:text-lg">Kusum Kunja Café</h1>
+            <h1 className="whitespace-nowrap font-serif text-base font-bold tracking-tight text-[#29231F] sm:text-lg">{propertyName || "In-Room Dining"}</h1>
             <div className="flex items-center gap-2">
-              <span className="text-[9px] font-semibold uppercase tracking-[0.2em] text-[#766B61]">{sectionLabel}</span>
+              <span className="text-[9px] font-semibold uppercase tracking-[0.2em] text-[#766B61] xl:whitespace-nowrap">{sectionLabel}</span>
               <span className="hidden items-center gap-1.5 rounded-full border border-[#E5DDD1] bg-[#FFFDF9] px-2 py-0.5 text-[9px] font-semibold text-[#766B61] sm:inline-flex">
                 <span className={`h-1.5 w-1.5 rounded-full ${connStatus === "connected" ? "bg-emerald-500" : "animate-pulse bg-amber-500"}`} />
                 {connStatus === "connected" ? "Live" : "Syncing"}
@@ -78,7 +110,7 @@ export function Navbar() {
         </div>
 
         {navItems.length > 0 && (
-          <nav aria-label="Staff navigation" className="hidden items-center gap-0.5 xl:flex">
+          <nav aria-label="Staff navigation" className="hidden min-w-0 flex-1 items-center justify-start gap-0.5 overflow-x-auto no-scrollbar xl:flex">
             {navItems.map((item) => {
               const active = location === item.href || (item.href === "/admin" && location === "/admin");
               return (

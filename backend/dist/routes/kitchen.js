@@ -14,6 +14,7 @@ router.get("/tickets", requireStaff(["kitchen", "admin"]), async (_req, res) => 
                json_build_object(
                  'id', oi.id,
                  'itemName', oi.item_name,
+                 'variantName', oi.variant_name,
                  'quantity', oi.quantity,
                  'selectedModifiers', oi.selected_modifiers,
                  'notes', oi.notes
@@ -77,7 +78,7 @@ router.post("/tickets/:id/advance", requireStaff(["kitchen", "admin"]), async (r
             String(orderId),
             JSON.stringify({ from: currentOrder.status, to: nextStatus }),
         ]);
-        const itemsRes = await query(`SELECT id, item_name as "itemName", quantity, selected_modifiers as "selectedModifiers", notes
+        const itemsRes = await query(`SELECT id, item_name as "itemName", variant_name as "variantName", quantity, selected_modifiers as "selectedModifiers", notes
        FROM order_items WHERE order_id = $1`, [orderId]);
         updatedOrder.items = itemsRes.rows;
         broadcastOrderStatusChanged(updatedOrder, currentOrder.status);

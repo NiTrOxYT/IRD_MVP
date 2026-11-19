@@ -15,6 +15,9 @@ import ordersRoutes from "./routes/orders.js";
 import kitchenRoutes from "./routes/kitchen.js";
 import settingsRoutes from "./routes/settings.js";
 import auditRoutes from "./routes/audit.js";
+import inventoryRoutes from "./routes/inventory.js";
+import analyticsRoutes from "./routes/analytics.js";
+import usersRoutes from "./routes/users.js";
 
 dotenv.config();
 
@@ -55,6 +58,9 @@ app.use("/api/orders", ordersRoutes);
 app.use("/api/kitchen", kitchenRoutes);
 app.use("/api/settings", settingsRoutes);
 app.use("/api/audit-logs", auditRoutes);
+app.use("/api/inventory", inventoryRoutes);
+app.use("/api/analytics", analyticsRoutes);
+app.use("/api/users", usersRoutes);
 
 // Global Error Handler
 app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {

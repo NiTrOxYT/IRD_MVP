@@ -8,11 +8,13 @@ import {
   getStayOrders,
   cancelGuestOrder,
   MenuItem,
+  MenuItemVariant,
   Category,
   ItemModifier,
   Order,
   PropertySettings,
 } from "../lib/api";
+import { formatINR } from "../lib/currency";
 import {
   joinStayRoom,
   onStayInvalidated,
@@ -55,6 +57,8 @@ import { cn } from "../lib/utils";
 interface CartLineItem {
   cartItemId: string;
   item: MenuItem;
+  variantId?: number | null;
+  variantName?: string | null;
   quantity: number;
   selectedModifiers: ItemModifier[];
   notes?: string;
@@ -98,10 +102,17 @@ export function GuestScreen() {
   const [deliveryNotes, setDeliveryNotes] = useState("");
   const [isSubmittingOrder, setIsSubmittingOrder] = useState(false);
 
-  // Customizer Modal
+  // Customizer / Details Modal
   const [customizingItem, setCustomizingItem] = useState<MenuItem | null>(null);
   const [selectedMods, setSelectedMods] = useState<Record<string, ItemModifier>>({});
   const [itemNotes, setItemNotes] = useState("");
+
+  // Rich Details View Modal State
+  const [viewingItemDetails, setViewingItemDetails] = useState<MenuItem | null>(null);
+  const [detailSelectedVariant, setDetailSelectedVariant] = useState<MenuItemVariant | null>(null);
+  const [detailSelectedMods, setDetailSelectedMods] = useState<Record<string, ItemModifier>>({});
+  const [detailNotes, setDetailNotes] = useState("");
+  const [detailQuantity, setDetailQuantity] = useState(1);
 
   // Orders Tracking State
   const [orders, setOrders] = useState<Order[]>([]);
@@ -110,6 +121,10 @@ export function GuestScreen() {
 
   // Socket Connection Status
   const [connStatus, setConnStatus] = useState<"connected" | "reconnecting" | "disconnected">("connected");
+
+  useEffect(() => {
+    document.title = property?.name ? `${property.name} · In-Room Dining` : "In-Room Dining";
+  }, [property?.name]);
 
   // 1. Initial Stay Verification
   const verifyToken = useCallback(async (token: string) => {
@@ -229,33 +244,55 @@ export function GuestScreen() {
     };
   }, [stayData?.id, fetchOrdersData]);
 
-  // Cart Management
-  const handleOpenCustomizer = (item: MenuItem) => {
+  // Cart Management & Item Details Modal Handlers
+  const handleOpenItemDetails = (item: MenuItem) => {
     if (!item.available) return;
+    setViewingItemDetails(item);
+
+    // Initial variant selection
+    if (item.variants && item.variants.length > 0) {
+      const firstAvailable = item.variants.find((v) => v.available) || item.variants[0];
+      setDetailSelectedVariant(firstAvailable || null);
+    } else {
+      setDetailSelectedVariant(null);
+    }
+
+    // Default modifiers
+    const defaults: Record<string, ItemModifier> = {};
     if (item.modifiers && item.modifiers.length > 0) {
-      setCustomizingItem(item);
-      const defaults: Record<string, ItemModifier> = {};
       item.modifiers.forEach((m) => {
         if (m.isDefault) defaults[m.groupName] = m;
       });
-      setSelectedMods(defaults);
-      setItemNotes("");
-    } else {
-      addToCart(item, [], "");
     }
+    setDetailSelectedMods(defaults);
+    setDetailNotes("");
+    setDetailQuantity(1);
   };
 
-  const addToCart = (item: MenuItem, modifiers: ItemModifier[], notes: string) => {
+  const handleOpenCustomizer = (item: MenuItem) => {
+    handleOpenItemDetails(item);
+  };
+
+  const addToCart = (
+    item: MenuItem,
+    variant?: MenuItemVariant | null,
+    modifiers: ItemModifier[] = [],
+    notes = "",
+    qty = 1
+  ) => {
+    const basePrice = variant ? Number(variant.price) : Number(item.price);
     const modTotal = modifiers.reduce((acc, m) => acc + Number(m.priceDelta), 0);
-    const unitPrice = Number(item.price) + modTotal;
-    const cartItemId = `${item.id}-${modifiers.map((m) => m.id).sort().join("_")}-${notes}`;
+    const unitPrice = basePrice + modTotal;
+    const variantKey = variant?.id ? `v${variant.id}` : "base";
+    const modKey = modifiers.map((m) => m.id).sort().join("_");
+    const cartItemId = `${item.id}-${variantKey}-${modKey}-${notes.trim()}`;
 
     setCart((prev) => {
       const existing = prev.find((c) => c.cartItemId === cartItemId);
       if (existing) {
         return prev.map((c) =>
           c.cartItemId === cartItemId
-            ? { ...c, quantity: c.quantity + 1, lineTotal: (c.quantity + 1) * unitPrice }
+            ? { ...c, quantity: c.quantity + qty, lineTotal: (c.quantity + qty) * unitPrice }
             : c
         );
       }
@@ -264,15 +301,20 @@ export function GuestScreen() {
         {
           cartItemId,
           item,
-          quantity: 1,
+          variantId: variant?.id || null,
+          variantName: variant?.name || null,
+          quantity: qty,
           selectedModifiers: modifiers,
-          notes,
+          notes: notes.trim() || undefined,
           unitPrice,
-          lineTotal: unitPrice,
+          lineTotal: unitPrice * qty,
         },
       ];
     });
 
+    if (viewingItemDetails) {
+      setViewingItemDetails(null);
+    }
     if (customizingItem) {
       setCustomizingItem(null);
     }
@@ -325,6 +367,7 @@ export function GuestScreen() {
     try {
       const itemsPayload = cart.map((c) => ({
         menuItemId: c.item.id,
+        variantId: c.variantId || undefined,
         quantity: c.quantity,
         modifierIds: c.selectedModifiers.map((m) => m.id),
         notes: c.notes,
@@ -439,12 +482,19 @@ export function GuestScreen() {
     return { activeOrders: active, pastOrders: past };
   }, [orders]);
 
+  const billableOrdersTotal = useMemo(
+    () => orders
+      .filter((order) => !["cancelled", "rejected"].includes(order.status))
+      .reduce((total, order) => total + Number(order.total_amount || 0), 0),
+    [orders]
+  );
+
   // ── Render Case 1: Initial Loading ──
   if (authLoading) {
     return (
       <div className="min-h-[100dvh] bg-[#FAF8F5] flex flex-col items-center justify-center p-6 text-center">
         <div className="w-12 h-12 rounded-full border-3 border-[#B88223] border-t-transparent animate-spin mb-4" />
-        <h2 className="font-serif text-xl font-bold text-[#1E150F]">The Aveniq Resort</h2>
+        <h2 className="font-serif text-xl font-bold text-[#1E150F]">In-Room Dining</h2>
         <p className="font-script text-base text-[#8E6314] mt-0.5">In-Room Dining Service</p>
         <p className="text-xs text-[#73685C] mt-2">Connecting to suite...</p>
       </div>
@@ -458,9 +508,6 @@ export function GuestScreen() {
         <div className="w-full max-w-sm bg-[#FFFDF9] border border-[#E5DDD1] rounded-3xl p-6 sm:p-8 shadow-xl text-center animate-in fade-in zoom-in-95 duration-200">
           <img src="/kusum-kunja-cafe-logo.png" alt="Kusum Kunja Café" className="mx-auto mb-4 h-16 w-16 rounded-full border border-[#ECD7A9] object-cover shadow-xs" />
 
-          <span className="text-[10px] font-bold uppercase tracking-widest text-[#8E6314] block mb-1">
-            The Aveniq Resort
-          </span>
           <h1 className="font-serif text-2xl font-bold text-[#1E150F] mb-1">
             In-Room Dining
           </h1>
@@ -501,7 +548,7 @@ export function GuestScreen() {
             <div>
               <div className="flex items-center gap-2">
                 <span className="font-serif text-[17px] font-bold leading-tight tracking-tight text-[#29231F] sm:text-[19px]">
-                  {property?.name || "Kusum Kunja Café"}
+                  {property?.name || "In-Room Dining"}
                 </span>
                 <span className="hidden rounded-full border border-[#ECD7A9] bg-[#FAF3E6] px-2 py-0.5 text-[9px] font-bold text-[#766B61] sm:inline-flex">Digital Menu</span>
               </div>
@@ -628,27 +675,27 @@ export function GuestScreen() {
               <button
                 onClick={() => setSelectedCategory("all")}
                 className={cn(
-                  "flex h-[74px] min-w-[74px] flex-col items-center justify-center gap-1.5 rounded-2xl border px-3 text-[11px] font-semibold transition-all sm:h-20 sm:min-w-20 sm:text-xs",
+                  "flex h-[86px] w-[84px] min-w-[84px] shrink-0 flex-col items-center justify-center gap-1.5 rounded-2xl border px-2 text-[11px] font-semibold leading-tight transition-all sm:h-20 sm:w-20 sm:min-w-20 sm:text-xs",
                   selectedCategory === "all"
                     ? "border-[#7B4E35] bg-[#7B4E35] text-white shadow-sm"
                     : "border-[#E5DDD1] bg-[#FFFDF9] text-[#51473F] hover:border-[#B89577]"
                 )}
               >
-                <Coffee className="h-5 w-5" />All
+                <Coffee className="h-5 w-5 shrink-0" /><span className="line-clamp-2 text-center">All</span>
               </button>
               {categories.map((cat) => (
                 <button
                   key={cat.id}
                   onClick={() => setSelectedCategory(cat.id)}
                   className={cn(
-                    "flex h-[74px] min-w-[74px] flex-col items-center justify-center gap-1.5 rounded-2xl border px-3 text-[11px] font-semibold transition-all sm:h-20 sm:min-w-20 sm:text-xs",
+                    "flex h-[86px] w-[84px] min-w-[84px] shrink-0 flex-col items-center justify-center gap-1.5 rounded-2xl border px-2 text-[11px] font-semibold leading-tight transition-all sm:h-20 sm:w-20 sm:min-w-20 sm:text-xs",
                     selectedCategory === cat.id
                       ? "border-[#7B4E35] bg-[#7B4E35] text-white shadow-sm"
                       : "border-[#E5DDD1] bg-[#FFFDF9] text-[#51473F] hover:border-[#B89577]"
                   )}
                 >
-                  {cat.name.toLowerCase().includes("dessert") || cat.name.toLowerCase().includes("sweet") ? <Cake className="h-5 w-5" /> : cat.name.toLowerCase().includes("drink") || cat.name.toLowerCase().includes("coffee") ? <Coffee className="h-5 w-5" /> : <Utensils className="h-5 w-5" />}
-                  {cat.name}
+                  {cat.name.toLowerCase().includes("dessert") || cat.name.toLowerCase().includes("sweet") ? <Cake className="h-5 w-5 shrink-0" /> : cat.name.toLowerCase().includes("drink") || cat.name.toLowerCase().includes("coffee") ? <Coffee className="h-5 w-5 shrink-0" /> : <Utensils className="h-5 w-5 shrink-0" />}
+                  <span className="line-clamp-2 max-w-full text-center leading-tight">{cat.name}</span>
                 </button>
               ))}
             </div>
@@ -686,12 +733,31 @@ export function GuestScreen() {
               <section>
                 <div className="mb-3 flex items-center justify-between"><h2 className="font-serif text-2xl font-bold text-[#29231F]">Chef’s Picks</h2><span className="text-xs text-[#7C4D32]">Handpicked</span></div>
                 <div className="grid grid-cols-2 gap-3 lg:grid-cols-3">
-                  {items.filter((item) => item.available && item.dietaryFlags?.some((flag) => ["chef_special", "signature"].includes(flag.toLowerCase()))).slice(0, 3).map((item) => (
-                    <button key={item.id} onClick={() => item.modifiers?.length ? handleOpenCustomizer(item) : addToCart(item, [], "")} className="group overflow-hidden rounded-[20px] border border-[#E5DDD1] bg-[#FFFDF9] text-left shadow-sm transition hover:-translate-y-0.5">
-                      {item.imageUrl && <img src={item.imageUrl} alt={item.name} className="aspect-[1.15/1] w-full object-cover transition duration-500 group-hover:scale-[1.02]" />}
-                      <span className="block p-4"><strong className="font-serif text-lg">{item.name}</strong><span className="mt-1 block text-sm text-[#766B61]">{item.description}</span><span className="mt-3 block font-bold">${Number(item.price).toFixed(2)}</span></span>
-                    </button>
-                  ))}
+                  {items.filter((item) => item.available && item.dietaryFlags?.some((flag) => ["chef_special", "signature"].includes(flag.toLowerCase()))).slice(0, 3).map((item) => {
+                    const minPrice = item.variants && item.variants.length > 0
+                      ? Math.min(...item.variants.map((v) => Number(v.price)))
+                      : Number(item.price);
+                    return (
+                      <button
+                        key={item.id}
+                        onClick={() => handleOpenItemDetails(item)}
+                        className="group overflow-hidden rounded-[20px] border border-[#E5DDD1] bg-[#FFFDF9] text-left shadow-sm transition hover:-translate-y-0.5 cursor-pointer"
+                      >
+                        {item.imageUrl && <img src={item.imageUrl} alt={item.name} className="aspect-[1.15/1] w-full object-cover transition duration-500 group-hover:scale-[1.02]" />}
+                        <span className="block p-4">
+                          <strong className="font-serif text-base sm:text-lg text-[#1E150F] block break-words whitespace-normal leading-snug">{item.name}</strong>
+                          {item.description && <span className="mt-1 block text-xs text-[#766B61] line-clamp-2">{item.description}</span>}
+                          <span className="mt-3 block font-bold text-sm text-[#1E150F]">
+                            {item.variants && item.variants.length > 0 ? (
+                              <span><span className="text-xs font-normal text-[#766B61] mr-1">From</span>{formatINR(minPrice)}</span>
+                            ) : (
+                              formatINR(item.price)
+                            )}
+                          </span>
+                        </span>
+                      </button>
+                    );
+                  })}
                 </div>
               </section>
             )}
@@ -719,75 +785,93 @@ export function GuestScreen() {
                 {section.items.map((item) => {
                   const qtyInCart = getItemCartQuantity(item.id);
                   const isAvailable = item.available;
+                  const hasVariants = Boolean(item.variants && item.variants.length > 0);
+                  const minPrice = hasVariants
+                    ? Math.min(...item.variants!.map((v) => Number(v.price)))
+                    : Number(item.price);
 
                   return (
                     <div
                       key={item.id}
+                      onClick={() => handleOpenItemDetails(item)}
                       className={cn(
-                        "bg-[#FFFDF9] border rounded-2xl overflow-hidden shadow-[0_2px_8px_rgba(41,35,31,0.03)] card-smooth-press",
-                        !isAvailable ? "border-stone-300 opacity-60 bg-stone-50" : "border-[#E5DDD1]"
+                        "bg-[#FFFDF9] border rounded-2xl overflow-hidden shadow-[0_2px_8px_rgba(41,35,31,0.03)] card-smooth-press cursor-pointer flex flex-col justify-between transition-all",
+                        !isAvailable ? "border-stone-300 opacity-60 bg-stone-50 cursor-not-allowed" : "border-[#E5DDD1] hover:border-[#B89577]"
                       )}
                     >
                       {/* Photo Header */}
-                      {item.imageUrl && (
-                        <div className="relative aspect-[1.15/1] bg-[#EAE2D5] overflow-hidden">
-                          <img
-                            src={item.imageUrl}
-                            alt={item.name}
-                            className={cn(
-                              "w-full h-full object-cover transition-transform duration-500 hover:scale-105",
-                              !isAvailable && "grayscale"
-                            )}
-                            loading="lazy"
-                          />
-                          <div className="absolute top-2.5 left-2.5 flex flex-wrap gap-1">
-                            {item.dietaryFlags.map((f) => (
-                              <DietaryBadge key={f} tag={f} className="bg-white/95 text-[10px] shadow-sm" />
-                            ))}
-                          </div>
-                          {!isAvailable && (
-                            <div className="absolute inset-0 bg-[#1E150F]/65 backdrop-blur-2xs flex items-center justify-center">
-                              <span className="px-3.5 py-1 bg-stone-900/90 text-white text-[11px] font-bold rounded-full uppercase tracking-wider border border-white/20">
-                                Sold Out Today
-                              </span>
+                      <div>
+                        {item.imageUrl && (
+                          <div className="relative aspect-[1.15/1] bg-[#EAE2D5] overflow-hidden">
+                            <img
+                              src={item.imageUrl}
+                              alt={item.name}
+                              className={cn(
+                                "w-full h-full object-cover transition-transform duration-500 hover:scale-105",
+                                !isAvailable && "grayscale"
+                              )}
+                              loading="lazy"
+                            />
+                            <div className="absolute top-2.5 left-2.5 flex flex-wrap gap-1">
+                              {item.dietaryFlags.map((f) => (
+                                <DietaryBadge key={f} tag={f} className="bg-white/95 text-[10px] shadow-sm" />
+                              ))}
                             </div>
-                          )}
-                        </div>
-                      )}
-
-                      {/* Content Section */}
-                        <div className="p-3 sm:p-4">
-                        <div className="flex items-start justify-between gap-3 mb-1.5">
-                          <div>
-                            <h3 className="truncate font-serif text-[15px] font-bold leading-snug text-[#29231F] sm:text-base">
-                              {item.name}
-                            </h3>
-                            {item.dietaryFlags?.length > 0 && !item.imageUrl && (
-                              <div className="flex flex-wrap gap-1 mt-1">
-                                {item.dietaryFlags.map((f) => (
-                                  <DietaryBadge key={f} tag={f} />
-                                ))}
+                            {!isAvailable && (
+                              <div className="absolute inset-0 bg-[#1E150F]/65 backdrop-blur-2xs flex items-center justify-center">
+                                <span className="px-3.5 py-1 bg-stone-900/90 text-white text-[11px] font-bold rounded-full uppercase tracking-wider border border-white/20">
+                                  Sold Out Today
+                                </span>
                               </div>
                             )}
                           </div>
-                          <span className="shrink-0 font-sans text-[15px] font-extrabold text-[#29231F] sm:text-base">
-                            ${Number(item.price).toFixed(2)}
-                          </span>
-                        </div>
-
-                        {item.description && (
-                          <p className="mb-2 line-clamp-2 text-[11px] leading-tight text-[#766B61] sm:text-xs sm:leading-snug">
-                            {item.description}
-                          </p>
                         )}
 
-                        <div className="flex items-center justify-between gap-1 pt-2">
+                        {/* Content Section */}
+                        <div className="p-3 sm:p-4">
+                          <div className="flex items-start justify-between gap-2 mb-1.5">
+                            <div className="min-w-0 flex-1">
+                              {/* Complete Menu Item Name with natural wrapping and no truncation */}
+                              <h3 className="font-serif text-[14px] sm:text-base font-bold leading-snug text-[#29231F] break-words whitespace-normal">
+                                {item.name}
+                              </h3>
+                              {item.dietaryFlags?.length > 0 && !item.imageUrl && (
+                                <div className="flex flex-wrap gap-1 mt-1">
+                                  {item.dietaryFlags.map((f) => (
+                                    <DietaryBadge key={f} tag={f} />
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                            <span className="shrink-0 font-sans text-[14px] sm:text-[15px] font-extrabold text-[#29231F] text-right">
+                              {hasVariants ? (
+                                <span className="flex flex-col items-end">
+                                  <span className="text-[10px] font-normal text-[#766B61] leading-none">From</span>
+                                  <span>{formatINR(minPrice)}</span>
+                                </span>
+                              ) : (
+                                formatINR(item.price)
+                              )}
+                            </span>
+                          </div>
+
+                          {item.description && (
+                            <p className="mb-2 line-clamp-2 text-[11px] leading-tight text-[#766B61] sm:text-xs sm:leading-snug break-words">
+                              {item.description}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Card Footer with Details / Add Controls */}
+                      <div className="px-3 pb-3 sm:px-4 sm:pb-4 pt-1">
+                        <div className="flex items-center justify-between gap-1 pt-2 border-t border-[#E5DDD1]/50">
                           <span className="flex items-center gap-1 text-[9px] text-[#766B61] sm:text-[10px]">
                             <Clock className="h-3 w-3 text-[#7B4E35]" />~{item.prepTimeMinutes} min
                           </span>
 
-                          {/* Quick 1-Hand Action Button */}
-                          <div>
+                          {/* Quick 1-Hand Action Button with stopPropagation */}
+                          <div onClick={(e) => e.stopPropagation()}>
                             {!isAvailable ? (
                               <button
                                 disabled
@@ -795,13 +879,16 @@ export function GuestScreen() {
                               >
                                 Unavailable
                               </button>
-                            ) : item.modifiers && item.modifiers.length > 0 ? (
+                            ) : hasVariants || (item.modifiers && item.modifiers.length > 0) ? (
                               <button
-                                onClick={() => handleOpenCustomizer(item)}
-                                className="flex min-h-9 items-center gap-1.5 rounded-full bg-[#7B4E35] px-3 py-2 text-xs font-bold text-white shadow-2xs transition-colors hover:bg-[#633D28] btn-smooth-press cursor-pointer"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleOpenItemDetails(item);
+                                }}
+                                className="flex min-h-8 items-center gap-1.5 rounded-full bg-[#7B4E35] px-3 py-1.5 text-xs font-bold text-white shadow-2xs transition-colors hover:bg-[#633D28] btn-smooth-press cursor-pointer"
                               >
                                 <Plus className="w-3.5 h-3.5 text-white" />
-                                <span>Customize</span>
+                                <span>{hasVariants ? "Options" : "Customize"}</span>
                                 {qtyInCart > 0 && (
                                   <span className="w-4 h-4 rounded-full bg-[#B88223] text-white text-[10px] flex items-center justify-center font-mono ml-0.5">
                                     {qtyInCart}
@@ -812,7 +899,8 @@ export function GuestScreen() {
                               /* In-card quick stepper */
                               <div className="flex items-center gap-1.5 bg-[#FAF8F5] p-1 rounded-xl border border-[#E5DDD1]">
                                 <button
-                                  onClick={() => {
+                                  onClick={(e) => {
+                                    e.stopPropagation();
                                     const match = cart.find((c) => c.item.id === item.id);
                                     if (match) updateCartQuantity(match.cartItemId, -1);
                                   }}
@@ -825,7 +913,10 @@ export function GuestScreen() {
                                   {qtyInCart}
                                 </span>
                                 <button
-                                  onClick={() => addToCart(item, [], "")}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    addToCart(item, null, [], "", 1);
+                                  }}
                                   className="w-7 h-7 rounded-lg bg-white border border-[#E5DDD1] flex items-center justify-center text-[#1E150F] active:scale-95 cursor-pointer shadow-2xs"
                                   aria-label="Increase quantity"
                                 >
@@ -834,8 +925,12 @@ export function GuestScreen() {
                               </div>
                             ) : (
                               <button
-                                onClick={() => addToCart(item, [], "")}
-                                className="flex h-8 w-8 items-center justify-center rounded-full bg-[#7B4E35] text-sm font-bold text-white shadow-2xs transition-colors hover:bg-[#633D28]"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  addToCart(item, null, [], "", 1);
+                                }}
+                                className="flex h-8 w-8 items-center justify-center rounded-full bg-[#7B4E35] text-sm font-bold text-white shadow-2xs transition-colors hover:bg-[#633D28] cursor-pointer"
+                                title="Add to cart"
                               >
                                 <Plus className="h-4 w-4 text-white" />
                                 <span className="sr-only">Add</span>
@@ -978,9 +1073,16 @@ export function GuestScreen() {
                         {ord.items?.map((it: any, idx: number) => (
                           <div key={idx} className="py-2.5 flex justify-between">
                             <div>
-                              <span className="font-semibold text-[#1E150F]">
-                                {it.quantity}× {it.itemName}
-                              </span>
+                              <div className="flex items-center gap-1.5 flex-wrap">
+                                <span className="font-semibold text-[#1E150F]">
+                                  {it.quantity}× {it.itemName}
+                                </span>
+                                {it.variantName && (
+                                  <span className="px-1.5 py-0.2 rounded-md text-[10px] font-bold bg-[#FAF3E6] text-[#8E6314] border border-[#ECD7A9]">
+                                    {it.variantName}
+                                  </span>
+                                )}
+                              </div>
                               {it.selectedModifiers && it.selectedModifiers.length > 0 && (
                                 <p className="text-[10px] text-[#73685C]">
                                   {it.selectedModifiers.map((m: any) => m.name).join(", ")}
@@ -990,8 +1092,8 @@ export function GuestScreen() {
                                 <p className="text-[10px] text-[#825C15] italic">Note: {it.notes}</p>
                               )}
                             </div>
-                            <span className="font-mono text-[11px] font-bold text-[#1E150F]">
-                              ${Number(it.lineTotal).toFixed(2)}
+                            <span className="font-sans text-[11px] font-extrabold text-[#29231F]">
+                              {formatINR(it.lineTotal)}
                             </span>
                           </div>
                         ))}
@@ -1009,8 +1111,8 @@ export function GuestScreen() {
                       <div className="pt-3 border-t border-[#E5DDD1] flex items-center justify-between text-xs">
                         <div>
                           <span className="text-[10px] text-[#73685C] block">Folio Charge</span>
-                          <span className="font-serif font-bold text-base text-[#1E150F]">
-                            ${Number(ord.total_amount).toFixed(2)}
+                          <span className="font-sans text-[14px] font-extrabold text-[#29231F] sm:text-[15px]">
+                            {formatINR(ord.total_amount)}
                           </span>
                         </div>
 
@@ -1051,7 +1153,7 @@ export function GuestScreen() {
                       </div>
 
                       <p className="text-[11px] text-[#73685C]">
-                        {ord.items?.map((it: any) => `${it.quantity}× ${it.itemName}`).join(", ")}
+                        {ord.items?.map((it: any) => `${it.quantity}× ${it.itemName}${it.variantName ? ` (${it.variantName})` : ""}`).join(", ")}
                       </p>
 
                       <div className="flex justify-between items-center pt-2 border-t border-[#E5DDD1]/60 text-[11px]">
@@ -1061,13 +1163,22 @@ export function GuestScreen() {
                             day: "numeric",
                           })}
                         </span>
-                        <span className="font-serif font-bold text-sm text-[#1E150F]">
-                          ${Number(ord.total_amount).toFixed(2)}
+                        <span className="font-sans text-[14px] font-extrabold text-[#29231F] sm:text-[15px]">
+                          {formatINR(ord.total_amount)}
                         </span>
                       </div>
                     </div>
                   ))}
                 </div>
+              </div>
+            )}
+
+            {orders.length > 0 && (
+              <div className="flex items-center justify-between rounded-2xl border border-[#E5DDD1] bg-[#FAF3E6] px-4 py-3.5">
+                <span className="text-sm font-semibold text-[#51473F]">Total for this stay</span>
+                <span className="font-sans text-[14px] font-extrabold text-[#29231F] sm:text-[15px]">
+                  {formatINR(billableOrdersTotal)}
+                </span>
               </div>
             )}
           </div>
@@ -1102,50 +1213,146 @@ export function GuestScreen() {
             </div>
 
             <div className="flex items-center gap-2">
-              <span className="font-serif text-base font-bold">${subtotal.toFixed(2)}</span>
+              <span className="font-serif text-base font-bold">{formatINR(subtotal)}</span>
               <ArrowRight className="w-4 h-4 text-[#B88223]" />
             </div>
           </button>
         </div>
       )}
 
-      {/* ── Item Customizer Bottom Sheet Modal ── */}
+      {/* ── Rich Details View & Item Customizer Modal ── */}
       <Modal
-        isOpen={Boolean(customizingItem)}
-        onClose={() => setCustomizingItem(null)}
-        title={customizingItem ? customizingItem.name : ""}
-        description={customizingItem?.description}
+        isOpen={Boolean(viewingItemDetails)}
+        onClose={() => setViewingItemDetails(null)}
+        title=""
       >
-        {customizingItem && (
-          <div className="space-y-5 text-xs">
-            {/* Modifier Groups */}
-            {(() => {
-              const groups: Record<string, ItemModifier[]> = {};
-              customizingItem.modifiers.forEach((m) => {
-                if (!groups[m.groupName]) groups[m.groupName] = [];
-                groups[m.groupName].push(m);
-              });
+        {viewingItemDetails && (() => {
+          const item = viewingItemDetails;
+          const currentBasePrice = detailSelectedVariant ? Number(detailSelectedVariant.price) : Number(item.price);
+          const modTotal = Object.values(detailSelectedMods).reduce((acc, m) => acc + Number(m.priceDelta), 0);
+          const singleUnitPrice = currentBasePrice + modTotal;
+          const currentLineTotal = singleUnitPrice * detailQuantity;
 
-              return Object.entries(groups).map(([groupName, mods]) => (
-                <div key={groupName} className="space-y-2">
+          const modGroups: Record<string, ItemModifier[]> = {};
+          if (item.modifiers) {
+            item.modifiers.forEach((m) => {
+              if (!modGroups[m.groupName]) modGroups[m.groupName] = [];
+              modGroups[m.groupName].push(m);
+            });
+          }
+
+          return (
+            <div className="space-y-4 text-xs">
+              {/* Full Image */}
+              {item.imageUrl && (
+                <div className="relative aspect-[16/10] rounded-2xl overflow-hidden bg-[#EAE2D5] -mt-2 shadow-xs">
+                  <img src={item.imageUrl} alt={item.name} className="w-full h-full object-cover" />
+                  <div className="absolute top-2.5 left-2.5 flex flex-wrap gap-1">
+                    {item.dietaryFlags?.map((f) => (
+                      <DietaryBadge key={f} tag={f} className="bg-white/95 text-[10px] shadow-sm" />
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Title, Badges, Prep Time & Price */}
+              <div>
+                <div className="flex items-start justify-between gap-3">
+                  <h2 className="font-serif text-xl sm:text-2xl font-bold leading-snug text-[#1E150F] break-words whitespace-normal">
+                    {item.name}
+                  </h2>
+                  <div className="shrink-0 text-right">
+                    <span className="font-serif text-lg sm:text-xl font-bold text-[#1E150F]">
+                      {formatINR(singleUnitPrice)}
+                    </span>
+                    {detailSelectedVariant && (
+                      <span className="block text-[10px] font-medium text-[#766B61]">
+                        {detailSelectedVariant.name}
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-2 mt-2">
+                  <span className="inline-flex items-center gap-1 text-[11px] font-medium text-[#766B61] bg-[#FAF8F5] px-2.5 py-0.5 rounded-full border border-[#E5DDD1]">
+                    <Clock className="w-3 h-3 text-[#B88223]" />
+                    ~{item.prepTimeMinutes} mins prep
+                  </span>
+                  {item.dietaryFlags?.map((f) => (
+                    <DietaryBadge key={f} tag={f} />
+                  ))}
+                </div>
+
+                {item.description && (
+                  <p className="mt-2.5 text-xs text-[#73685C] leading-relaxed break-words whitespace-normal">
+                    {item.description}
+                  </p>
+                )}
+              </div>
+
+              {/* Sizes / Variants Selection */}
+              {item.variants && item.variants.length > 0 && (
+                <div className="space-y-2 pt-3 border-t border-[#E5DDD1]">
+                  <div className="flex items-center justify-between">
+                    <label className="text-[11px] font-bold uppercase tracking-wider text-[#1E150F]">
+                      Select Portion / Size
+                    </label>
+                    <span className="text-[10px] text-[#8E6314] font-semibold">Required</span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    {item.variants.map((v) => {
+                      const isSelected = detailSelectedVariant?.id === v.id || (!detailSelectedVariant && v.id === item.variants![0].id);
+                      return (
+                        <button
+                          key={v.id || v.name}
+                          type="button"
+                          disabled={!v.available}
+                          onClick={() => setDetailSelectedVariant(v)}
+                          className={cn(
+                            "flex flex-col p-3 rounded-2xl border text-left transition-all btn-smooth-press cursor-pointer",
+                            !v.available && "opacity-50 cursor-not-allowed bg-stone-100 border-stone-200",
+                            isSelected
+                              ? "bg-[#FAF3E6] border-[#B88223] text-[#1E150F] shadow-2xs ring-1 ring-[#B88223]/40"
+                              : "bg-[#FAF8F5] border-[#E5DDD1] text-[#73685C] hover:bg-[#F2ECE1]"
+                          )}
+                        >
+                          <div className="flex items-center justify-between w-full">
+                            <span className="font-serif font-bold text-xs text-[#1E150F]">{v.name}</span>
+                            <span className="font-mono text-xs font-bold text-[#8E6314]">
+                              {formatINR(v.price)}
+                            </span>
+                          </div>
+                          {!v.available && (
+                            <span className="text-[9px] text-red-600 font-semibold mt-0.5">Sold Out</span>
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* Modifiers / Add-ons */}
+              {Object.entries(modGroups).map(([groupName, mods]) => (
+                <div key={groupName} className="space-y-2 pt-3 border-t border-[#E5DDD1]">
                   <label className="block text-[11px] font-bold uppercase tracking-wider text-[#1E150F]">
                     {groupName}
                   </label>
                   <div className="grid grid-cols-1 gap-2">
                     {mods.map((mod) => {
-                      const isSelected = selectedMods[groupName]?.id === mod.id;
+                      const isSelected = detailSelectedMods[groupName]?.id === mod.id;
                       return (
                         <button
                           key={mod.id}
                           type="button"
                           onClick={() =>
-                            setSelectedMods((prev) => ({
+                            setDetailSelectedMods((prev) => ({
                               ...prev,
                               [groupName]: mod,
                             }))
                           }
                           className={cn(
-                            "flex items-center justify-between p-3.5 rounded-2xl border text-xs font-medium transition-all text-left btn-smooth-press min-h-[44px]",
+                            "flex items-center justify-between p-3 rounded-2xl border text-xs font-medium transition-all text-left btn-smooth-press min-h-[44px] cursor-pointer",
                             isSelected
                               ? "bg-[#FAF3E6] border-[#ECD7A9] text-[#8E6314] shadow-2xs"
                               : "bg-[#FAF8F5] border-[#E5DDD1] text-[#73685C] hover:bg-[#F0ECE1]"
@@ -1153,53 +1360,75 @@ export function GuestScreen() {
                         >
                           <span className="font-semibold text-[#1E150F]">{mod.name}</span>
                           <span className="font-mono text-xs font-bold text-[#8E6314]">
-                            {Number(mod.priceDelta) > 0 ? `+$${Number(mod.priceDelta).toFixed(2)}` : "Included"}
+                            {Number(mod.priceDelta) > 0 ? `+${formatINR(mod.priceDelta)}` : "Included"}
                           </span>
                         </button>
                       );
                     })}
                   </div>
                 </div>
-              ));
-            })()}
+              ))}
 
-            {/* Dish Preparation Note */}
-            <div>
-              <label className="block text-[11px] font-bold uppercase tracking-wider text-[#1E150F] mb-1.5">
-                Special Requests for this Dish
-              </label>
-              <input
-                type="text"
-                placeholder="e.g. Dressing on side, well toasted..."
-                value={itemNotes}
-                onChange={(e) => setItemNotes(e.target.value)}
-                className="w-full px-4 py-2.5 bg-[#FAF8F5] border border-[#E5DDD1] rounded-2xl text-xs text-[#1E150F] focus:outline-none focus:ring-2 focus:ring-[#B88223]/30"
-              />
-            </div>
-
-            {/* Add Action */}
-            <div className="pt-4 border-t border-[#E5DDD1] flex items-center justify-between">
-              <div>
-                <span className="text-[10px] text-[#73685C] block">Total</span>
-                <span className="font-serif text-lg font-bold text-[#1E150F]">
-                  $
-                  {(
-                    Number(customizingItem.price) +
-                    Object.values(selectedMods).reduce((acc, m) => acc + Number(m.priceDelta), 0)
-                  ).toFixed(2)}
-                </span>
+              {/* Special Requests */}
+              <div className="pt-2">
+                <label className="block text-[11px] font-bold uppercase tracking-wider text-[#1E150F] mb-1.5">
+                  Special Requests / In-Suite Preparation Notes
+                </label>
+                <input
+                  type="text"
+                  placeholder="e.g. Extra hot, dressing on the side, no onions..."
+                  value={detailNotes}
+                  onChange={(e) => setDetailNotes(e.target.value)}
+                  className="w-full px-3.5 py-2.5 bg-[#FAF8F5] border border-[#E5DDD1] rounded-2xl text-xs text-[#1E150F] focus:outline-none focus:ring-2 focus:ring-[#B88223]/30"
+                />
               </div>
-              <button
-                onClick={() =>
-                  addToCart(customizingItem, Object.values(selectedMods), itemNotes)
-                }
-                className="px-6 py-3 rounded-2xl font-bold text-xs text-white bg-[#1E150F] hover:bg-[#29231F] shadow-md min-h-[44px] btn-smooth-press"
-              >
-                Add to Order
-              </button>
+
+              {/* Quantity Stepper & Add Button */}
+              <div className="pt-3 border-t border-[#E5DDD1] flex items-center justify-between gap-3">
+                <div className="flex items-center gap-2 bg-[#FAF8F5] p-1.5 rounded-2xl border border-[#E5DDD1]">
+                  <button
+                    type="button"
+                    onClick={() => setDetailQuantity((q) => Math.max(1, q - 1))}
+                    className="w-8 h-8 rounded-xl bg-white border border-[#E5DDD1] flex items-center justify-center text-[#1E150F] active:scale-95 cursor-pointer shadow-2xs"
+                    aria-label="Decrease quantity"
+                  >
+                    <Minus className="w-3.5 h-3.5" />
+                  </button>
+                  <span className="font-mono text-sm font-bold w-6 text-center">
+                    {detailQuantity}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setDetailQuantity((q) => q + 1)}
+                    className="w-8 h-8 rounded-xl bg-white border border-[#E5DDD1] flex items-center justify-center text-[#1E150F] active:scale-95 cursor-pointer shadow-2xs"
+                    aria-label="Increase quantity"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    addToCart(
+                      item,
+                      detailSelectedVariant,
+                      Object.values(detailSelectedMods),
+                      detailNotes,
+                      detailQuantity
+                    );
+                  }}
+                  className="flex-1 py-3 px-4 rounded-2xl font-bold text-xs text-white bg-[#1E150F] hover:bg-[#29231F] shadow-md flex items-center justify-between min-h-[46px] btn-smooth-press cursor-pointer"
+                >
+                  <span>Add to Order</span>
+                  <span className="font-mono font-bold text-sm text-[#ECD7A9]">
+                    {formatINR(currentLineTotal)}
+                  </span>
+                </button>
+              </div>
             </div>
-          </div>
-        )}
+          );
+        })()}
       </Modal>
 
       {/* ── Cart Review & Order Placement Modal ── */}
@@ -1218,12 +1447,19 @@ export function GuestScreen() {
                 className="p-3.5 bg-[#FAF8F5] border border-[#E5DDD1] rounded-2xl flex items-center justify-between gap-2 shadow-2xs"
               >
                 <div className="flex-1 min-w-0 pr-1">
-                  <div className="flex justify-between items-baseline">
-                    <span className="font-serif font-bold text-sm text-[#1E150F] truncate">
-                      {line.item.name}
-                    </span>
-                    <span className="font-serif font-bold text-xs text-[#1E150F] ml-1">
-                      ${line.lineTotal.toFixed(2)}
+                  <div className="flex justify-between items-baseline gap-2">
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <span className="font-serif font-bold text-sm text-[#1E150F]">
+                        {line.item.name}
+                      </span>
+                      {line.variantName && (
+                        <span className="px-1.5 py-0.2 rounded-md text-[10px] font-bold bg-[#FAF3E6] text-[#8E6314] border border-[#ECD7A9]">
+                          {line.variantName}
+                        </span>
+                      )}
+                    </div>
+                    <span className="font-serif font-bold text-xs text-[#1E150F] shrink-0 ml-1">
+                      {formatINR(line.lineTotal)}
                     </span>
                   </div>
                   {line.selectedModifiers.length > 0 && (
@@ -1278,20 +1514,20 @@ export function GuestScreen() {
           <div className="p-4 bg-[#FAF8F5] border border-[#E5DDD1] rounded-2xl space-y-2 text-[11px]">
             <div className="flex justify-between text-[#73685C]">
               <span>Culinary Subtotal</span>
-              <span className="font-mono">${subtotal.toFixed(2)}</span>
+              <span className="font-mono font-medium">{formatINR(subtotal)}</span>
             </div>
             <div className="flex justify-between text-[#73685C]">
               <span>Resort Tax ({property?.taxRatePercent || 10}%)</span>
-              <span className="font-mono">${taxAmount.toFixed(2)}</span>
+              <span className="font-mono font-medium">{formatINR(taxAmount)}</span>
             </div>
             <div className="flex justify-between text-[#73685C]">
               <span>In-Room Service Charge ({property?.serviceChargePercent || 5}%)</span>
-              <span className="font-mono">${serviceCharge.toFixed(2)}</span>
+              <span className="font-mono font-medium">{formatINR(serviceCharge)}</span>
             </div>
             <div className="pt-2.5 border-t border-[#E5DDD1] flex justify-between font-bold text-sm text-[#1E150F]">
               <span className="font-serif">Total to Room Folio</span>
               <span className="font-serif text-lg font-bold text-[#1E150F]">
-                ${totalAmount.toFixed(2)}
+                {formatINR(totalAmount)}
               </span>
             </div>
           </div>

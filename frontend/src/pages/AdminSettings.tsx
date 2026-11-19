@@ -27,7 +27,7 @@ export function AdminSettings() {
 
   // Form
   const [name, setName] = useState("");
-  const [currency, setCurrency] = useState("USD");
+  const [currency, setCurrency] = useState("INR");
   const [taxRate, setTaxRate] = useState("10.00");
   const [serviceCharge, setServiceCharge] = useState("5.00");
   const [openingTime, setOpeningTime] = useState("06:00");

@@ -8,7 +8,7 @@ interface Props {
 }
 
 export function DietaryBadge({ tag, className }: Props) {
-  const norm = tag.toLowerCase().replace(/-/g, "_");
+  const norm = tag.trim().toLowerCase().replace(/[\s-]+/g, "_");
 
   switch (norm) {
     case "veg":
@@ -22,6 +22,21 @@ export function DietaryBadge({ tag, className }: Props) {
         >
           <CircleDot className="w-2.5 h-2.5 text-emerald-600 fill-emerald-600" />
           <span>Veg</span>
+        </span>
+      );
+    case "non_veg":
+    case "nonveg":
+    case "non_vegetarian":
+    case "nonvegetarian":
+      return (
+        <span
+          className={cn(
+            "inline-flex items-center gap-1 rounded-full border border-rose-300 bg-rose-50 px-2 py-0.5 text-[11px] font-semibold text-rose-800 shadow-2xs whitespace-nowrap",
+            className
+          )}
+        >
+          <CircleDot className="h-2.5 w-2.5 fill-rose-600 text-rose-600" />
+          <span>Non-Veg</span>
         </span>
       );
     case "vegan":
