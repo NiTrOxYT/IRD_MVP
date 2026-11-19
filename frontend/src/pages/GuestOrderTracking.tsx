@@ -15,14 +15,15 @@ import {
   Utensils,
   BellRing,
 } from "lucide-react";
+import { cn } from "../lib/utils";
 
 const STAGES = [
   { key: "pending", label: "Received", desc: "Awaiting front desk review" },
   { key: "accepted", label: "Confirmed", desc: "Sent to kitchen station" },
-  { key: "preparing", label: "In Kitchen", desc: "Being prepared by chefs" },
+  { key: "preparing", label: "In Kitchen", desc: "Being prepared by resort chefs" },
   { key: "ready", label: "Plated & Ready", desc: "Awaiting butler dispatch" },
   { key: "out_for_delivery", label: "En Route", desc: "On its way to your suite" },
-  { key: "delivered", label: "Delivered", desc: "Enjoy your dining" },
+  { key: "delivered", label: "Delivered", desc: "Enjoy your culinary dining" },
 ];
 
 export function GuestOrderTracking() {
@@ -55,7 +56,6 @@ export function GuestOrderTracking() {
       joinOrderRoom(orderId);
     }
 
-    // Realtime status listener
     const unsubStatus = onOrderStatusChanged(({ order: updatedOrder }) => {
       if (updatedOrder.id === orderId) {
         setOrder(updatedOrder);
@@ -63,10 +63,8 @@ export function GuestOrderTracking() {
       }
     });
 
-    // Socket connection listener
     const unsubConn = subscribeConnectionStatus(setConnStatus);
 
-    // Fallback polling every 5s if disconnected or actively waiting
     const interval = setInterval(() => {
       fetchLatestOrder();
     }, 5000);
@@ -95,7 +93,7 @@ export function GuestOrderTracking() {
 
   if (loading) {
     return (
-      <div className="min-h-[70vh] flex flex-col items-center justify-center">
+      <div className="min-h-[70vh] flex flex-col items-center justify-center p-6 text-center">
         <div className="w-10 h-10 border-3 border-[#B88223] border-t-transparent rounded-full animate-spin"></div>
         <p className="mt-4 font-serif text-sm text-[#73685C]">Connecting to suite order feed...</p>
       </div>
@@ -107,10 +105,10 @@ export function GuestOrderTracking() {
       <div className="max-w-md mx-auto my-16 p-8 bg-[#FFFDF9] border border-red-200 rounded-3xl text-center shadow-lg">
         <AlertTriangle className="w-12 h-12 text-red-500 mx-auto mb-4" />
         <h2 className="font-serif text-xl font-bold text-[#1E150F] mb-2">Order Not Found</h2>
-        <p className="text-sm text-[#73685C] mb-6">{error || "Unable to locate this order."}</p>
+        <p className="text-xs text-[#73685C] mb-6">{error || "Unable to locate this order."}</p>
         <Link
           href="/stay/menu"
-          className="inline-flex items-center justify-center px-5 py-2.5 rounded-xl font-medium text-sm text-white bg-[#1E150F]"
+          className="inline-flex items-center justify-center px-5 py-2.5 rounded-xl font-medium text-xs text-white bg-[#1E150F] btn-smooth-press"
         >
           Return to Menu
         </Link>
@@ -122,16 +120,16 @@ export function GuestOrderTracking() {
   const currentStageIndex = STAGES.findIndex((s) => s.key === order.status);
 
   return (
-    <div className="min-h-screen py-8 px-4 sm:px-6">
+    <div className="min-h-[100dvh] bg-[#FAF8F5] py-8 px-4 sm:px-6">
       <div className="max-w-2xl mx-auto space-y-6">
         {/* Navigation back */}
         <div className="flex items-center justify-between">
           <Link
             href="/stay/menu"
-            className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#73685C] hover:text-[#1E150F] transition-colors"
+            className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#73685C] hover:text-[#1E150F] transition-colors btn-smooth-press"
           >
             <ArrowLeft className="w-4 h-4" />
-            Back to In-Room Menu
+            <span>Back to In-Room Menu</span>
           </Link>
 
           {/* Reconnecting pill */}
@@ -144,7 +142,7 @@ export function GuestOrderTracking() {
         </div>
 
         {/* Order Header Card */}
-        <div className="bg-[#FFFDF9] border border-[#E5DDD1] rounded-3xl p-6 sm:p-8 shadow-md">
+        <div className="bg-[#FFFDF9] border border-[#E5DDD1] rounded-3xl p-6 sm:p-8 shadow-xs">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
             <div>
               <div className="flex items-center gap-2 mb-1">
@@ -190,20 +188,22 @@ export function GuestOrderTracking() {
                   return (
                     <div key={stage.key} className="flex flex-col items-center relative z-10">
                       <div
-                        className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold transition-all shadow-xs ${
+                        className={cn(
+                          "w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold transition-all shadow-2xs",
                           isDone
                             ? "bg-[#B88223] text-white"
                             : isCurrent
                             ? "bg-[#1E150F] text-[#B88223] ring-4 ring-[#B88223]/20"
-                            : "bg-[#F8F5EF] text-[#73685C] border border-[#E5DDD1]"
-                        }`}
+                            : "bg-[#FAF8F5] text-[#73685C] border border-[#E5DDD1]"
+                        )}
                       >
                         {isDone ? "✓" : idx + 1}
                       </div>
                       <span
-                        className={`text-[11px] font-semibold mt-2 text-center max-w-[60px] truncate ${
+                        className={cn(
+                          "text-[11px] font-semibold mt-2 text-center max-w-[60px] truncate",
                           isCurrent ? "text-[#1E150F]" : "text-[#73685C]"
-                        }`}
+                        )}
                       >
                         {stage.label}
                       </span>
@@ -213,8 +213,8 @@ export function GuestOrderTracking() {
               </div>
 
               {/* Current Stage Highlight Box */}
-              <div className="mt-6 p-4 bg-[#F8F5EF] rounded-2xl border border-[#E5DDD1] flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-[#1E150F] text-[#B88223] flex items-center justify-center shrink-0">
+              <div className="mt-6 p-4 bg-[#FAF8F5] rounded-2xl border border-[#E5DDD1] flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-[#1E150F] text-[#B88223] flex items-center justify-center shrink-0 shadow-2xs">
                   <Utensils className="w-5 h-5" />
                 </div>
                 <div>
@@ -266,7 +266,7 @@ export function GuestOrderTracking() {
                       <p className="text-[11px] text-[#825C15] italic">Note: {item.notes}</p>
                     )}
                   </div>
-                  <span className="font-mono text-xs font-bold text-[#1E150F] shrink-0">
+                  <span className="font-serif text-xs font-bold text-[#1E150F] shrink-0">
                     ${Number(item.lineTotal).toFixed(2)}
                   </span>
                 </div>
@@ -275,7 +275,7 @@ export function GuestOrderTracking() {
 
             {/* Special Instructions */}
             {order.special_instructions && (
-              <div className="p-3.5 bg-[#F8F5EF] rounded-xl text-xs text-[#73685C]">
+              <div className="p-3.5 bg-[#FAF8F5] rounded-xl text-xs text-[#73685C] border border-[#E5DDD1]/60">
                 <span className="font-semibold text-[#1E150F]">Delivery Note: </span>
                 {order.special_instructions}
               </div>
@@ -283,8 +283,8 @@ export function GuestOrderTracking() {
 
             {/* Total */}
             <div className="pt-3 border-t border-[#E5DDD1] flex justify-between items-baseline font-bold text-sm text-[#1E150F]">
-              <span>Room Folio Total</span>
-              <span className="font-mono text-base">${Number(order.total_amount).toFixed(2)}</span>
+              <span className="font-serif">Room Folio Total</span>
+              <span className="font-serif text-lg font-bold">${Number(order.total_amount).toFixed(2)}</span>
             </div>
           </div>
 
@@ -294,7 +294,7 @@ export function GuestOrderTracking() {
               <button
                 onClick={handleCancelOrder}
                 disabled={isCancelling}
-                className="px-4 py-2 text-xs font-semibold text-red-600 hover:text-red-700 bg-red-50 hover:bg-red-100 rounded-xl transition-colors cursor-pointer disabled:opacity-50"
+                className="px-4 py-2 text-xs font-semibold text-red-600 hover:text-red-700 bg-red-50 hover:bg-red-100 rounded-xl border border-red-200 transition-colors btn-smooth-press cursor-pointer disabled:opacity-50"
               >
                 {isCancelling ? "Cancelling..." : "Cancel Order"}
               </button>

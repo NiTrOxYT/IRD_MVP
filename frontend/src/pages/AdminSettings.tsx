@@ -14,7 +14,9 @@ import {
   CheckCircle2,
   FileText,
   RotateCcw,
+  Sparkles,
 } from "lucide-react";
+import { cn } from "../lib/utils";
 
 export function AdminSettings() {
   const [settings, setSettings] = useState<PropertySettings | null>(null);
@@ -92,51 +94,66 @@ export function AdminSettings() {
   };
 
   return (
-    <div className="min-h-screen py-8 px-4 sm:px-6 max-w-7xl mx-auto space-y-8">
-      {/* Header */}
-      <div className="pb-6 border-b border-[#E5DDD1]">
-        <span className="text-xs font-bold uppercase tracking-wider text-[#B88223]">
-          Property Configuration
-        </span>
-        <h1 className="font-serif text-3xl font-bold text-[#1E150F]">
-          Resort & In-Room Dining Settings
-        </h1>
-        <p className="text-xs text-[#73685C] mt-1">
-          Configure property identity, room service fee schedule, operating hours, and review staff audit history.
-        </p>
+    <div className="min-h-[100dvh] bg-[#FAF8F5] py-8 px-4 sm:px-6 max-w-7xl mx-auto space-y-8">
+      {/* Header matching Cafe Command Center */}
+      <div className="pb-6 border-b border-[#E5DDD1] flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <span className="text-[10px] font-bold uppercase tracking-widest text-[#8E6314]">
+            Property Configuration · Operations
+          </span>
+          <h1 className="font-serif text-3xl font-bold text-[#1E150F] tracking-tight mt-0.5">
+            Resort & In-Room Dining Settings
+          </h1>
+          <p className="text-xs text-[#73685C] mt-1">
+            Configure property branding, room service tax schedules, operating hours, and inspect security audit trails.
+          </p>
+        </div>
+        <div>
+          <button
+            onClick={() => void fetchData()}
+            disabled={loading}
+            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold bg-[#FFFDF9] border border-[#E5DDD1] text-[#1E150F] hover:bg-[#FAF8F5] shadow-2xs btn-smooth-press"
+          >
+            <RotateCcw className={cn("w-3.5 h-3.5", loading && "animate-spin")} />
+            <span>Refresh</span>
+          </button>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Settings Form */}
         <div className="lg:col-span-1 bg-[#FFFDF9] border border-[#E5DDD1] rounded-3xl p-6 shadow-xs h-fit space-y-6">
-          <h2 className="font-serif text-lg font-bold text-[#1E150F] flex items-center gap-2">
-            <Settings className="w-5 h-5 text-[#B88223]" />
-            Operating Parameters
-          </h2>
+          <div className="flex items-center justify-between pb-3 border-b border-[#E5DDD1]">
+            <h2 className="font-serif text-xl font-bold text-[#1E150F] flex items-center gap-2">
+              <Settings className="w-5 h-5 text-[#B88223]" />
+              <span>Operating Schedule</span>
+            </h2>
+          </div>
 
           {savedSuccess && (
-            <div className="p-3 bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs rounded-xl flex items-center gap-2 font-medium">
-              <CheckCircle2 className="w-4 h-4 text-emerald-600" /> Settings updated successfully
+            <div className="p-3 bg-emerald-50 border border-emerald-300 text-emerald-900 text-xs rounded-2xl flex items-center gap-2 font-medium shadow-2xs animate-in fade-in">
+              <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+              <span>Resort dining settings updated successfully</span>
             </div>
           )}
 
           <form onSubmit={handleSave} className="space-y-4 text-xs">
             <div>
-              <label className="block font-bold uppercase tracking-wider text-[#1E150F] mb-1">
-                Property Name
+              <label className="block text-[11px] font-bold uppercase tracking-wider text-[#1E150F] mb-1.5">
+                Resort Property Name
               </label>
               <input
                 type="text"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                className="w-full px-3.5 py-2 bg-[#F8F5EF] border border-[#E5DDD1] rounded-xl text-[#1E150F] focus:outline-none focus:ring-2 focus:ring-[#B88223]/30"
+                className="w-full px-3.5 py-2.5 bg-[#FAF8F5] border border-[#E5DDD1] rounded-2xl text-[#1E150F] focus:outline-none focus:ring-2 focus:ring-[#B88223]/30"
                 required
               />
             </div>
 
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block font-bold uppercase tracking-wider text-[#1E150F] mb-1">
+                <label className="block text-[11px] font-bold uppercase tracking-wider text-[#1E150F] mb-1.5">
                   Resort Tax (%)
                 </label>
                 <input
@@ -144,12 +161,12 @@ export function AdminSettings() {
                   step="0.01"
                   value={taxRate}
                   onChange={(e) => setTaxRate(e.target.value)}
-                  className="w-full px-3.5 py-2 bg-[#F8F5EF] border border-[#E5DDD1] rounded-xl font-mono text-[#1E150F]"
+                  className="w-full px-3.5 py-2.5 bg-[#FAF8F5] border border-[#E5DDD1] rounded-2xl font-mono text-[#1E150F] focus:outline-none focus:ring-2 focus:ring-[#B88223]/30"
                   required
                 />
               </div>
               <div>
-                <label className="block font-bold uppercase tracking-wider text-[#1E150F] mb-1">
+                <label className="block text-[11px] font-bold uppercase tracking-wider text-[#1E150F] mb-1.5">
                   Service Charge (%)
                 </label>
                 <input
@@ -157,7 +174,7 @@ export function AdminSettings() {
                   step="0.01"
                   value={serviceCharge}
                   onChange={(e) => setServiceCharge(e.target.value)}
-                  className="w-full px-3.5 py-2 bg-[#F8F5EF] border border-[#E5DDD1] rounded-xl font-mono text-[#1E150F]"
+                  className="w-full px-3.5 py-2.5 bg-[#FAF8F5] border border-[#E5DDD1] rounded-2xl font-mono text-[#1E150F] focus:outline-none focus:ring-2 focus:ring-[#B88223]/30"
                   required
                 />
               </div>
@@ -165,61 +182,65 @@ export function AdminSettings() {
 
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block font-bold uppercase tracking-wider text-[#1E150F] mb-1">
-                  IRD Opens
+                <label className="block text-[11px] font-bold uppercase tracking-wider text-[#1E150F] mb-1.5">
+                  IRD Service Opens
                 </label>
                 <input
                   type="time"
                   value={openingTime}
                   onChange={(e) => setOpeningTime(e.target.value)}
-                  className="w-full px-3.5 py-2 bg-[#F8F5EF] border border-[#E5DDD1] rounded-xl text-[#1E150F]"
+                  className="w-full px-3.5 py-2.5 bg-[#FAF8F5] border border-[#E5DDD1] rounded-2xl text-[#1E150F] focus:outline-none focus:ring-2 focus:ring-[#B88223]/30"
                   required
                 />
               </div>
               <div>
-                <label className="block font-bold uppercase tracking-wider text-[#1E150F] mb-1">
-                  IRD Closes
+                <label className="block text-[11px] font-bold uppercase tracking-wider text-[#1E150F] mb-1.5">
+                  IRD Service Closes
                 </label>
                 <input
                   type="time"
                   value={closingTime}
                   onChange={(e) => setClosingTime(e.target.value)}
-                  className="w-full px-3.5 py-2 bg-[#F8F5EF] border border-[#E5DDD1] rounded-xl text-[#1E150F]"
+                  className="w-full px-3.5 py-2.5 bg-[#FAF8F5] border border-[#E5DDD1] rounded-2xl text-[#1E150F] focus:outline-none focus:ring-2 focus:ring-[#B88223]/30"
                   required
                 />
               </div>
             </div>
 
             <div>
-              <label className="block font-bold uppercase tracking-wider text-[#1E150F] mb-1">
-                Concierge Contact Phone
+              <label className="block text-[11px] font-bold uppercase tracking-wider text-[#1E150F] mb-1.5">
+                Front Desk Dial Contact
               </label>
               <input
                 type="text"
+                placeholder="Extension 0"
                 value={contactNumber}
                 onChange={(e) => setContactNumber(e.target.value)}
-                className="w-full px-3.5 py-2 bg-[#F8F5EF] border border-[#E5DDD1] rounded-xl text-[#1E150F]"
+                className="w-full px-3.5 py-2.5 bg-[#FAF8F5] border border-[#E5DDD1] rounded-2xl text-[#1E150F] focus:outline-none focus:ring-2 focus:ring-[#B88223]/30"
               />
             </div>
 
-            <div className="pt-2">
-              <label className="flex items-center gap-2 cursor-pointer font-medium text-[#1E150F]">
+            <div className="p-3.5 bg-[#FAF8F5] rounded-2xl border border-[#E5DDD1] mt-2">
+              <label className="flex items-center gap-2.5 cursor-pointer font-semibold text-xs text-[#1E150F]">
                 <input
                   type="checkbox"
                   checked={irdEnabled}
                   onChange={(e) => setIrdEnabled(e.target.checked)}
                   className="w-4 h-4 rounded text-[#B88223] focus:ring-[#B88223]"
                 />
-                In-Room Dining Accepting Orders
+                <span>In-Room Dining Accepting Orders</span>
               </label>
+              <p className="text-[10px] text-[#73685C] mt-1 pl-6">
+                When unchecked, guests are notified that room service is temporarily paused.
+              </p>
             </div>
 
             <button
               type="submit"
               disabled={saving}
-              className="w-full py-2.5 px-4 rounded-xl font-semibold text-xs text-white bg-[#1E150F] hover:bg-[#29231F] transition-all cursor-pointer shadow-md mt-4 disabled:opacity-50"
+              className="w-full py-3 px-4 rounded-xl font-bold text-xs text-white bg-[#1E150F] hover:bg-[#29231F] transition-all btn-smooth-press shadow-md mt-4 disabled:opacity-50"
             >
-              {saving ? "Saving Changes..." : "Save Settings"}
+              {saving ? "Saving Changes..." : "Save Operating Settings"}
             </button>
           </form>
         </div>
@@ -227,58 +248,56 @@ export function AdminSettings() {
         {/* Audit Log Table */}
         <div className="lg:col-span-2 bg-[#FFFDF9] border border-[#E5DDD1] rounded-3xl p-6 shadow-xs space-y-4">
           <div className="flex items-center justify-between pb-3 border-b border-[#E5DDD1]">
-            <h2 className="font-serif text-lg font-bold text-[#1E150F] flex items-center gap-2">
-              <FileText className="w-5 h-5 text-[#B88223]" />
-              Staff Security & Operations Audit Trail
-            </h2>
-            <button
-              onClick={() => fetchData()}
-              className="p-1.5 text-[#73685C] hover:text-[#1E150F] rounded-lg transition-colors cursor-pointer"
-              title="Refresh logs"
-            >
-              <RotateCcw className="w-4 h-4" />
-            </button>
+            <div>
+              <h2 className="font-serif text-xl font-bold text-[#1E150F] flex items-center gap-2">
+                <FileText className="w-5 h-5 text-[#B88223]" />
+                <span>Security & Operations Audit Trail</span>
+              </h2>
+              <p className="text-xs text-[#73685C] mt-0.5">
+                Cryptographic immutable log of staff status transitions, checkout revocations, and configuration edits.
+              </p>
+            </div>
           </div>
 
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto no-scrollbar">
             <table className="w-full text-left text-xs">
               <thead>
-                <tr className="border-b border-[#E5DDD1] text-[#73685C] font-semibold">
-                  <th className="py-2.5 px-3">Timestamp</th>
-                  <th className="py-2.5 px-3">Staff</th>
-                  <th className="py-2.5 px-3">Action</th>
-                  <th className="py-2.5 px-3">Target</th>
-                  <th className="py-2.5 px-3">Details</th>
+                <tr className="border-b border-[#E5DDD1] text-[#73685C] text-[10px] font-bold uppercase tracking-wider">
+                  <th className="py-3 px-3">Timestamp</th>
+                  <th className="py-3 px-3">Staff Identity</th>
+                  <th className="py-3 px-3">Action</th>
+                  <th className="py-3 px-3">Target Scope</th>
+                  <th className="py-3 px-3">Details</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-[#E5DDD1]/60">
                 {auditLogs.length === 0 ? (
                   <tr>
-                    <td colSpan={5} className="py-8 text-center text-[#73685C]">
+                    <td colSpan={5} className="py-12 text-center text-[#73685C]">
                       No audit events recorded yet.
                     </td>
                   </tr>
                 ) : (
                   auditLogs.map((log) => (
-                    <tr key={log.id} className="hover:bg-[#F8F5EF]/50">
-                      <td className="py-2.5 px-3 font-mono text-[11px] text-[#73685C] whitespace-nowrap">
+                    <tr key={log.id} className="hover:bg-[#FAF8F5]/60 transition-colors">
+                      <td className="py-3 px-3 font-mono text-[11px] text-[#73685C] whitespace-nowrap">
                         {new Date(log.created_at).toLocaleString([], {
                           dateStyle: "short",
                           timeStyle: "short",
                         })}
                       </td>
-                      <td className="py-2.5 px-3 font-semibold text-[#1E150F]">
-                        {log.staff_username || "System"}
+                      <td className="py-3 px-3 font-bold text-[#1E150F]">
+                        {log.staff_username || "System Worker"}
                       </td>
-                      <td className="py-2.5 px-3">
-                        <span className="inline-block px-2 py-0.5 rounded-full font-mono text-[10px] bg-[#F8F5EF] border border-[#E5DDD1] text-[#825C15] font-bold">
+                      <td className="py-3 px-3">
+                        <span className="inline-block px-2.5 py-0.5 rounded-full font-mono text-[10px] bg-[#FAF3E6] border border-[#ECD7A9] text-[#8E6314] font-bold shadow-2xs">
                           {log.action}
                         </span>
                       </td>
-                      <td className="py-2.5 px-3 uppercase text-[11px] text-[#73685C]">
+                      <td className="py-3 px-3 uppercase text-[10px] font-semibold text-[#73685C]">
                         {log.target_type} #{log.target_id}
                       </td>
-                      <td className="py-2.5 px-3 text-[#73685C] text-[11px] max-w-xs truncate">
+                      <td className="py-3 px-3 text-[#73685C] text-[11px] max-w-xs truncate">
                         {log.details ? JSON.stringify(log.details) : "—"}
                       </td>
                     </tr>

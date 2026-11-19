@@ -1,7 +1,8 @@
 import React, { useState } from "react";
 import { useLocation } from "wouter";
 import { loginStaff } from "../lib/api";
-import { Lock, User, ShieldCheck, ArrowRight, Sparkles } from "lucide-react";
+import { Lock, User, ShieldCheck, ArrowRight, Sparkles, ChefHat, Bell, Crown } from "lucide-react";
+import { cn } from "../lib/utils";
 
 export function AdminLogin() {
   const [, setLocation] = useLocation();
@@ -54,29 +55,30 @@ export function AdminLogin() {
   };
 
   return (
-    <div className="min-h-[calc(100vh-4rem)] flex flex-col justify-center items-center px-4 py-12">
-      <div className="max-w-md w-full bg-[#FFFDF9] border border-[#E5DDD1] rounded-3xl p-8 shadow-xl">
+    <div className="min-h-[calc(100vh-4rem)] bg-[#FAF8F5] flex flex-col justify-center items-center px-4 py-12">
+      <div className="max-w-md w-full bg-[#FFFDF9] border border-[#E5DDD1] rounded-3xl p-8 shadow-xl animate-in fade-in zoom-in-95 duration-200">
         <div className="text-center mb-8">
-          <div className="w-14 h-14 rounded-2xl bg-[#1E150F] text-[#B88223] flex items-center justify-center text-2xl mx-auto mb-4 shadow-md">
-            🛡️
-          </div>
+          <img src="/kusum-kunja-cafe-logo.png" alt="Kusum Kunja Café" className="mx-auto mb-4 h-16 w-16 rounded-full border border-[#ECD7A9] object-cover shadow-xs" />
+          <span className="text-[10px] font-bold uppercase tracking-widest text-[#8E6314] block mb-1">
+            The Aveniq Resort
+          </span>
           <h1 className="font-serif text-2xl font-bold text-[#1E150F]">
-            Staff Portal Sign In
+            Staff Operations Portal
           </h1>
-          <p className="text-xs text-[#73685C] mt-1">
-            Reception, Management & Culinary Operations Console
+          <p className="font-script text-base text-[#73685C] mt-0.5">
+            Reception, Butler Coordination & Kitchen KOT Console
           </p>
         </div>
 
         {error && (
-          <div className="mb-6 p-3.5 bg-red-50 border border-red-200 text-red-700 text-xs rounded-xl font-medium">
+          <div className="mb-6 p-3.5 bg-red-50 border border-red-200 text-red-700 text-xs rounded-2xl font-medium shadow-2xs">
             {error}
           </div>
         )}
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-xs font-semibold uppercase tracking-wider text-[#73685C] mb-1.5">
+            <label className="block text-[11px] font-bold uppercase tracking-wider text-[#1E150F] mb-1.5">
               Staff Username
             </label>
             <div className="relative">
@@ -85,14 +87,14 @@ export function AdminLogin() {
                 placeholder="Username"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
-                className="w-full pl-10 pr-4 py-2.5 bg-[#F8F5EF] border border-[#E5DDD1] rounded-xl text-sm text-[#1E150F] focus:outline-none focus:ring-2 focus:ring-[#B88223]/30"
+                className="w-full pl-10 pr-4 py-2.5 bg-[#FAF8F5] border border-[#E5DDD1] rounded-2xl text-xs text-[#1E150F] focus:outline-none focus:ring-2 focus:ring-[#B88223]/30"
               />
-              <User className="w-4 h-4 text-[#73685C] absolute left-3 top-3 pointer-events-none" />
+              <User className="w-4 h-4 text-[#73685C] absolute left-3.5 top-3 pointer-events-none" />
             </div>
           </div>
 
           <div>
-            <label className="block text-xs font-semibold uppercase tracking-wider text-[#73685C] mb-1.5">
+            <label className="block text-[11px] font-bold uppercase tracking-wider text-[#1E150F] mb-1.5">
               Password
             </label>
             <div className="relative">
@@ -101,47 +103,56 @@ export function AdminLogin() {
                 placeholder="••••••••"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full pl-10 pr-4 py-2.5 bg-[#F8F5EF] border border-[#E5DDD1] rounded-xl text-sm text-[#1E150F] focus:outline-none focus:ring-2 focus:ring-[#B88223]/30"
+                className="w-full pl-10 pr-4 py-2.5 bg-[#FAF8F5] border border-[#E5DDD1] rounded-2xl text-xs text-[#1E150F] focus:outline-none focus:ring-2 focus:ring-[#B88223]/30"
               />
-              <Lock className="w-4 h-4 text-[#73685C] absolute left-3 top-3 pointer-events-none" />
+              <Lock className="w-4 h-4 text-[#73685C] absolute left-3.5 top-3 pointer-events-none" />
             </div>
           </div>
 
           <button
             type="submit"
             disabled={loading}
-            className="w-full py-3 px-4 rounded-xl font-medium text-sm text-white bg-[#1E150F] hover:bg-[#29231F] transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+            className="w-full py-3.5 px-4 rounded-2xl font-bold text-xs text-white bg-[#1E150F] hover:bg-[#29231F] transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer btn-smooth-press disabled:opacity-50 mt-2"
           >
-            {loading ? "Authenticating..." : "Sign In to Console"}
-            <ArrowRight className="w-4 h-4" />
+            <span>{loading ? "Authenticating..." : "Sign In to Console"}</span>
+            <ArrowRight className="w-4 h-4 text-[#B88223]" />
           </button>
         </form>
 
-        {/* Demo Quick Logins */}
+        {/* Demo Quick Logins matching Cafe Admin */}
         <div className="mt-8 pt-6 border-t border-[#E5DDD1] space-y-2">
-          <span className="block text-[11px] font-bold uppercase tracking-wider text-[#73685C] text-center mb-2">
+          <span className="block text-[10px] font-bold uppercase tracking-widest text-[#8E6314] text-center mb-2.5">
             One-Click Demo Roles
           </span>
           <div className="grid grid-cols-1 gap-2">
             <button
               onClick={() => handleQuickLogin("reception", "staff123")}
-              className="w-full py-2 px-3 text-xs font-semibold text-[#1E150F] bg-[#F8F5EF] hover:bg-[#EAE2D5] border border-[#E5DDD1] rounded-xl transition-colors flex items-center justify-between cursor-pointer"
+              className="w-full py-2.5 px-3.5 text-xs font-semibold text-[#1E150F] bg-[#FAF8F5] hover:bg-[#F0ECE1] border border-[#E5DDD1] rounded-2xl transition-all flex items-center justify-between btn-smooth-press cursor-pointer"
             >
-              <span>🛎️ Front Desk / Reception</span>
+              <span className="flex items-center gap-2">
+                <Bell className="w-3.5 h-3.5 text-[#B88223]" />
+                <span>Front Desk / Reception</span>
+              </span>
               <span className="font-mono text-[10px] text-[#73685C]">reception / staff123</span>
             </button>
             <button
               onClick={() => handleQuickLogin("chef", "kitchen123")}
-              className="w-full py-2 px-3 text-xs font-semibold text-[#825C15] bg-[#B88223]/10 hover:bg-[#B88223]/20 border border-[#B88223]/30 rounded-xl transition-colors flex items-center justify-between cursor-pointer"
+              className="w-full py-2.5 px-3.5 text-xs font-semibold text-[#8E6314] bg-[#FAF3E6] hover:bg-[#F5EAD4] border border-[#ECD7A9] rounded-2xl transition-all flex items-center justify-between btn-smooth-press cursor-pointer shadow-2xs"
             >
-              <span>👨‍🍳 Kitchen Console (KDS)</span>
-              <span className="font-mono text-[10px] text-[#825C15]">chef / kitchen123</span>
+              <span className="flex items-center gap-2">
+                <ChefHat className="w-3.5 h-3.5 text-[#B88223]" />
+                <span>Kitchen Console (KOT)</span>
+              </span>
+              <span className="font-mono text-[10px] text-[#8E6314]">chef / kitchen123</span>
             </button>
             <button
               onClick={() => handleQuickLogin("admin", "admin123")}
-              className="w-full py-2 px-3 text-xs font-semibold text-[#1E150F] bg-[#F8F5EF] hover:bg-[#EAE2D5] border border-[#E5DDD1] rounded-xl transition-colors flex items-center justify-between cursor-pointer"
+              className="w-full py-2.5 px-3.5 text-xs font-semibold text-[#1E150F] bg-[#FAF8F5] hover:bg-[#F0ECE1] border border-[#E5DDD1] rounded-2xl transition-all flex items-center justify-between btn-smooth-press cursor-pointer"
             >
-              <span>👑 General Manager (Admin)</span>
+              <span className="flex items-center gap-2">
+                <Crown className="w-3.5 h-3.5 text-[#B88223]" />
+                <span>General Manager (Admin)</span>
+              </span>
               <span className="font-mono text-[10px] text-[#73685C]">admin / admin123</span>
             </button>
           </div>

@@ -20,7 +20,8 @@ flowchart TD
     end
 
     subgraph Docker Network Boundary
-        NGINX[Web Gateway / Nginx Reverse Proxy\nPort 3000 exposed]
+        CF[Optional Cloudflare Tunnel\nHTTPS: ird.theaveniq.site]
+        NGINX[Web Gateway / Nginx Reverse Proxy\nLocal test: 127.0.0.1:3000]
         API[Express API & Socket.IO\nPort 5001 private]
         DB[(PostgreSQL 16\nNamed Volume ird_pgdata\nPrivate)]
     end
@@ -28,6 +29,7 @@ flowchart TD
     G -->|HTTP & WebSockets| NGINX
     R -->|HTTP & WebSockets| NGINX
     K -->|HTTP & WebSockets| NGINX
+    CF -->|Private Docker network| NGINX
 
     NGINX --> API
     API --> DB
@@ -38,7 +40,7 @@ flowchart TD
 ## 3 Role-Based Experiences
 
 ### 1. Room Guest
-- **Room Identity via Active Stay Token**: Guests access in-room dining exclusively through a revocable stay token generated at check-in (e.g. `http://localhost:3000/stay?token=demo-stay-room-301`) or by entering their Suite number and 4-digit keycard PIN.
+- **Room Identity via Active Stay Token**: Guests access in-room dining through a revocable stay token generated at check-in (e.g. `http://localhost:3000/stay?token=demo-stay-room-301`).
 - **Server Authority**: The server never trusts client-submitted room numbers, item prices, or order status. The room number is pulled directly from the verified database stay record.
 - **Mobile-First Luxury Menu**: Category filters (Breakfast, All-Day Dining, Late Night, Desserts, Beverages), instant search, and dietary chips (🌱 Vegetarian, 🌿 Vegan, 🌾 Gluten-Free, 🌶️ Spicy, ★ Chef's Signature).
 - **Item Customization**: Support for choice of protein, bread type, sides, and guest preparation instructions.
@@ -47,7 +49,7 @@ flowchart TD
 - **Session Sharing**: Multiple guest devices in the same room sharing the QR code share the active stay context and see active room orders live.
 
 ### 2. Reception & Front Desk
-- **Guest Stays & Room Credentialing**: Check in guests to rooms, auto-generate cryptographic stay tokens and 4-digit PINs, and generate live QR codes for room keycard sleeves.
+- **Guest Stays & Room Credentialing**: Check in guests to rooms, auto-generate revocable stay tokens, and create permanent room QR stickers from the admin console.
 - **Instant Revocation at Checkout**: Checking out a stay immediately revokes room access in realtime across all guest devices in that suite.
 - **Live Order Queue**: Realtime feed grouped by room. Front desk staff can accept incoming orders, decline with explanation to guest, dispatch plated orders to butlers, or mark delivered.
 - **Menu Catalog**: Instant 86-ing / availability toggle for out-of-stock items, price management, and dietary tag curation.
@@ -115,7 +117,6 @@ stateDiagram-v2
 
 - **Suite**: Room 301 (Royal Penthouse Suite · Ocean Panorama)
 - **Guest Name**: Sir Alexander Wright
-- **Guest PIN**: `4821`
 - **Pre-generated Stay Token**: `demo-stay-room-301`
 - **Direct Guest Access URL**: `http://localhost:3000/stay?token=demo-stay-room-301`
 
@@ -138,7 +139,29 @@ docker compose up --build -d
 open http://localhost:3000
 ```
 
-Only port `3000` is exposed to your machine. PostgreSQL and the Express backend remain private on the internal Docker network. Database data is safely persisted in the named volume `ird_resort_pgdata`.
+For local tests, the web app is available only on the Linux host at `http://localhost:3000`. PostgreSQL and the Express backend remain private on the internal Docker network. Database data is safely persisted in the named volume `ird_resort_pgdata`.
+
+### Optional: Public access at `https://ird.theaveniq.site`
+
+Use a **dedicated Cloudflare Tunnel for IRD**, separate from the café tunnel. This prevents a tunnel route for one app from accidentally reaching the other app. The tunnel container joins the IRD Docker network and can reach only the IRD web gateway. The API and database have no public port mapping.
+
+1. In Cloudflare, create a new remotely managed tunnel named `IRD-Resort`.
+2. Add a published application route to that tunnel:
+   - **Subdomain:** `ird`
+   - **Domain:** `theaveniq.site`
+   - **Service type:** `HTTP`
+   - **Service URL:** `http://frontend:80`
+3. Cloudflare should create the DNS record for that public hostname when you add the route. Verify the route is attached to the new IRD tunnel, not the café tunnel.
+4. On the Linux host, store the tunnel token only in the local `.env` file. Replace the `CLOUDFLARE_TUNNEL_TOKEN` placeholder with the token from Cloudflare; do not paste it into chat or commit it.
+5. Start the tunnel profile:
+
+   ```bash
+   sudo docker compose --profile tunnel up --build -d
+   sudo docker compose ps
+   sudo docker compose logs --tail=50 tunnel
+   ```
+
+The normal `docker compose up --build -d` command remains local-only and does not start Cloudflare Tunnel. Keep the Arch host powered on and connected to the internet for the domain to work. Cloudflare documents published application routes as hostname-to-service mappings and automatically creates the tunnel DNS record when a route is added in the dashboard ([routing documentation](https://developers.cloudflare.com/tunnel/concepts/routing/)).
 
 ---
 
@@ -185,7 +208,7 @@ npm test
 
 ### Verified Test Cases:
 - `Staff Authentication & Authorization`: Bcrypt hash verification, JWT signing, role scopes, tampered token rejection.
-- `Stay & Room Access Security`: Cryptographic token generation, 4-digit PIN verification, room order number formatting, signed guest tracking tokens.
+- `Stay & Room Access Security`: Cryptographic stay-token generation, room order number formatting, signed guest tracking tokens.
 - `Order State Machine & Role Permissions`: Reception transitions, illegal state transition prevention, strict kitchen role confinement, and guest pending-only cancellation.
 - `Pricing, Taxes & Modifiers Calculation`: Subtotal with modifiers, 10% tax, 5% service charge, and floating-point cent rounding.
 

@@ -4,8 +4,8 @@ const JWT_SECRET = process.env.JWT_SECRET || "ird_resort_dev_secret_key_84920491
 export function generateStayToken() {
     return "stay_" + crypto.randomBytes(24).toString("hex");
 }
-export function generatePIN() {
-    return Math.floor(1000 + Math.random() * 9000).toString();
+export function generateRoomQrToken() {
+    return "room_" + crypto.randomBytes(24).toString("hex");
 }
 export function generateOrderNumber(roomNumber) {
     const dateStr = new Date().toISOString().slice(2, 10).replace(/-/g, "");

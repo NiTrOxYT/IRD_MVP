@@ -2,42 +2,50 @@ import React from "react";
 import { Route, Switch, Redirect } from "wouter";
 import { Navbar } from "./components/Navbar";
 
-// Pages
-import { GuestStayLanding } from "./pages/GuestStayLanding";
-import { GuestMenu } from "./pages/GuestMenu";
-import { GuestOrdersList } from "./pages/GuestOrdersList";
+// Guest Experience Page
+import { GuestScreen } from "./pages/GuestScreen";
 import { GuestOrderTracking } from "./pages/GuestOrderTracking";
+
+// Staff Experience Pages
 import { AdminLogin } from "./pages/AdminLogin";
 import { AdminOrders } from "./pages/AdminOrders";
 import { AdminStays } from "./pages/AdminStays";
 import { AdminMenu } from "./pages/AdminMenu";
 import { AdminSettings } from "./pages/AdminSettings";
+import { AdminRoomQR } from "./pages/AdminRoomQR";
 import { KitchenKOT } from "./pages/KitchenKOT";
 
 export function App() {
   return (
-    <div className="min-h-screen flex flex-col bg-[#F8F5EF] text-[#29231F]">
+    <div className="min-h-screen flex flex-col bg-[#FAF8F5] text-[#29231F]">
       <Navbar />
       <div className="flex-1">
         <Switch>
-          {/* Guest Experience */}
-          <Route path="/" component={GuestStayLanding} />
-          <Route path="/stay" component={GuestStayLanding} />
-          <Route path="/stay/menu" component={GuestMenu} />
-          <Route path="/stay/orders" component={GuestOrdersList} />
+          {/* 1. Guest Experience (https://ird.theaveniq.site/) */}
+          <Route path="/" component={GuestScreen} />
+          <Route path="/stay" component={GuestScreen} />
+          <Route path="/stay/menu" component={GuestScreen} />
           <Route path="/order/:id" component={GuestOrderTracking} />
+          <Route path="/orders" component={GuestScreen} />
 
-          {/* Staff & Admin Experience */}
+          {/* 2. Reception Experience (https://ird.theaveniq.site/reception) */}
+          <Route path="/reception" component={AdminOrders} />
+          <Route path="/reception/stays" component={AdminStays} />
+
+          {/* 3. Kitchen/KOT Experience (https://ird.theaveniq.site/kot) */}
+          <Route path="/kot" component={KitchenKOT} />
+          <Route path="/kitchen" component={KitchenKOT} />
+
+          {/* 4. Admin Experience (https://ird.theaveniq.site/admin) */}
+          <Route path="/admin" component={AdminOrders} />
           <Route path="/admin/login" component={AdminLogin} />
           <Route path="/admin/orders" component={AdminOrders} />
           <Route path="/admin/stays" component={AdminStays} />
           <Route path="/admin/menu" component={AdminMenu} />
           <Route path="/admin/settings" component={AdminSettings} />
+          <Route path="/admin/qr" component={AdminRoomQR} />
 
-          {/* Kitchen KOT Experience */}
-          <Route path="/kitchen" component={KitchenKOT} />
-
-          {/* Fallback */}
+          {/* Fallback to Guest Home */}
           <Route>
             <Redirect to="/" />
           </Route>

@@ -1,5 +1,6 @@
 import { pool } from "./index.js";
 import { hashPassword } from "../lib/auth.js";
+import { generateRoomQrToken } from "../lib/tokens.js";
 
 export async function runMigrations() {
   const client = await pool.connect();
@@ -30,6 +31,7 @@ export async function runMigrations() {
         room_number TEXT NOT NULL,
         floor TEXT,
         wing TEXT,
+        qr_token TEXT UNIQUE,
         is_active BOOLEAN NOT NULL DEFAULT TRUE,
         created_at TIMESTAMP WITHOUT TIME ZONE DEFAULT NOW(),
         UNIQUE(property_id, room_number)
@@ -42,7 +44,6 @@ export async function runMigrations() {
         room_id INT NOT NULL REFERENCES rooms(id) ON DELETE RESTRICT,
         guest_name TEXT NOT NULL,
         guest_phone TEXT,
-        guest_pin TEXT NOT NULL DEFAULT '1234',
         stay_token TEXT NOT NULL UNIQUE,
         check_in_at TIMESTAMP WITHOUT TIME ZONE NOT NULL DEFAULT NOW(),
         check_out_at TIMESTAMP WITHOUT TIME ZONE,
@@ -50,6 +51,12 @@ export async function runMigrations() {
         notes TEXT,
         created_at TIMESTAMP WITHOUT TIME ZONE DEFAULT NOW()
       );
+
+      -- Retire the legacy guest PIN field; room access now uses revocable stay tokens.
+      ALTER TABLE stays DROP COLUMN IF EXISTS guest_pin;
+
+      ALTER TABLE rooms ADD COLUMN IF NOT EXISTS qr_token TEXT;
+      CREATE UNIQUE INDEX IF NOT EXISTS rooms_qr_token_unique ON rooms(qr_token);
 
       -- 4. Staff Users
       CREATE TABLE IF NOT EXISTS staff_users (
@@ -194,10 +201,15 @@ export async function runMigrations() {
       ON CONFLICT (id) DO NOTHING;
     `);
 
+    const roomsWithoutQr = await client.query("SELECT id FROM rooms WHERE qr_token IS NULL");
+    for (const room of roomsWithoutQr.rows) {
+      await client.query("UPDATE rooms SET qr_token = $1 WHERE id = $2 AND qr_token IS NULL", [generateRoomQrToken(), room.id]);
+    }
+
     // Seed Demo Active Stay for Room 301
     await client.query(`
-      INSERT INTO stays (id, property_id, room_id, guest_name, guest_phone, guest_pin, stay_token, status, notes)
-      VALUES (1, 1, 5, 'Sir Alexander Wright', '+1 (555) 234-5678', '4821', 'demo-stay-room-301', 'active', 'VIP Guest · Ocean Panorama Suite · Late checkout approved')
+      INSERT INTO stays (id, property_id, room_id, guest_name, guest_phone, stay_token, status, notes)
+      VALUES (1, 1, 5, 'Sir Alexander Wright', '+1 (555) 234-5678', 'demo-stay-room-301', 'active', 'VIP Guest · Ocean Panorama Suite · Late checkout approved')
       ON CONFLICT (id) DO NOTHING;
     `);
 

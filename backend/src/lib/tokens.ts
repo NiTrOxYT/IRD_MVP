@@ -7,8 +7,8 @@ export function generateStayToken(): string {
   return "stay_" + crypto.randomBytes(24).toString("hex");
 }
 
-export function generatePIN(): string {
-  return Math.floor(1000 + Math.random() * 9000).toString();
+export function generateRoomQrToken(): string {
+  return "room_" + crypto.randomBytes(24).toString("hex");
 }
 
 export function generateOrderNumber(roomNumber: string): string {

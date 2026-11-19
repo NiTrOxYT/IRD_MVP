@@ -23,7 +23,7 @@ export interface Room {
   active_stay_id?: number | null;
   guest_name?: string | null;
   stay_token?: string | null;
-  guest_pin?: string | null;
+  qr_token: string;
   check_in_at?: string | null;
 }
 
@@ -32,7 +32,6 @@ export interface Stay {
   property_id: number;
   guest_name: string;
   guest_phone: string | null;
-  guest_pin: string;
   stay_token: string;
   check_in_at: string;
   check_out_at: string | null;
@@ -179,7 +178,6 @@ export async function verifyStay(token: string) {
     stay: {
       id: number;
       guestName: string;
-      guestPin: string;
       stayToken: string;
       status: string;
       checkInAt: string;
@@ -189,13 +187,6 @@ export async function verifyStay(token: string) {
     property: PropertySettings;
   }>(`/stays/verify?token=${encodeURIComponent(token)}`);
   return res;
-}
-
-export async function lookupStayByPin(roomNumber: string, pin: string) {
-  return request<{ stayToken: string }>("/stays/lookup-pin", {
-    method: "POST",
-    body: JSON.stringify({ roomNumber, pin }),
-  });
 }
 
 export async function listStays(status?: string) {
@@ -226,6 +217,10 @@ export async function revokeStay(stayId: number, reason?: string) {
 // ── Rooms API ──
 export async function listRooms() {
   return request<{ rooms: Room[] }>("/rooms");
+}
+
+export async function resolveRoomQr(qrToken: string) {
+  return request<{ stayToken: string }>(`/rooms/resolve-qr/${encodeURIComponent(qrToken)}`);
 }
 
 export async function createRoom(data: { roomNumber: string; floor?: string; wing?: string }) {

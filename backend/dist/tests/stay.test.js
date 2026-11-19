@@ -1,6 +1,6 @@
 import { test, describe } from "node:test";
 import assert from "node:assert";
-import { generateStayToken, generatePIN, generateOrderNumber, generateGuestOrderToken, verifyGuestOrderToken, } from "../lib/tokens.js";
+import { generateStayToken, generateOrderNumber, generateGuestOrderToken, verifyGuestOrderToken, } from "../lib/tokens.js";
 describe("Stay & Room Access Security", () => {
     test("generates unique cryptographically random stay tokens", () => {
         const t1 = generateStayToken();
@@ -9,12 +9,6 @@ describe("Stay & Room Access Security", () => {
         assert.ok(t2.startsWith("stay_"));
         assert.notStrictEqual(t1, t2);
         assert.ok(t1.length >= 32);
-    });
-    test("generates 4-digit PIN for in-room guest convenience", () => {
-        const pin = generatePIN();
-        assert.match(pin, /^\d{4}$/);
-        const pinNum = Number(pin);
-        assert.ok(pinNum >= 1000 && pinNum <= 9999);
     });
     test("generates deterministic order number containing room number and date", () => {
         const room = "Villa 4";

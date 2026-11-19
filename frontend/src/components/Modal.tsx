@@ -1,15 +1,26 @@
 import React, { useEffect } from "react";
 import { X } from "lucide-react";
+import { cn } from "../lib/utils";
 
 interface ModalProps {
   isOpen: boolean;
   onClose: () => void;
   title?: string;
+  description?: string | null;
   children: React.ReactNode;
   maxWidth?: string;
+  className?: string;
 }
 
-export function Modal({ isOpen, onClose, title, children, maxWidth = "max-w-lg" }: ModalProps) {
+export function Modal({
+  isOpen,
+  onClose,
+  title,
+  description,
+  children,
+  maxWidth = "max-w-lg",
+  className,
+}: ModalProps) {
   useEffect(() => {
     const handleEsc = (e: KeyboardEvent) => {
       if (e.key === "Escape") onClose();
@@ -27,30 +38,49 @@ export function Modal({ isOpen, onClose, title, children, maxWidth = "max-w-lg" 
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 overflow-y-auto">
       {/* Backdrop */}
       <div
-        className="fixed inset-0 bg-[#1E150F]/60 backdrop-blur-sm transition-opacity"
+        className="fixed inset-0 bg-[#1E150F]/65 backdrop-blur-sm transition-opacity animate-in fade-in duration-200"
         onClick={onClose}
+        aria-hidden="true"
       />
 
-      {/* Content */}
+      {/* Dialog Card Container */}
       <div
-        className={`relative z-10 w-full ${maxWidth} bg-[#FFFDF9] border border-[#E5DDD1] rounded-2xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-150`}
+        role="dialog"
+        aria-modal="true"
+        className={cn(
+          "relative z-10 w-full my-auto bg-[#FFFDF9] border border-[#E5DDD1] rounded-3xl shadow-2xl overflow-hidden transition-all transform animate-in fade-in zoom-in-95 duration-200",
+          maxWidth,
+          className
+        )}
       >
         {title && (
-          <div className="flex items-center justify-between px-6 py-4 border-b border-[#E5DDD1]/70 bg-[#F8F5EF]/50">
-            <h3 className="font-serif text-xl font-semibold text-[#1E150F]">{title}</h3>
-            <button
-              onClick={onClose}
-              className="p-1.5 rounded-full text-[#73685C] hover:text-[#1E150F] hover:bg-[#EAE2D5]/50 transition-colors"
-              aria-label="Close dialog"
-            >
-              <X className="w-5 h-5" />
-            </button>
+          <div className="relative px-6 py-5 border-b border-[#E5DDD1] bg-[#FAF8F5]/80">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <h3 className="font-serif text-xl sm:text-2xl font-bold text-[#1E150F] tracking-tight">
+                  {title}
+                </h3>
+                {description && (
+                  <p className="text-xs text-[#73685C] mt-1">{description}</p>
+                )}
+              </div>
+              <button
+                type="button"
+                onClick={onClose}
+                className="rounded-full p-1.5 text-[#73685C] hover:text-[#1E150F] hover:bg-[#EAE2D5]/60 transition-colors btn-smooth-press"
+                aria-label="Close dialog"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            {/* Subtle luxury gold accent hairline */}
+            <div className="absolute bottom-0 left-6 right-6 gold-hairline opacity-60" />
           </div>
         )}
-        <div className="p-6 max-h-[85vh] overflow-y-auto">{children}</div>
+        <div className="p-6 max-h-[80vh] overflow-y-auto">{children}</div>
       </div>
     </div>
   );

@@ -1,6 +1,6 @@
 import { Router, Request, Response } from "express";
 import { query } from "../db/index.js";
-import { generateStayToken, generatePIN } from "../lib/tokens.js";
+import { generateStayToken } from "../lib/tokens.js";
 import { createStaySchema } from "../lib/validation.js";
 import { requireStaff } from "../middleware/auth.js";
 import { broadcastStayCreated, broadcastStayInvalidated } from "../socket.js";
@@ -17,7 +17,7 @@ router.get("/verify", async (req: Request, res: Response): Promise<void> => {
 
   try {
     const result = await query(
-      `SELECT s.id, s.property_id, s.guest_name, s.guest_phone, s.guest_pin, s.stay_token,
+      `SELECT s.id, s.property_id, s.guest_name, s.guest_phone, s.stay_token,
               s.check_in_at, s.check_out_at, s.status, s.notes,
               r.id as room_id, r.room_number, r.floor, r.wing,
               p.name as property_name, p.currency, p.tax_rate_percent, p.service_charge_percent, p.ird_enabled
@@ -47,7 +47,6 @@ router.get("/verify", async (req: Request, res: Response): Promise<void> => {
       stay: {
         id: row.id,
         guestName: row.guest_name,
-        guestPin: row.guest_pin,
         stayToken: row.stay_token,
         status: row.status,
         checkInAt: row.check_in_at,
@@ -73,41 +72,13 @@ router.get("/verify", async (req: Request, res: Response): Promise<void> => {
   }
 });
 
-// Guest PIN lookup fallback
-router.post("/lookup-pin", async (req: Request, res: Response): Promise<void> => {
-  const { roomNumber, pin } = req.body;
-  if (!roomNumber || !pin) {
-    res.status(400).json({ error: "Room number and PIN are required" });
-    return;
-  }
-
-  try {
-    const result = await query(
-      `SELECT s.stay_token
-       FROM stays s
-       JOIN rooms r ON s.room_id = r.id
-       WHERE LOWER(r.room_number) = LOWER($1) AND s.guest_pin = $2 AND s.status = 'active'`,
-      [roomNumber.trim(), pin.trim()]
-    );
-
-    if (result.rows.length === 0) {
-      res.status(401).json({ error: "No active stay matching that Room and PIN combination." });
-      return;
-    }
-
-    res.json({ stayToken: result.rows[0].stay_token });
-  } catch (err) {
-    res.status(500).json({ error: "Database error" });
-  }
-});
-
 // Staff: List stays
 router.get("/", requireStaff(["admin", "staff"]), async (req: Request, res: Response): Promise<void> => {
   const statusFilter = req.query.status as string | undefined;
 
   try {
     let sql = `
-      SELECT s.id, s.property_id, s.guest_name, s.guest_phone, s.guest_pin, s.stay_token,
+      SELECT s.id, s.property_id, s.guest_name, s.guest_phone, s.stay_token,
              s.check_in_at, s.check_out_at, s.status, s.notes,
              r.id as room_id, r.room_number, r.floor, r.wing,
              (SELECT COUNT(*) FROM orders o WHERE o.stay_id = s.id) as order_count
@@ -162,13 +133,11 @@ router.post("/", requireStaff(["admin", "staff"]), async (req: Request, res: Res
     }
 
     const stayToken = generateStayToken();
-    const guestPin = generatePIN();
-
     const insertRes = await query(
-      `INSERT INTO stays (property_id, room_id, guest_name, guest_phone, guest_pin, stay_token, status, notes)
-       VALUES ($1, $2, $3, $4, $5, $6, 'active', $7)
+      `INSERT INTO stays (property_id, room_id, guest_name, guest_phone, stay_token, status, notes)
+       VALUES ($1, $2, $3, $4, $5, 'active', $6)
        RETURNING *`,
-      [staff.propertyId, roomId, guestName.trim(), guestPhone?.trim() || null, guestPin, stayToken, notes?.trim() || null]
+      [staff.propertyId, roomId, guestName.trim(), guestPhone?.trim() || null, stayToken, notes?.trim() || null]
     );
 
     const newStay = insertRes.rows[0];
