@@ -6,7 +6,7 @@ import {
   areUnitsCompatible,
   convertUnitQuantity,
   isValidUnit,
-} from "../lib/units.js";
+} from "../modules/ird/units.js";
 
 describe("Inventory Units of Measurement & Dimensional Conversion", () => {
   it("normalizes and validates supported unit strings", () => {

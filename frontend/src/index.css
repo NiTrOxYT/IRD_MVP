@@ -150,30 +150,218 @@
 
 /* Fast, Hardware-Accelerated Click & Tap Physics */
 .btn-smooth-press {
-  transform: translateZ(0);
-  will-change: transform;
-  transition: transform 0.08s cubic-bezier(0.2, 0.8, 0.2, 1), background-color 0.12s ease, box-shadow 0.12s ease;
+  transform: translate3d(0, 0, 0);
+  transition:
+    transform 140ms cubic-bezier(0.16, 1, 0.3, 1),
+    background-color 160ms ease,
+    border-color 160ms ease,
+    box-shadow 180ms ease;
+}
+.btn-smooth-press:hover {
+  transform: translate3d(0, -1px, 0);
 }
 .btn-smooth-press:active {
-  transform: scale(0.95) translateZ(0);
+  transform: scale3d(0.96, 0.96, 1);
 }
 
 .btn-smooth-press-sm {
-  transform: translateZ(0);
-  will-change: transform;
-  transition: transform 0.08s cubic-bezier(0.2, 0.8, 0.2, 1), background-color 0.12s ease;
+  transform: translate3d(0, 0, 0);
+  transition:
+    transform 130ms cubic-bezier(0.16, 1, 0.3, 1),
+    background-color 150ms ease,
+    color 150ms ease;
 }
 .btn-smooth-press-sm:active {
-  transform: scale(0.88) translateZ(0);
+  transform: scale3d(0.9, 0.9, 1);
 }
 
 .card-smooth-press {
-  transform: translateZ(0);
-  will-change: transform, box-shadow;
-  transition: transform 0.12s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.15s ease;
+  transform: translate3d(0, 0, 0);
+  transition:
+    transform 220ms cubic-bezier(0.16, 1, 0.3, 1),
+    box-shadow 220ms cubic-bezier(0.16, 1, 0.3, 1),
+    border-color 180ms ease;
 }
 .card-smooth-press:active {
-  transform: scale(0.975) translateZ(0);
+  transform: scale3d(0.985, 0.985, 1);
+}
+
+/* =========================================================================
+   Enterprise 3D Screen Transitions & Perspective Surfaces (GPU-Composited)
+   Only animates transform + opacity; no layout/paint thrash.
+   ========================================================================= */
+@keyframes screen-stage-depth-in {
+  from {
+    opacity: 0;
+    transform: perspective(1200px) translate3d(0, 14px, -24px) rotateX(1.6deg) scale3d(0.988, 0.988, 1);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes screen-stage-slide-right-in {
+  from {
+    opacity: 0;
+    transform: perspective(1200px) translate3d(26px, 0, -16px) rotateY(-1.8deg) scale3d(0.992, 0.992, 1);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes screen-stage-slide-left-in {
+  from {
+    opacity: 0;
+    transform: perspective(1200px) translate3d(-26px, 0, -16px) rotateY(1.8deg) scale3d(0.992, 0.992, 1);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes screen-stage-fade-in {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 8px, 0);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes modal-3d-enter {
+  from {
+    opacity: 0;
+    transform: perspective(1100px) translate3d(0, 18px, -28px) rotateX(2.4deg) scale3d(0.96, 0.96, 1);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes backdrop-fade-enter {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.screen-stage-enter {
+  transform-origin: center top;
+  animation: screen-stage-depth-in 320ms cubic-bezier(0.16, 1, 0.3, 1) backwards;
+}
+
+.screen-stage-slide-right {
+  transform-origin: center center;
+  animation: screen-stage-slide-right-in 300ms cubic-bezier(0.16, 1, 0.3, 1) backwards;
+}
+
+.screen-stage-slide-left {
+  transform-origin: center center;
+  animation: screen-stage-slide-left-in 300ms cubic-bezier(0.16, 1, 0.3, 1) backwards;
+}
+
+.screen-stage-fade {
+  animation: screen-stage-fade-in 240ms cubic-bezier(0.16, 1, 0.3, 1) backwards;
+}
+
+.modal-3d-enter {
+  transform-origin: center 42%;
+  animation: modal-3d-enter 280ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.backdrop-fade-enter {
+  animation: backdrop-fade-enter 200ms ease-out both;
+}
+
+/* Native fallback utilities for existing animate-in classes used across portals */
+.animate-in.fade-in {
+  animation: backdrop-fade-enter 200ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+.animate-in.fade-in.zoom-in-95 {
+  animation: modal-3d-enter 240ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+/* Zero-rerender 3D Perspective Card (pointer hit-box stays stationary on .card-3d-wrap) */
+.card-3d-wrap {
+  --rx: 0deg;
+  --ry: 0deg;
+  --mx: 50%;
+  --my: 50%;
+  perspective: 1100px;
+}
+
+.card-3d-surface {
+  position: relative;
+  transform-style: preserve-3d;
+  transform: rotateX(var(--rx)) rotateY(var(--ry)) translate3d(0, 0, 0);
+  transition:
+    transform 260ms cubic-bezier(0.16, 1, 0.3, 1),
+    box-shadow 260ms cubic-bezier(0.16, 1, 0.3, 1),
+    border-color 200ms ease;
+  will-change: transform;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .card-3d-wrap:hover .card-3d-surface {
+    transform: rotateX(var(--rx)) rotateY(var(--ry)) translate3d(0, -4px, 0);
+    box-shadow:
+      0 18px 38px -14px rgba(30, 21, 15, 0.14),
+      0 6px 14px -4px rgba(184, 130, 35, 0.12);
+  }
+}
+
+.card-3d-wrap:active .card-3d-surface {
+  transform: scale3d(0.985, 0.985, 1) translate3d(0, 0, 0);
+}
+
+.card-3d-glare::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  opacity: 0;
+  background: radial-gradient(
+    420px circle at var(--mx) var(--my),
+    rgba(236, 215, 169, 0.18),
+    transparent 62%
+  );
+  transition: opacity 220ms ease;
+  z-index: 20;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .card-3d-wrap:hover .card-3d-glare::after {
+    opacity: 1;
+  }
+}
+
+/* Enterprise surface hierarchy */
+.enterprise-surface {
+  background: #FFFDF9;
+  border: 1px solid #E5DDD1;
+  box-shadow:
+    0 1px 2px rgba(30, 21, 15, 0.04),
+    0 8px 24px -12px rgba(30, 21, 15, 0.08);
+  transition:
+    transform 220ms cubic-bezier(0.16, 1, 0.3, 1),
+    border-color 180ms ease,
+    box-shadow 220ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .enterprise-surface-interactive:hover {
+    transform: translate3d(0, -2px, 0);
+    border-color: #D4A84D;
+    box-shadow:
+      0 4px 12px rgba(30, 21, 15, 0.06),
+      0 18px 34px -14px rgba(184, 130, 35, 0.18);
+  }
 }
 
 /* Performance containment for list sections */
@@ -263,38 +451,6 @@ body,
   to { transform: scale(1.1); }
 }
 
-@keyframes suite-loader-piece-dining {
-  0% { opacity: 0; transform: translate3d(-34vw, -2vh, 0) rotate(-12deg) scale(0.82); }
-  24% { opacity: 1; }
-  48% { opacity: 1; transform: translate3d(0, 0, 0) rotate(-6deg) scale(1); }
-  68% { opacity: 0.7; transform: translate3d(0, -1vh, 0) rotate(-3deg) scale(0.96); }
-  78%, 100% { opacity: 0; transform: translate3d(-2vw, -2vh, 0) rotate(0) scale(0.9); }
-}
-
-@keyframes suite-loader-piece-room {
-  0% { opacity: 0; transform: translate3d(34vw, -2vh, 0) rotate(12deg) scale(0.82); }
-  24% { opacity: 1; }
-  48% { opacity: 1; transform: translate3d(0, 0, 0) rotate(6deg) scale(1); }
-  68% { opacity: 0.7; transform: translate3d(0, -1vh, 0) rotate(3deg) scale(0.96); }
-  78%, 100% { opacity: 0; transform: translate3d(2vw, -2vh, 0) rotate(0) scale(0.9); }
-}
-
-@keyframes suite-loader-piece-suite {
-  0% { opacity: 0; transform: translate3d(-28vw, 2vh, 0) rotate(10deg) scale(0.82); }
-  32% { opacity: 1; }
-  54% { opacity: 1; transform: translate3d(0, 0, 0) rotate(-5deg) scale(1); }
-  72% { opacity: 0.55; transform: translate3d(0, 1vh, 0) rotate(-2deg) scale(0.96); }
-  82%, 100% { opacity: 0; transform: translate3d(-1vw, 2vh, 0) rotate(0) scale(0.9); }
-}
-
-@keyframes suite-loader-piece-amenities {
-  0% { opacity: 0; transform: translate3d(30vw, 3vh, 0) rotate(10deg) scale(0.82); }
-  34% { opacity: 1; }
-  56% { opacity: 1; transform: translate3d(0, 0, 0) rotate(5deg) scale(1); }
-  74% { opacity: 0.55; transform: translate3d(0, 1vh, 0) rotate(2deg) scale(0.96); }
-  84%, 100% { opacity: 0; transform: translate3d(2vw, 2vh, 0) rotate(0) scale(0.9); }
-}
-
 @keyframes suite-loader-mark-in {
   0%, 24% { opacity: 0; transform: scale(0.72) translateY(8px); }
   68% { opacity: 1; transform: scale(1.04) translateY(0); }
@@ -312,10 +468,6 @@ body,
 }
 
 .suite-loader-scene { animation: suite-loader-scene 18s ease-in-out infinite alternate; }
-.suite-loader-piece-dining { animation: suite-loader-piece-dining 1.8s cubic-bezier(0.16, 1, 0.3, 1) both; }
-.suite-loader-piece-room { animation: suite-loader-piece-room 1.8s cubic-bezier(0.16, 1, 0.3, 1) both; }
-.suite-loader-piece-suite { animation: suite-loader-piece-suite 1.8s cubic-bezier(0.16, 1, 0.3, 1) both; }
-.suite-loader-piece-amenities { animation: suite-loader-piece-amenities 1.8s cubic-bezier(0.16, 1, 0.3, 1) both; }
 .suite-loader-mark { animation: suite-loader-mark-in 1.5s cubic-bezier(0.16, 1, 0.3, 1) 180ms both; }
 .suite-loader-copy { animation: suite-loader-copy-in 450ms cubic-bezier(0.16, 1, 0.3, 1) 550ms both; }
 .suite-loader-trace > span { animation: suite-loader-trace 1.6s cubic-bezier(0.16, 1, 0.3, 1) infinite; }
@@ -323,10 +475,20 @@ body,
 @media (prefers-reduced-motion: reduce) {
   .suite-loader-mark,
   .suite-loader-scene,
-  .suite-loader-piece,
   .suite-loader-copy,
   .suite-loader-trace > span { animation: none; }
-  .suite-loader-piece { opacity: 0.2; }
+  .screen-stage-enter,
+  .screen-stage-slide-right,
+  .screen-stage-slide-left,
+  .screen-stage-fade,
+  .modal-3d-enter {
+    animation: backdrop-fade-enter 160ms ease-out both;
+  }
+  .card-3d-wrap:hover .card-3d-surface,
+  .card-3d-surface,
+  .enterprise-surface-interactive:hover {
+    transform: none !important;
+  }
 }
 
 @media (min-width: 1024px) {

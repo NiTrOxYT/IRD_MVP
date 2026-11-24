@@ -1,11 +1,11 @@
 import { test, describe } from "node:test";
 import assert from "node:assert";
+import { generateStayToken } from "../core/stay/tokens.js";
 import {
-  generateStayToken,
   generateOrderNumber,
   generateGuestOrderToken,
   verifyGuestOrderToken,
-} from "../lib/tokens.js";
+} from "../modules/ird/tokens.js";
 
 describe("Stay & Room Access Security", () => {
   test("generates unique cryptographically random stay tokens", () => {

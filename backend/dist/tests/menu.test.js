@@ -1,6 +1,6 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { menuItemSchema, reorderCategoriesSchema, createOrderSchema, } from "../lib/validation.js";
+import { menuItemSchema, reorderCategoriesSchema, createOrderSchema, } from "../modules/ird/validation.js";
 describe("Menu Variants & Categories Validation", () => {
     it("validates menu items with portion sizes / variants", () => {
         const validWithVariants = menuItemSchema.safeParse({

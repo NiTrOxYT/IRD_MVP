@@ -1,6 +1,6 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { hasPermission, PERMISSION_MODULES } from "../lib/permissions.js";
+import { hasPermission, PERMISSION_MODULES } from "../core/auth/permissions.js";
 
 describe("Housekeeping Management Logic & Permissions", () => {
   it("includes housekeeping in permission modules catalog", () => {

@@ -4,7 +4,7 @@ import {
   menuItemSchema,
   reorderCategoriesSchema,
   createOrderSchema,
-} from "../lib/validation.js";
+} from "../modules/ird/validation.js";
 
 describe("Menu Variants & Categories Validation", () => {
   it("validates menu items with portion sizes / variants", () => {

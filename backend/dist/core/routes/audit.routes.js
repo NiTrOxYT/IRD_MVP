@@ -1,0 +1,16 @@
+import { Router } from "express";
+import { query } from "../db/index.js";
+import { requireStaff } from "../auth/middleware.js";
+export function createAuditRouter() {
+    const router = Router();
+    router.get("/", requireStaff("settings:view"), async (_req, res) => {
+        try {
+            const result = await query("SELECT * FROM audit_logs ORDER BY id DESC LIMIT 100");
+            res.json({ logs: result.rows });
+        }
+        catch (err) {
+            res.status(500).json({ error: "Failed to load audit logs" });
+        }
+    });
+    return router;
+}

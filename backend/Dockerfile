@@ -17,7 +17,7 @@ RUN npm ci --omit=dev
 
 COPY --from=builder /app/dist ./dist
 # copy tsx/src for db migration runner if needed
-COPY src/db ./src/db
+COPY src/core/db ./src/core/db
 
 EXPOSE 5001
 

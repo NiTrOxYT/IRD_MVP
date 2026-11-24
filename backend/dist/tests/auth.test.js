@@ -1,6 +1,6 @@
 import { test, describe } from "node:test";
 import assert from "node:assert";
-import { hashPassword, comparePassword, signStaffToken, verifyStaffToken } from "../lib/auth.js";
+import { hashPassword, comparePassword, signStaffToken, verifyStaffToken } from "../core/auth/jwt.js";
 describe("Staff Authentication & Authorization", () => {
     test("hashes and verifies password correctly", () => {
         const password = "ResortPassword!2026";

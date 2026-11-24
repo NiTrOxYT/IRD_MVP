@@ -3,57 +3,67 @@ import http from "http";
 import cors from "cors";
 import cookieParser from "cookie-parser";
 import dotenv from "dotenv";
-import { initSocket } from "./socket.js";
-import { runMigrations } from "./db/migrate.js";
-// Routes
-import authRoutes from "./routes/auth.js";
-import staysRoutes from "./routes/stays.js";
-import roomsRoutes from "./routes/rooms.js";
-import menuRoutes from "./routes/menu.js";
-import ordersRoutes from "./routes/orders.js";
-import kitchenRoutes from "./routes/kitchen.js";
-import settingsRoutes from "./routes/settings.js";
-import auditRoutes from "./routes/audit.js";
-import inventoryRoutes from "./routes/inventory.js";
-import analyticsRoutes from "./routes/analytics.js";
-import usersRoutes from "./routes/users.js";
-import housekeepingRoutes from "./routes/housekeeping.js";
+// Core Platform
+import { runMigrations } from "./core/db/migrate.js";
+import { createCoreModuleDeps } from "./core/deps.js";
+import { registerPermissionModules } from "./core/auth/permissions.js";
+import { socketGateway } from "./core/realtime/socketGateway.js";
+import { mountCoreRoutes } from "./core/routes/index.js";
+// Pluggable Domain Modules
+import { createIrdModule } from "./modules/ird/module.js";
+import { createRoomServiceModule } from "./modules/room-service/module.js";
+import { createAttractionsModule } from "./modules/attractions/module.js";
+import { createFaqModule } from "./modules/faq/module.js";
 dotenv.config();
 const app = express();
 const server = http.createServer(app);
-// Initialize WebSockets
-initSocket(server);
-// Middleware
+// Env-driven CORS so frontend can be hosted on a separate origin or gateway
+const configuredOrigins = (process.env.CORS_ORIGINS || "")
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean);
+const corsOrigin = configuredOrigins.length > 0 ? configuredOrigins : true;
 app.use(cors({
-    origin: (origin, callback) => {
-        // Allow local development and mobile network access
-        callback(null, true);
-    },
+    origin: corsOrigin,
     credentials: true,
 }));
 app.use(cookieParser());
-app.use(express.json());
+app.use(express.json({ limit: "10mb" }));
 // Healthcheck
 app.get("/api/health", (_req, res) => {
     res.json({
         status: "ok",
-        service: "Aura Resort In-Room Dining API",
+        service: "Aura Resort Modular Platform API",
+        modules: ["core", "ird", "room-service", "attractions", "faq"],
         timestamp: new Date().toISOString(),
     });
 });
-// Mount Routes
-app.use("/api/auth", authRoutes);
-app.use("/api/stays", staysRoutes);
-app.use("/api/rooms", roomsRoutes);
-app.use("/api/menu", menuRoutes);
-app.use("/api/orders", ordersRoutes);
-app.use("/api/kitchen", kitchenRoutes);
-app.use("/api/settings", settingsRoutes);
-app.use("/api/audit-logs", auditRoutes);
-app.use("/api/inventory", inventoryRoutes);
-app.use("/api/analytics", analyticsRoutes);
-app.use("/api/users", usersRoutes);
-app.use("/api/housekeeping", housekeepingRoutes);
+// Assemble dependency-injected module deps
+const moduleDeps = createCoreModuleDeps();
+// Instantiate isolated domain modules
+const irdModule = createIrdModule(moduleDeps);
+const roomServiceModule = createRoomServiceModule(moduleDeps);
+const attractionsModule = createAttractionsModule(moduleDeps);
+const faqModule = createFaqModule(moduleDeps);
+// Register permissions & realtime socket handlers for each module
+registerPermissionModules([
+    ...irdModule.permissions,
+    ...roomServiceModule.permissions,
+    ...attractionsModule.permissions,
+    ...faqModule.permissions,
+]);
+irdModule.registerRealtime();
+roomServiceModule.registerRealtime();
+attractionsModule.registerRealtime();
+faqModule.registerRealtime();
+// Initialize WebSocket gateway after modules register their room handlers
+socketGateway.init(server, configuredOrigins.length > 0 ? configuredOrigins : "*");
+// Mount Core + Domain Module Routes
+mountCoreRoutes(app, "/api");
+app.use("/api", irdModule.router);
+app.use("/api", roomServiceModule.router);
+app.use("/api", attractionsModule.router);
+app.use("/api", faqModule.router);
 // Global Error Handler
 app.use((err, _req, res, _next) => {
     console.error("[Server Error]", err);
@@ -63,7 +73,6 @@ app.use((err, _req, res, _next) => {
 });
 const PORT = process.env.PORT || 5001;
 async function startServer() {
-    // Run DB migrations automatically if PostgreSQL is reachable
     try {
         await runMigrations();
     }
@@ -71,11 +80,10 @@ async function startServer() {
         console.warn("[Startup] Could not run DB migrations immediately (DB may still be starting):", err.message);
     }
     server.listen(PORT, () => {
-        console.log(`[Aura IRD] In-Room Dining backend listening on port ${PORT}`);
+        console.log(`[Aura Platform] Backend API listening on port ${PORT} (modules: core, ird, room-service, attractions, faq)`);
     });
 }
-// Only start listening when not running unit tests
 if (process.env.NODE_ENV !== "test") {
     startServer();
 }
-export { app, server };
+export { app, server, irdModule, roomServiceModule, attractionsModule, faqModule };

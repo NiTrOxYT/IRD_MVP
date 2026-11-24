@@ -1,6 +1,6 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { normalizeUnit, getUnitDimension, areUnitsCompatible, convertUnitQuantity, isValidUnit, } from "../lib/units.js";
+import { normalizeUnit, getUnitDimension, areUnitsCompatible, convertUnitQuantity, isValidUnit, } from "../modules/ird/units.js";
 describe("Inventory Units of Measurement & Dimensional Conversion", () => {
     it("normalizes and validates supported unit strings", () => {
         assert.equal(isValidUnit("kg"), true);
