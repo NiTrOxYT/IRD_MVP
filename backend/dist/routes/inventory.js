@@ -711,10 +711,30 @@ router.get("/recipes", requireStaff("inventory:view"), async (_req, res) => {
       `);
         res.json({
             success: true,
-            recipes: recipesRes.rows.map((r) => ({
-                ...r,
-                menu_item_price: parseFloat(r.menu_item_price),
-            })),
+            recipes: recipesRes.rows.map((r) => {
+                const price = parseFloat(r.menu_item_price);
+                const ingredients = (r.ingredients || []).map((ing) => {
+                    let ingredientCost = null;
+                    if (ing.unitCost != null && ing.quantity != null && ing.unit && ing.baseUnit) {
+                        try {
+                            const qtyInBaseUnit = convertUnitQuantity(Number(ing.quantity), ing.unit, ing.baseUnit);
+                            ingredientCost = Math.round(qtyInBaseUnit * Number(ing.unitCost) * 100) / 100;
+                        }
+                        catch {
+                            // Incompatible units — fall back to raw multiplication
+                            ingredientCost = Math.round(Number(ing.unitCost) * Number(ing.quantity) * 100) / 100;
+                        }
+                    }
+                    return { ...ing, ingredientCost };
+                });
+                const totalPlateCost = ingredients.reduce((sum, ing) => sum + (ing.ingredientCost || 0), 0);
+                return {
+                    ...r,
+                    menu_item_price: price,
+                    ingredients,
+                    totalPlateCost: Math.round(totalPlateCost * 100) / 100,
+                };
+            }),
         });
     }
     catch (err) {
@@ -745,15 +765,33 @@ router.get("/recipes/:menuItemId", requireStaff("inventory:view"), async (req, r
         JOIN raw_materials r ON mir.raw_material_id = r.id
         WHERE mir.menu_item_id = $1 AND r.is_archived = false
         ORDER BY r.name ASC`, [menuItemId]);
+        const ingredients = ingRes.rows.map((row) => {
+            const qty = parseFloat(row.quantity);
+            const cost = row.unitCost ? parseFloat(row.unitCost) : null;
+            let ingredientCost = null;
+            if (cost != null && qty && row.unit && row.baseUnit) {
+                try {
+                    const qtyInBaseUnit = convertUnitQuantity(qty, row.unit, row.baseUnit);
+                    ingredientCost = Math.round(qtyInBaseUnit * cost * 100) / 100;
+                }
+                catch {
+                    ingredientCost = Math.round(cost * qty * 100) / 100;
+                }
+            }
+            return {
+                ...row,
+                quantity: qty,
+                unitCost: cost,
+                currentStock: parseFloat(row.currentStock || "0"),
+                ingredientCost,
+            };
+        });
+        const totalPlateCost = ingredients.reduce((sum, ing) => sum + (ing.ingredientCost || 0), 0);
         res.json({
             success: true,
             menuItem: itemRes.rows[0],
-            ingredients: ingRes.rows.map((row) => ({
-                ...row,
-                quantity: parseFloat(row.quantity),
-                unitCost: row.unitCost ? parseFloat(row.unitCost) : null,
-                currentStock: parseFloat(row.currentStock || "0"),
-            })),
+            ingredients,
+            totalPlateCost: Math.round(totalPlateCost * 100) / 100,
         });
     }
     catch (err) {

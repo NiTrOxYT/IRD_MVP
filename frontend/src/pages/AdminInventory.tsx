@@ -1092,16 +1092,11 @@ export function AdminInventory() {
                 recipeSearch ? r.menu_item_name.toLowerCase().includes(recipeSearch.toLowerCase()) : true
               )
               .map((rec) => {
-                // Calculate estimated recipe cost
-                const calculatedCost = rec.ingredients.reduce((acc, ing) => {
-                  if (ing.unitCost && ing.quantity) {
-                    return acc + ing.unitCost * ing.quantity;
-                  }
-                  return acc;
-                }, 0);
+                // Use server-computed plate cost (with correct unit conversion)
+                const calculatedCost = rec.totalPlateCost ?? 0;
 
                 const marginPercent =
-                  rec.menu_item_price > 0
+                  rec.menu_item_price > 0 && calculatedCost > 0
                     ? Math.round(((rec.menu_item_price - calculatedCost) / rec.menu_item_price) * 100)
                     : 0;
 

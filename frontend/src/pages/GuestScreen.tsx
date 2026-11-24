@@ -65,7 +65,7 @@ import {
   Send,
 } from "lucide-react";
 import { cn } from "../lib/utils";
-import { usePropertyLogo } from "../lib/usePropertyName";
+import { setPropertyFavicon, usePropertyLogo } from "../lib/usePropertyName";
 
 interface CartLineItem {
   cartItemId: string;
@@ -217,10 +217,7 @@ export function GuestScreen() {
   }, [property?.name]);
 
   useEffect(() => {
-    const icon = document.querySelector<HTMLLinkElement>('link[rel="icon"]');
-    if (!icon) return;
-    icon.href = property?.logoUrl || "/cafe-favicon.svg";
-    icon.type = property?.logoUrl?.startsWith("data:image/webp") ? "image/webp" : "image/svg+xml";
+    setPropertyFavicon(property?.logoUrl || null);
   }, [property?.logoUrl]);
 
   useEffect(() => {
@@ -521,16 +518,17 @@ export function GuestScreen() {
   }, [cart]);
 
   const taxAmount = useMemo(() => {
-    const rate = property?.taxRatePercent ? Number(property.taxRatePercent) / 100 : 0.1;
+    const rate = property ? Number(property.taxRatePercent) / 100 : 0.1;
     return subtotal * rate;
   }, [subtotal, property?.taxRatePercent]);
 
   const serviceCharge = useMemo(() => {
-    const rate = property?.serviceChargePercent
-      ? Number(property.serviceChargePercent) / 100
-      : 0.05;
+    const rate = property ? Number(property.serviceChargePercent) / 100 : 0.05;
     return subtotal * rate;
   }, [subtotal, property?.serviceChargePercent]);
+
+  const taxEnabled = Number(property?.taxRatePercent || 0) > 0;
+  const serviceChargeEnabled = Number(property?.serviceChargePercent || 0) > 0;
 
   const totalAmount = useMemo(() => {
     return subtotal + taxAmount + serviceCharge;
@@ -716,7 +714,13 @@ export function GuestScreen() {
     return (
       <div className="min-h-[100dvh] bg-[#FAF8F5] flex flex-col justify-center items-center px-4 py-8">
         <div className="w-full max-w-sm bg-[#FFFDF9] border border-[#E5DDD1] rounded-3xl p-6 sm:p-8 shadow-xl text-center animate-in fade-in zoom-in-95 duration-200">
-          <img src={property?.logoUrl || "/kusum-kunja-cafe-logo.png"} alt={`${property?.name || "Property"} logo`} className="mx-auto mb-4 h-16 w-16 rounded-2xl border border-[#ECD7A9] bg-[#FFFDF9] p-1 object-contain shadow-xs" />
+          {property?.logoUrl || loadingLogo ? (
+            <img src={property?.logoUrl || loadingLogo || ""} alt={`${property?.name || "Property"} logo`} className="mx-auto mb-4 h-16 w-16 rounded-2xl border border-[#ECD7A9] bg-[#FFFDF9] p-1 object-contain shadow-xs" />
+          ) : (
+            <div aria-hidden="true" className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl border border-[#ECD7A9] bg-[#FFFDF9] text-[#A88C5B] shadow-xs">
+              <Sparkles className="h-7 w-7" />
+            </div>
+          )}
 
           <h1 className="font-serif text-2xl font-bold text-[#1E150F] mb-1">
             In-Room Dining
@@ -1731,6 +1735,14 @@ export function GuestScreen() {
                         </div>
                       )}
 
+                      {(taxEnabled || serviceChargeEnabled) && (
+                        <div className="rounded-xl border border-[#E5DDD1]/70 bg-[#FAF8F5] px-3 py-2 text-[10px] text-[#73685C] space-y-1">
+                          <div className="flex justify-between"><span>Subtotal</span><span>{formatINR(ord.subtotal)}</span></div>
+                          {taxEnabled && <div className="flex justify-between"><span>GST / Tax ({property?.taxRatePercent}%)</span><span>{formatINR(ord.tax_amount)}</span></div>}
+                          {serviceChargeEnabled && <div className="flex justify-between"><span>In-Room Service Charge ({property?.serviceChargePercent}%)</span><span>{formatINR(ord.service_charge)}</span></div>}
+                        </div>
+                      )}
+
                       {/* Folio Total & Cancel Action */}
                       <div className="pt-3 border-t border-[#E5DDD1] flex items-center justify-between text-xs">
                         <div>
@@ -1779,6 +1791,14 @@ export function GuestScreen() {
                       <p className="text-[11px] text-[#73685C]">
                         {ord.items?.map((it: any) => `${it.quantity}× ${it.itemName}${it.variantName ? ` (${it.variantName})` : ""}`).join(", ")}
                       </p>
+
+                      {(taxEnabled || serviceChargeEnabled) && (
+                        <div className="rounded-xl bg-[#FAF8F5] px-3 py-2 text-[10px] text-[#73685C] space-y-1">
+                          <div className="flex justify-between"><span>Subtotal</span><span>{formatINR(ord.subtotal)}</span></div>
+                          {taxEnabled && <div className="flex justify-between"><span>GST / Tax ({property?.taxRatePercent}%)</span><span>{formatINR(ord.tax_amount)}</span></div>}
+                          {serviceChargeEnabled && <div className="flex justify-between"><span>In-Room Service Charge ({property?.serviceChargePercent}%)</span><span>{formatINR(ord.service_charge)}</span></div>}
+                        </div>
+                      )}
 
                       <div className="flex justify-between items-center pt-2 border-t border-[#E5DDD1]/60 text-[11px]">
                         <span className="text-[#73685C]">
@@ -2095,16 +2115,16 @@ export function GuestScreen() {
       >
         <div className="space-y-5 text-xs">
           {/* Cart Items List */}
-          <div className="space-y-2.5 max-h-56 overflow-y-auto pr-1">
+          <div className="max-h-56 overflow-y-auto rounded-2xl border border-[#E5DDD1] bg-[#FFFDF9] divide-y divide-[#E5DDD1]/70">
             {cart.map((line) => (
               <div
                 key={line.cartItemId}
-                className="p-3.5 bg-[#FAF8F5] border border-[#E5DDD1] rounded-2xl flex items-center justify-between gap-2 shadow-2xs"
+                className="flex items-center justify-between gap-3 px-3.5 py-3"
               >
                 <div className="flex-1 min-w-0 pr-1">
-                  <div className="flex justify-between items-baseline gap-2">
+                  <div className="flex items-start justify-between gap-2">
                     <div className="flex items-center gap-1.5 flex-wrap">
-                      <span className="font-serif font-bold text-sm text-[#1E150F]">
+                      <span className="font-serif font-semibold text-sm leading-snug text-[#1E150F]">
                         {line.item.name}
                       </span>
                       {line.variantName && (
@@ -2113,7 +2133,7 @@ export function GuestScreen() {
                         </span>
                       )}
                     </div>
-                    <span className="font-serif font-bold text-xs text-[#1E150F] shrink-0 ml-1">
+                    <span className="shrink-0 whitespace-nowrap font-sans text-[14px] font-extrabold tabular-nums text-[#29231F]">
                       {formatINR(line.lineTotal)}
                     </span>
                   </div>
@@ -2128,23 +2148,23 @@ export function GuestScreen() {
                 </div>
 
                 {/* Steppers */}
-                <div className="flex items-center gap-1.5 shrink-0">
+                <div className="flex items-center gap-1.5 shrink-0 rounded-full border border-[#E5DDD1] bg-[#FAF8F5] p-1">
                   <button
                     onClick={() => updateCartQuantity(line.cartItemId, -1)}
-                    className="w-7 h-7 rounded-lg bg-white border border-[#E5DDD1] flex items-center justify-center text-[#1E150F] active:scale-90 cursor-pointer shadow-2xs"
-                    aria-label="Decrease"
+                    className="h-8 w-8 rounded-full bg-white border border-[#E5DDD1] flex items-center justify-center text-[#1E150F] active:scale-90 cursor-pointer"
+                    aria-label={`Decrease ${line.item.name} quantity`}
                   >
-                    <Minus className="w-3 h-3" />
+                    <Minus className="w-3.5 h-3.5" />
                   </button>
-                  <span className="font-mono text-xs font-bold w-4 text-center">
+                  <span className="font-sans text-xs font-bold tabular-nums w-5 text-center text-[#29231F]">
                     {line.quantity}
                   </span>
                   <button
                     onClick={() => updateCartQuantity(line.cartItemId, 1)}
-                    className="w-7 h-7 rounded-lg bg-white border border-[#E5DDD1] flex items-center justify-center text-[#1E150F] active:scale-90 cursor-pointer shadow-2xs"
-                    aria-label="Increase"
+                    className="h-8 w-8 rounded-full bg-white border border-[#E5DDD1] flex items-center justify-center text-[#1E150F] active:scale-90 cursor-pointer"
+                    aria-label={`Increase ${line.item.name} quantity`}
                   >
-                    <Plus className="w-3 h-3" />
+                    <Plus className="w-3.5 h-3.5" />
                   </button>
                 </div>
               </div>
@@ -2168,20 +2188,24 @@ export function GuestScreen() {
           {/* Bill Breakdown */}
           <div className="p-4 bg-[#FAF8F5] border border-[#E5DDD1] rounded-2xl space-y-2 text-[11px]">
             <div className="flex justify-between text-[#73685C]">
-              <span>Culinary Subtotal</span>
-              <span className="font-mono font-medium">{formatINR(subtotal)}</span>
+              <span>Subtotal</span>
+              <span className="font-sans font-semibold tabular-nums">{formatINR(subtotal)}</span>
             </div>
-            <div className="flex justify-between text-[#73685C]">
-              <span>Resort Tax ({property?.taxRatePercent || 10}%)</span>
-              <span className="font-mono font-medium">{formatINR(taxAmount)}</span>
-            </div>
-            <div className="flex justify-between text-[#73685C]">
-              <span>In-Room Service Charge ({property?.serviceChargePercent || 5}%)</span>
-              <span className="font-mono font-medium">{formatINR(serviceCharge)}</span>
-            </div>
-            <div className="pt-2.5 border-t border-[#E5DDD1] flex justify-between font-bold text-sm text-[#1E150F]">
+            {taxEnabled && (
+              <div className="flex justify-between text-[#73685C]">
+                <span>GST / Tax ({property?.taxRatePercent}%)</span>
+                <span className="font-sans font-semibold tabular-nums">{formatINR(taxAmount)}</span>
+              </div>
+            )}
+            {serviceChargeEnabled && (
+              <div className="flex justify-between text-[#73685C]">
+                <span>Service Charge ({property?.serviceChargePercent}%)</span>
+                <span className="font-sans font-semibold tabular-nums">{formatINR(serviceCharge)}</span>
+              </div>
+            )}
+            <div className="pt-3 mt-1 border-t border-[#E5DDD1] flex items-baseline justify-between gap-3 font-bold text-sm text-[#1E150F]">
               <span className="font-serif">Total to Room Folio</span>
-              <span className="font-serif text-lg font-bold text-[#1E150F]">
+              <span className="font-sans text-[15px] sm:text-base font-extrabold tabular-nums text-[#29231F]">
                 {formatINR(totalAmount)}
               </span>
             </div>

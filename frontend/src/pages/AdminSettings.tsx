@@ -252,7 +252,7 @@ export function AdminSettings() {
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="block text-[11px] font-bold uppercase tracking-wider text-[#1E150F] mb-1.5">
-                  Resort Tax (%)
+                  GST / Tax (%)
                 </label>
                 <input
                   type="number"
@@ -277,6 +277,7 @@ export function AdminSettings() {
                 />
               </div>
             </div>
+            <p className="-mt-1 text-[11px] text-[#73685C]">Set either rate to 0 to disable it. Enabled charges appear in guest order history.</p>
 
             <div className="grid grid-cols-2 gap-3">
               <div>

@@ -517,6 +517,7 @@ export interface RecipeIngredient {
   unitCost?: number | null;
   baseUnit?: string;
   currentStock?: number;
+  ingredientCost?: number | null;
 }
 
 export interface MenuItemRecipe {
@@ -525,6 +526,7 @@ export interface MenuItemRecipe {
   menu_item_price: number;
   category_name?: string;
   ingredients: RecipeIngredient[];
+  totalPlateCost?: number;
 }
 
 export async function getInventorySummary() {

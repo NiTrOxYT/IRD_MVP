@@ -1,6 +1,38 @@
 import { useEffect, useState } from "react";
 import { getPropertySettings } from "./api";
 
+export function setPropertyFavicon(logoUrl: string | null) {
+  const icon = document.querySelector<HTMLLinkElement>('link[rel="icon"]');
+  if (!icon) return;
+
+  if (!logoUrl) {
+    icon.type = "image/svg+xml";
+    icon.href = "/cafe-favicon.svg";
+    return;
+  }
+
+  icon.removeAttribute("type");
+  icon.href = logoUrl;
+  if (!logoUrl.startsWith("data:image/webp")) return;
+
+  icon.dataset.logoSource = logoUrl;
+  const image = new Image();
+  image.onload = () => {
+    if (icon.dataset.logoSource !== logoUrl) return;
+    const canvas = document.createElement("canvas");
+    canvas.width = canvas.height = 128;
+    const context = canvas.getContext("2d");
+    if (!context) return;
+    const scale = Math.min(128 / image.naturalWidth, 128 / image.naturalHeight);
+    const width = image.naturalWidth * scale;
+    const height = image.naturalHeight * scale;
+    context.drawImage(image, (128 - width) / 2, (128 - height) / 2, width, height);
+    icon.type = "image/png";
+    icon.href = canvas.toDataURL("image/png");
+  };
+  image.src = logoUrl;
+}
+
 export function usePropertyName(enabled = true) {
   const [propertyName, setPropertyName] = useState<string | null>(null);
 
@@ -44,10 +76,7 @@ export function usePropertyLogo(enabled = true) {
   }, [enabled]);
 
   useEffect(() => {
-    const icon = document.querySelector<HTMLLinkElement>('link[rel="icon"]');
-    if (!icon) return;
-    icon.href = logoUrl || "/cafe-favicon.svg";
-    icon.type = logoUrl?.startsWith("data:image/webp") ? "image/webp" : "image/svg+xml";
+    setPropertyFavicon(logoUrl);
   }, [logoUrl]);
 
   return logoUrl;
