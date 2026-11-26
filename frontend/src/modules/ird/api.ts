@@ -6,6 +6,7 @@ import type {
   InventoryItem,
   InventoryMovement,
   InventorySummary,
+  IrdHeroCard,
   IrdHttpClient,
   MenuItem,
   MenuItemRecipe,
@@ -19,11 +20,62 @@ export function createIrdApi(http: IrdHttpClient = httpClient) {
   return {
     // ── Menu ──
     async getGuestMenu() {
-      return http.request<{ categories: Category[]; items: MenuItem[] }>("/menu");
+      return http.request<{ categories: Category[]; items: MenuItem[]; heroCards?: IrdHeroCard[] }>("/menu");
     },
 
     async getAdminMenu() {
-      return http.request<{ categories: Category[]; items: MenuItem[] }>("/menu/admin");
+      return http.request<{ categories: Category[]; items: MenuItem[]; heroCards?: IrdHeroCard[] }>("/menu/admin");
+    },
+
+    async createHeroCard(data: {
+      title: string;
+      subtitle?: string | null;
+      ctaLabel?: string;
+      imageUrl?: string | null;
+      isActive?: boolean;
+      sortOrder?: number;
+    }) {
+      return http.request<{ card: IrdHeroCard }>("/menu/hero-cards", {
+        method: "POST",
+        body: JSON.stringify(data),
+      });
+    },
+
+    async updateHeroCard(
+      id: number,
+      data: {
+        title: string;
+        subtitle?: string | null;
+        ctaLabel?: string;
+        imageUrl?: string | null;
+        isActive?: boolean;
+        sortOrder?: number;
+      }
+    ) {
+      return http.request<{ success: boolean; card: IrdHeroCard }>(`/menu/hero-cards/${id}`, {
+        method: "PUT",
+        body: JSON.stringify(data),
+      });
+    },
+
+    async toggleHeroCardStatus(id: number, isActive: boolean) {
+      return http.request<{ success: boolean; card: IrdHeroCard }>(`/menu/hero-cards/${id}/status`, {
+        method: "PATCH",
+        body: JSON.stringify({ isActive }),
+      });
+    },
+
+    async reorderHeroCards(orders: Array<{ id: number; sortOrder: number }>) {
+      return http.request<{ success: boolean }>("/menu/hero-cards/reorder", {
+        method: "PATCH",
+        body: JSON.stringify({ orders }),
+      });
+    },
+
+    async deleteHeroCard(id: number) {
+      return http.request<{ success: boolean }>(`/menu/hero-cards/${id}`, {
+        method: "DELETE",
+      });
     },
 
     async getCategories() {

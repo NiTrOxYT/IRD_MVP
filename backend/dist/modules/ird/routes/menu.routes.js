@@ -1,5 +1,17 @@
 import { Router } from "express";
-import { categorySchema, menuItemSchema, reorderCategoriesSchema } from "../validation.js";
+import { categorySchema, heroCardSchema, menuItemSchema, reorderCategoriesSchema, reorderHeroCardsSchema, } from "../validation.js";
+function serializeHeroCard(row) {
+    return {
+        id: row.id,
+        propertyId: row.property_id,
+        title: row.title,
+        subtitle: row.subtitle ?? null,
+        ctaLabel: row.cta_label || "Order Now",
+        imageUrl: row.image_url ?? null,
+        isActive: Boolean(row.is_active),
+        sortOrder: Number(row.sort_order ?? 0),
+    };
+}
 export function createMenuRouter(deps) {
     const { db, auth } = deps;
     const { requireStaff } = auth;
@@ -60,9 +72,13 @@ export function createMenuRouter(deps) {
                 variants: variantsByItem[row.id] || [],
                 modifiers: modifiersByItem[row.id] || [],
             }));
+            const heroRes = await db
+                .query("SELECT id, property_id, title, subtitle, cta_label, image_url, is_active, sort_order FROM ird_hero_cards WHERE is_active = TRUE ORDER BY sort_order ASC, id ASC")
+                .catch(() => ({ rows: [] }));
             res.json({
                 categories: catRes.rows,
                 items,
+                heroCards: heroRes.rows.map(serializeHeroCard),
             });
         }
         catch (err) {
@@ -125,7 +141,10 @@ export function createMenuRouter(deps) {
                 variants: variantsByItem[row.id] || [],
                 modifiers: modifiersByItem[row.id] || [],
             }));
-            res.json({ categories: catRes.rows, items });
+            const heroRes = await db
+                .query("SELECT id, property_id, title, subtitle, cta_label, image_url, is_active, sort_order FROM ird_hero_cards ORDER BY sort_order ASC, id ASC")
+                .catch(() => ({ rows: [] }));
+            res.json({ categories: catRes.rows, items, heroCards: heroRes.rows.map(serializeHeroCard) });
         }
         catch (err) {
             res.status(500).json({ error: "Failed to fetch admin menu" });
@@ -440,6 +459,127 @@ export function createMenuRouter(deps) {
         }
         catch (err) {
             res.status(500).json({ error: "Failed to delete item" });
+        }
+    });
+    // ── Promo Hero Carousel Cards ──
+    async function syncPrimaryDiningHeroUrl(propertyId) {
+        const firstActive = await db.query(`SELECT image_url FROM ird_hero_cards
+     WHERE property_id = $1 AND is_active = TRUE
+     ORDER BY sort_order ASC, id ASC LIMIT 1`, [propertyId]);
+        const nextUrl = firstActive.rows[0]?.image_url ?? null;
+        await db.query("UPDATE properties SET dining_hero_url = $1 WHERE id = $2", [nextUrl, propertyId]).catch(() => { });
+    }
+    router.post("/hero-cards", requireStaff("menu:create"), async (req, res) => {
+        const parse = heroCardSchema.safeParse(req.body);
+        if (!parse.success) {
+            res.status(400).json({ error: parse.error.errors[0].message });
+            return;
+        }
+        const { title, subtitle, ctaLabel, imageUrl, isActive, sortOrder } = parse.data;
+        const staff = req.staff;
+        const cleanImage = imageUrl ? imageUrl.trim() || null : null;
+        try {
+            const result = await db.query(`INSERT INTO ird_hero_cards (property_id, title, subtitle, cta_label, image_url, is_active, sort_order)
+       VALUES ($1, $2, $3, $4, $5, $6, $7)
+       RETURNING *`, [staff.propertyId, title, subtitle || null, ctaLabel, cleanImage, isActive, sortOrder]);
+            await syncPrimaryDiningHeroUrl(staff.propertyId);
+            res.status(201).json({ card: serializeHeroCard(result.rows[0]) });
+        }
+        catch (err) {
+            res.status(500).json({ error: "Failed to create promo card" });
+        }
+    });
+    router.patch("/hero-cards/reorder", requireStaff("menu:edit"), async (req, res) => {
+        const parse = reorderHeroCardsSchema.safeParse(req.body);
+        if (!parse.success) {
+            res.status(400).json({ error: parse.error.errors[0].message });
+            return;
+        }
+        const staff = req.staff;
+        const client = await db.connect();
+        try {
+            await client.query("BEGIN");
+            for (const item of parse.data.orders) {
+                await client.query("UPDATE ird_hero_cards SET sort_order = $1, updated_at = NOW() WHERE id = $2 AND property_id = $3", [item.sortOrder, item.id, staff.propertyId]);
+            }
+            await client.query("COMMIT");
+            await syncPrimaryDiningHeroUrl(staff.propertyId);
+            res.json({ success: true });
+        }
+        catch (err) {
+            await client.query("ROLLBACK");
+            res.status(500).json({ error: "Failed to reorder promo cards" });
+        }
+        finally {
+            client.release();
+        }
+    });
+    router.put("/hero-cards/:id", requireStaff("menu:edit"), async (req, res) => {
+        const cardId = Number(req.params.id);
+        const parse = heroCardSchema.safeParse(req.body);
+        if (!parse.success) {
+            res.status(400).json({ error: parse.error.errors[0].message });
+            return;
+        }
+        const { title, subtitle, ctaLabel, imageUrl, isActive, sortOrder } = parse.data;
+        const staff = req.staff;
+        const cleanImage = imageUrl ? imageUrl.trim() || null : null;
+        try {
+            const result = await db.query(`UPDATE ird_hero_cards
+       SET title = $1,
+           subtitle = $2,
+           cta_label = $3,
+           image_url = CASE WHEN $4 THEN $5 ELSE image_url END,
+           is_active = $6,
+           sort_order = $7,
+           updated_at = NOW()
+       WHERE id = $8 AND property_id = $9
+       RETURNING *`, [title, subtitle || null, ctaLabel, imageUrl !== undefined, cleanImage, isActive, sortOrder, cardId, staff.propertyId]);
+            if (result.rows.length === 0) {
+                res.status(404).json({ error: "Promo card not found" });
+                return;
+            }
+            await syncPrimaryDiningHeroUrl(staff.propertyId);
+            res.json({ success: true, card: serializeHeroCard(result.rows[0]) });
+        }
+        catch (err) {
+            res.status(500).json({ error: "Failed to update promo card" });
+        }
+    });
+    router.patch("/hero-cards/:id/status", requireStaff("menu:edit"), async (req, res) => {
+        const cardId = Number(req.params.id);
+        const { isActive } = req.body;
+        const staff = req.staff;
+        try {
+            const result = await db.query("UPDATE ird_hero_cards SET is_active = $1, updated_at = NOW() WHERE id = $2 AND property_id = $3 RETURNING *", [Boolean(isActive), cardId, staff.propertyId]);
+            if (result.rows.length === 0) {
+                res.status(404).json({ error: "Promo card not found" });
+                return;
+            }
+            await syncPrimaryDiningHeroUrl(staff.propertyId);
+            res.json({ success: true, card: serializeHeroCard(result.rows[0]) });
+        }
+        catch (err) {
+            res.status(500).json({ error: "Failed to update promo card status" });
+        }
+    });
+    router.delete("/hero-cards/:id", requireStaff("menu:delete"), async (req, res) => {
+        const cardId = Number(req.params.id);
+        const staff = req.staff;
+        try {
+            const del = await db.query("DELETE FROM ird_hero_cards WHERE id = $1 AND property_id = $2 RETURNING id", [
+                cardId,
+                staff.propertyId,
+            ]);
+            if (del.rows.length === 0) {
+                res.status(404).json({ error: "Promo card not found" });
+                return;
+            }
+            await syncPrimaryDiningHeroUrl(staff.propertyId);
+            res.json({ success: true });
+        }
+        catch (err) {
+            res.status(500).json({ error: "Failed to delete promo card" });
         }
     });
     return router;

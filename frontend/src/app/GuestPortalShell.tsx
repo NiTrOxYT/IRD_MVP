@@ -41,7 +41,13 @@ import {
 } from "../modules/inbox";
 
 function GuestPortalContent() {
-  const { logoUrl: loadingLogo, suiteLoaderBgUrl: loadingBgUrl } = usePropertyBranding();
+  const {
+    propertyName: brandingName,
+    contactNumber: brandingContact,
+    logoUrl: loadingLogo,
+    suiteLoaderBgUrl: loadingBgUrl,
+    brandingReady,
+  } = usePropertyBranding();
   const { stay, property, authLoading, authError, connStatus } = useStaySession();
 
   const [serviceMode, setServiceMode] = useState<
@@ -80,6 +86,25 @@ function GuestPortalContent() {
   useEffect(() => {
     document.title = property?.name ? `${property.name} · In-Room Dining` : "In-Room Dining";
   }, [property?.name]);
+
+  useEffect(() => {
+    const bg =
+      authLoading || !stay
+        ? "#1E130C"
+        : serviceMode === "attractions"
+        ? "#0B0E16"
+        : serviceMode === "hub"
+        ? "#1D0803"
+        : serviceMode === "room-service"
+        ? "#FAF3EA"
+        : "#161712";
+    document.documentElement.style.backgroundColor = bg;
+    document.body.style.backgroundColor = bg;
+    return () => {
+      document.documentElement.style.backgroundColor = "";
+      document.body.style.backgroundColor = "";
+    };
+  }, [authLoading, stay, serviceMode]);
 
   const fetchOrders = useCallback(async () => {
     try {
@@ -268,11 +293,26 @@ function GuestPortalContent() {
   );
 
   if (authLoading) {
-    return <SuiteLoader logoUrl={loadingLogo} bgUrl={property?.suiteLoaderBgUrl || loadingBgUrl} />;
+    return (
+      <SuiteLoader
+        logoUrl={loadingLogo}
+        bgUrl={property?.suiteLoaderBgUrl || loadingBgUrl}
+        ready={Boolean(property || brandingReady)}
+      />
+    );
   }
 
   if (!stay) {
-    return <StayRequiredCard property={property} fallbackLogo={loadingLogo} authError={authError} />;
+    return (
+      <StayRequiredCard
+        property={property}
+        fallbackName={brandingName}
+        fallbackContactNumber={brandingContact}
+        fallbackLogo={loadingLogo}
+        fallbackBgUrl={loadingBgUrl}
+        authError={authError}
+      />
+    );
   }
 
   const welcomeMode = property?.welcomeMode || "every_time";
@@ -303,14 +343,14 @@ function GuestPortalContent() {
   return (
     <div
       className={cn(
-        "relative flex flex-col",
+        "flex flex-col",
         isLockedViewport
-          ? "h-[100dvh] overflow-hidden bg-[#0B0E16] text-white pb-[calc(4.75rem+env(safe-area-inset-bottom))]"
+          ? "fixed inset-0 overflow-hidden bg-[#0B0E16] text-white pb-[calc(4.75rem+env(safe-area-inset-bottom))]"
           : isHubView
-          ? "min-h-[100svh] bg-[#1D0803] text-white pb-[max(2rem,env(safe-area-inset-bottom))]"
+          ? "relative min-h-[100svh] bg-[#1D0803] text-white pb-[max(2rem,env(safe-area-inset-bottom))]"
           : isIrdView
-          ? "min-h-[100svh] bg-[#FAF3EA] text-[#3D1C11] pb-[max(7.25rem,calc(6.5rem+env(safe-area-inset-bottom)))]"
-          : "min-h-[100svh] bg-[#161712] bg-[radial-gradient(ellipse_at_top,#26281E_0%,#141510_68%)] text-white pb-[max(6.5rem,calc(5.75rem+env(safe-area-inset-bottom)))]"
+          ? "relative min-h-[100svh] bg-[#FAF3EA] text-[#3D1C11] pb-[max(7.25rem,calc(6.5rem+env(safe-area-inset-bottom)))]"
+          : "relative min-h-[100svh] bg-[#161712] bg-[radial-gradient(ellipse_at_top,#26281E_0%,#141510_68%)] text-white pb-[max(6.5rem,calc(5.75rem+env(safe-area-inset-bottom)))]"
       )}
     >
 

@@ -1,3 +1,5 @@
+import type { IrdHeroCard } from "../../modules/ird/types";
+
 export interface PropertySettings {
   id: number;
   name: string;
@@ -16,6 +18,7 @@ export interface PropertySettings {
   welcomeMessage?: string | null;
   welcomeBgUrl?: string | null;
   diningHeroUrl?: string | null;
+  diningHeroCards?: IrdHeroCard[];
   roomServiceHeroUrl?: string | null;
   attractionsHeroUrl?: string | null;
   suiteLoaderBgUrl?: string | null;

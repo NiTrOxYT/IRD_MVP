@@ -97,6 +97,17 @@ export interface CartLineItem {
   lineTotal: number;
 }
 
+export interface IrdHeroCard {
+  id: number;
+  propertyId?: number;
+  title: string;
+  subtitle: string | null;
+  ctaLabel: string;
+  imageUrl: string | null;
+  isActive: boolean;
+  sortOrder: number;
+}
+
 export interface IrdPropertyConfig {
   name?: string;
   currency?: string;
@@ -106,6 +117,7 @@ export interface IrdPropertyConfig {
   openingTime?: string;
   closingTime?: string;
   diningHeroUrl?: string | null;
+  diningHeroCards?: IrdHeroCard[];
 }
 
 export interface InventoryItem {

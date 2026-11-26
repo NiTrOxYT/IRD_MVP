@@ -1,58 +1,157 @@
-import React from "react";
-import { AlertCircle, QrCode } from "lucide-react";
+import React, { useRef } from "react";
+import { AlertCircle, PhoneCall, QrCode } from "lucide-react";
 import { SilverClocheTrayIcon } from "../ui/CustomResortIcons";
+import { gsap, useGSAP } from "../ui/gsap";
 import type { PropertySettings } from "../property/propertyTypes";
 
 interface StayRequiredCardProps {
   property?: PropertySettings | null;
+  fallbackName?: string | null;
+  fallbackContactNumber?: string | null;
   fallbackLogo?: string | null;
+  fallbackBgUrl?: string | null;
   authError?: string | null;
 }
 
-export function StayRequiredCard({ property, fallbackLogo, authError }: StayRequiredCardProps) {
+export function StayRequiredCard({
+  property,
+  fallbackName,
+  fallbackContactNumber,
+  fallbackLogo,
+  fallbackBgUrl,
+  authError,
+}: StayRequiredCardProps) {
+  const containerRef = useRef<HTMLDivElement>(null);
   const logoSrc = property?.logoUrl || fallbackLogo || "";
+  const bgSrc = property?.suiteLoaderBgUrl || fallbackBgUrl || "/suite-loader-scene.jpg";
+  const propertyTitle = property?.name?.trim() || fallbackName?.trim() || "Suite Portal";
+  const receptionPhone = property?.contactNumber?.trim() || fallbackContactNumber?.trim() || "";
+
+  useGSAP(
+    () => {
+      const root = containerRef.current;
+      if (!root) return;
+
+      const mm = gsap.matchMedia();
+      mm.add("(prefers-reduced-motion: no-preference)", () => {
+        gsap.fromTo(
+          ".gsap-stay-req-item",
+          { autoAlpha: 0, y: 14 },
+          {
+            autoAlpha: 1,
+            y: 0,
+            duration: 0.48,
+            stagger: 0.06,
+            ease: "power3.out",
+            force3D: true,
+            clearProps: "transform",
+          }
+        );
+      });
+    },
+    { scope: containerRef }
+  );
 
   return (
-    <div className="min-h-[100dvh] bg-[#FAF8F5] flex flex-col justify-center items-center px-4 py-8">
-      <div className="w-full max-w-sm bg-[#FFFDF9] border border-[#E5DDD1] rounded-3xl p-6 sm:p-8 shadow-xl text-center modal-3d-enter">
-        {logoSrc ? (
-          <img
-            src={logoSrc}
-            alt={`${property?.name || "Property"} logo`}
-            className="mx-auto mb-4 h-16 w-16 rounded-2xl border border-[#ECD7A9] bg-[#FFFDF9] p-1 object-contain shadow-xs"
-          />
-        ) : (
-          <div
-            aria-hidden="true"
-            className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl border border-[#ECD7A9] bg-[#FFFDF9] text-[#A88C5B] shadow-xs"
+    <div
+      ref={containerRef}
+      className="relative isolate flex min-h-[100svh] flex-col items-center justify-center overflow-x-clip bg-[#1E130C] px-5 py-10 text-[#FFF9EF]"
+    >
+      {/* Suite backdrop scene harmonizing with SuiteLoader & GuestServiceHub */}
+      <div aria-hidden="true" className="pointer-events-none absolute inset-0 z-0 overflow-hidden">
+        <img
+          src={bgSrc}
+          alt=""
+          className="h-full w-full scale-[1.03] object-cover object-[58%_center] brightness-[0.68]"
+          onError={(e) => {
+            const img = e.currentTarget;
+            if (!img.dataset.fallbackApplied) {
+              img.dataset.fallbackApplied = "1";
+              img.src = "/suite-loader-scene.jpg";
+            }
+          }}
+        />
+        <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(24,14,9,0.58)_0%,rgba(24,14,9,0.46)_45%,rgba(16,9,6,0.9)_100%)]" />
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_50%_46%,rgba(24,14,9,0.18)_0%,rgba(16,9,6,0.72)_76%)]" />
+      </div>
+
+      {/* Single grounded dark-amber concierge surface */}
+      <main className="relative z-10 w-full max-w-[400px] rounded-[24px] border border-[#E2C98F]/24 bg-[#19100B]/84 px-6 py-8 shadow-[0_24px_60px_-14px_rgba(8,4,2,0.82)] backdrop-blur-md sm:px-8 sm:py-9">
+        <div className="text-center">
+          {logoSrc ? (
+            <div className="gsap-stay-req-item mx-auto mb-5 flex h-[68px] w-[68px] items-center justify-center overflow-hidden rounded-[20px] border border-[#E2C98F]/55 bg-[#FFFDF9] p-1.5 shadow-[0_10px_24px_rgba(12,6,3,0.45)]">
+              <img
+                src={logoSrc}
+                alt={`${propertyTitle} crest`}
+                className="h-full w-full object-contain"
+              />
+            </div>
+          ) : (
+            <div
+              aria-hidden="true"
+              className="gsap-stay-req-item mx-auto mb-5 flex h-[68px] w-[68px] items-center justify-center rounded-[20px] border border-[#E2C98F]/45 bg-[#2A1A11] text-[#E9C77D] shadow-[0_10px_24px_rgba(12,6,3,0.45)]"
+            >
+              <SilverClocheTrayIcon className="h-8 w-8" />
+            </div>
+          )}
+
+          <h1 className="gsap-stay-req-item font-serif text-[28px] sm:text-[32px] font-semibold leading-[1.12] tracking-[-0.02em] text-[#FFF9EF] [overflow-wrap:break-word]">
+            {propertyTitle}
+          </h1>
+
+          <p
+            className="gsap-stay-req-item mt-2 text-[19px] sm:text-[21px] font-medium italic leading-snug text-[#E9C77D]"
+            style={{ fontFamily: "'Cormorant Garamond', 'Playfair Display', Georgia, serif" }}
           >
-            <SilverClocheTrayIcon className="h-8 w-8" />
-          </div>
-        )}
-
-        <h1 className="font-serif text-2xl font-bold text-[#1E150F] mb-1">In-Room Dining</h1>
-        <p className="font-script text-base text-[#73685C] mb-6">
-          Curated culinary experiences delivered to your suite
-        </p>
-
-        <div className="mb-6 rounded-2xl border border-[#E5DDD1] bg-[#FAF8F5] p-4 text-left flex items-start gap-3">
-          <QrCode className="w-5 h-5 text-[#B88223] shrink-0 mt-0.5" />
-          <p className="text-xs text-[#73685C] leading-relaxed">
-            Please scan the permanent QR code placed on your suite desk or bedside table. Ordering is activated upon guest check-in.
+            Dining, suite care &amp; concierge at your bedside
           </p>
         </div>
 
+        {/* Direct scan guidance — clean hairline dividers, no nested card box */}
+        <div className="gsap-stay-req-item mt-7 border-y border-[#E2C98F]/18 py-5">
+          <div className="flex items-start gap-3.5 text-left">
+            <div
+              aria-hidden="true"
+              className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#E9C77D]/14 text-[#E9C77D]"
+            >
+              <QrCode className="h-5 w-5" />
+            </div>
+            <div className="min-w-0 space-y-1">
+              <h2 className="text-[14px] font-semibold text-[#FFF9EF]">
+                Scan your suite QR code
+              </h2>
+              <p className="text-[13px] leading-relaxed text-[#EADDCB]/82">
+                Found on your bedside table or desk. Your personal stay portal activates right after check-in.
+              </p>
+            </div>
+          </div>
+        </div>
+
         {authError && (
-          <div className="mb-6 p-3.5 bg-amber-50 border border-amber-200 text-amber-900 text-xs rounded-2xl text-left flex items-start gap-2.5">
-            <AlertCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+          <div
+            role="alert"
+            className="gsap-stay-req-item mt-5 flex items-start gap-2.5 rounded-xl border border-[#E9C77D]/32 bg-[#4A2512]/70 px-3.5 py-3 text-left text-[12.5px] leading-relaxed text-[#FFEAD1]"
+          >
+            <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-[#F2B749]" />
             <span>{authError}</span>
           </div>
         )}
 
-        <div className="pt-4 border-t border-[#E5DDD1] text-[11px] text-[#73685C]">
-          Need assistance? Dial <span className="font-bold text-[#1E150F]">Extension 0</span> from your in-suite phone for Reception.
-        </div>
-      </div>
+        <footer className="gsap-stay-req-item mt-6 flex flex-col items-center gap-2.5 text-center text-[12.5px] text-[#EADDCB]/78">
+          <p>
+            Need help connecting? Dial <strong className="font-semibold text-[#FFF9EF]">Extension 0</strong> from your suite phone for Reception.
+          </p>
+          {receptionPhone && (
+            <a
+              href={`tel:${receptionPhone.replace(/[^\d+]/g, "")}`}
+              className="inline-flex items-center gap-1.5 rounded-full border border-[#E2C98F]/30 bg-[#FFF9EF]/8 px-3.5 py-1.5 text-[12px] font-semibold text-[#E9C77D] transition-colors hover:bg-[#FFF9EF]/14 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#E9C77D]"
+            >
+              <PhoneCall className="h-3.5 w-3.5" />
+              <span>Call Reception</span>
+            </a>
+          )}
+        </footer>
+      </main>
     </div>
   );
 }

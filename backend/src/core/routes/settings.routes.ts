@@ -131,6 +131,17 @@ export function createSettingsRouter(): Router {
         ]
       );
 
+      if (diningHeroUrl !== undefined) {
+        await query(
+          `UPDATE ird_hero_cards
+           SET image_url = $1, updated_at = NOW()
+           WHERE id = (
+             SELECT id FROM ird_hero_cards WHERE property_id = 1 ORDER BY sort_order ASC, id ASC LIMIT 1
+           )`,
+          [diningHeroUrl]
+        ).catch(() => {});
+      }
+
       await query(
         `INSERT INTO audit_logs (property_id, staff_user_id, staff_username, action, target_type, target_id, details)
          VALUES ($1, $2, $3, 'SETTINGS_UPDATE', 'settings', '1', $4)`,

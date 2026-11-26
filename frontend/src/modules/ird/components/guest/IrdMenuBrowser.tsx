@@ -19,12 +19,13 @@ import { cn } from "../../../../core/ui/utils";
 import { useIrdAdapter } from "../../adapter";
 import { DietaryBadge } from "../DietaryBadge";
 import { IrdHeroBanner } from "./IrdHeroBanner";
-import type { CartLineItem, Category, IrdPropertyConfig, MenuItem } from "../../types";
+import type { CartLineItem, Category, IrdHeroCard, IrdPropertyConfig, MenuItem } from "../../types";
 
 interface IrdMenuBrowserProps {
   roomNumber?: string;
   categories: Category[];
   items: MenuItem[];
+  heroCards?: IrdHeroCard[];
   menuLoading: boolean;
   property?: IrdPropertyConfig | null;
   cart: CartLineItem[];
@@ -38,6 +39,7 @@ export function IrdMenuBrowser({
   roomNumber,
   categories,
   items,
+  heroCards,
   menuLoading,
   property,
   cart,
@@ -195,8 +197,8 @@ export function IrdMenuBrowser({
         </div>
       </div>
 
-      {/* Terracotta Promo Banner */}
-      <IrdHeroBanner property={property} />
+      {/* Terracotta Promo Banner Carousel */}
+      <IrdHeroBanner property={property} heroCards={heroCards} />
 
       {/* Category Thumbnail Tiles Strip */}
       <div id="ird-menu-items" className="space-y-3">

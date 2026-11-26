@@ -236,7 +236,7 @@ export function GuestWelcomeLetter({
   const stageRef = useRef<HTMLElement>(null);
   const timelineRef = useRef<gsap.core.Timeline | null>(null);
   const [timing, setTiming] = useState<WelcomeEnvelopeTimingConfig>(DEFAULT_ENVELOPE_TIMING);
-  const [configLoaded, setConfigLoaded] = useState(false);
+  const [readyToAnimate, setReadyToAnimate] = useState(false);
 
   const propertyName = property?.name?.trim() || "Aura Resort & Spa";
   const logoSrc = property?.logoUrl || fallbackLogo || "/kusum-kunja-cafe-logo.png";
@@ -246,10 +246,15 @@ export function GuestWelcomeLetter({
 
   useEffect(() => {
     let active = true;
-    loadWelcomeEnvelopeTiming().then((cfg) => {
+    const fontsReady =
+      typeof document !== "undefined" && document.fonts?.ready
+        ? document.fonts.ready.catch(() => undefined)
+        : Promise.resolve();
+
+    Promise.all([loadWelcomeEnvelopeTiming(), fontsReady]).then(([cfg]) => {
       if (!active) return;
       setTiming(cfg);
-      setConfigLoaded(true);
+      setReadyToAnimate(true);
     });
     return () => {
       active = false;
@@ -258,252 +263,239 @@ export function GuestWelcomeLetter({
 
   const { contextSafe } = useGSAP(
     () => {
-      if (!configLoaded) return;
+      if (!readyToAnimate) return;
 
-      let cancelled = false;
+      const rootEl = stageRef.current;
+      if (!rootEl) return;
+
       const splitInstances: SplitText[] = [];
       const mm = gsap.matchMedia();
 
-      const buildChoreography = async () => {
-        if (typeof document !== "undefined" && document.fonts?.ready) {
-          await document.fonts.ready;
-        }
-        if (cancelled) return;
+      const sheetEl = rootEl.querySelector<HTMLElement>(".gsap-letter-sheet");
+      const pocketEl = rootEl.querySelector<HTMLElement>(".gsap-pocket-front");
 
-        const rootEl = stageRef.current;
-        if (!rootEl) return;
-
-        const sheetEl = rootEl.querySelector<HTMLElement>(".gsap-letter-sheet");
-        const pocketEl = rootEl.querySelector<HTMLElement>(".gsap-pocket-front");
-        const flapEl = rootEl.querySelector<HTMLElement>(".gsap-envelope-flap");
-
-        const computeClosedMetrics = () => {
-          const sheetH = sheetEl?.offsetHeight || 520;
-          const pocketH = pocketEl?.offsetHeight || 242;
-          const tuckedDrop = Math.max(180, sheetH - pocketH + 34);
-          const stageCenterShift = -Math.max(0, (sheetH - pocketH) * 0.42);
-          return { tuckedDrop, stageCenterShift };
-        };
-
-        mm.add("(prefers-reduced-motion: no-preference)", () => {
-          const salutationSplit = SplitText.create(".gsap-letter-salutation", {
-            type: "words, chars",
-            aria: "auto",
-          });
-          const bodySplit = SplitText.create(".gsap-letter-body", {
-            type: "words, chars",
-            aria: "auto",
-          });
-          splitInstances.push(salutationSplit, bodySplit);
-
-          const { tuckedDrop, stageCenterShift } = computeClosedMetrics();
-
-          gsap.set(".gsap-envelope-stage", {
-            autoAlpha: 1,
-            y: stageCenterShift,
-            scale: 0.96,
-            force3D: true,
-          });
-          gsap.set(".gsap-letter-sheet", {
-            y: tuckedDrop,
-            autoAlpha: 1,
-            force3D: true,
-          });
-          gsap.set(".gsap-envelope-flap", {
-            rotationX: 0,
-            zIndex: 34,
-            autoAlpha: 1,
-            transformOrigin: "top center",
-            force3D: true,
-          });
-          gsap.set(".gsap-flap-inner-shade", { opacity: 0 });
-          gsap.set(".gsap-wax-seal", { scale: 1, y: 0, force3D: true });
-          gsap.set(".gsap-pocket-seam-shadow", { opacity: 0.35 });
-          gsap.set(".gsap-letter-header-band", { autoAlpha: 0, y: 6, force3D: true });
-          gsap.set([salutationSplit.chars, bodySplit.chars], { autoAlpha: 0 });
-          gsap.set(".gsap-letter-signature", {
-            autoAlpha: 0,
-            clipPath: "inset(0 100% 0 0)",
-          });
-          gsap.set(".gsap-letter-cta", { autoAlpha: 0, y: 8, force3D: true });
-
-          const tl = gsap.timeline({
-            delay: timing.autoPlayDelay,
-            defaults: { overwrite: "auto", force3D: true },
-          });
-          timelineRef.current = tl;
-
-          // Subtle studio presence & unseal press
-          tl.to(
-            ".gsap-envelope-stage",
-            {
-              scale: 1,
-              duration: 0.45,
-              ease: "power2.out",
-            },
-            0
-          )
-            .addLabel("sealRelease", 0.08)
-            .to(
-              ".gsap-wax-seal",
-              {
-                scale: 1.035,
-                y: 2,
-                duration: timing.sealBreakDuration * 0.55,
-                ease: "power2.out",
-              },
-              "sealRelease"
-            )
-            .to(
-              ".gsap-wax-seal",
-              {
-                scale: 1,
-                y: 0,
-                duration: timing.sealBreakDuration * 0.45,
-                ease: "power2.inOut",
-              },
-              ">"
-            )
-            // Flap glides forward & up from pocket crease, tucking cleanly behind at 90deg
-            .addLabel("flapOpen", `>-${Math.min(0.08, timing.sealBreakDuration * 0.35)}`)
-            .to(
-              ".gsap-envelope-flap",
-              {
-                rotationX: 178,
-                duration: timing.flapOpenDuration,
-                ease: "power3.inOut",
-                onUpdate() {
-                  if (!flapEl) return;
-                  const rot = Math.abs(Number(gsap.getProperty(flapEl, "rotationX")) || 0);
-                  flapEl.style.zIndex = rot >= 90 ? "12" : "34";
-                },
-              },
-              "flapOpen"
-            )
-            .to(
-              ".gsap-flap-inner-shade",
-              {
-                opacity: 0.85,
-                duration: timing.flapOpenDuration * 0.65,
-                ease: "power2.inOut",
-              },
-              "flapOpen"
-            )
-            // Once behind the rising paper, recede open flap cleanly into the back pocket wall
-            .to(
-              ".gsap-envelope-flap",
-              {
-                autoAlpha: 0,
-                duration: timing.envelopeSettleDuration * 0.55,
-                ease: "power2.out",
-              },
-              `flapOpen+=${timing.flapOpenDuration * 0.72}`
-            )
-            // Deckle cotton letter rises out of the velvet pocket while stage settles to center
-            .addLabel("letterRise", `>-${Math.min(0.24, timing.flapOpenDuration * 0.4)}`)
-            .to(
-              ".gsap-letter-sheet",
-              {
-                y: 0,
-                duration: timing.letterRiseDuration,
-                ease: "power3.out",
-              },
-              "letterRise"
-            )
-            .to(
-              ".gsap-envelope-stage",
-              {
-                y: 0,
-                duration: timing.envelopeSettleDuration,
-                ease: "power3.inOut",
-              },
-              "letterRise"
-            )
-            .to(
-              ".gsap-pocket-seam-shadow",
-              {
-                opacity: 1,
-                duration: timing.envelopeSettleDuration * 0.7,
-                ease: "power2.out",
-              },
-              "letterRise"
-            )
-            // Refined editorial typography reveal (smooth ink-soak, zero vertical bounce)
-            .addLabel("textReveal", `>-${Math.min(0.26, timing.letterRiseDuration * 0.32)}`)
-            .to(
-              ".gsap-letter-header-band",
-              {
-                autoAlpha: 1,
-                y: 0,
-                duration: 0.38,
-                ease: "power2.out",
-              },
-              "textReveal"
-            )
-            .to(
-              salutationSplit.chars,
-              {
-                autoAlpha: 1,
-                duration: timing.salutationCharDuration,
-                stagger: timing.salutationCharStagger,
-                ease: "power2.out",
-              },
-              `>+${timing.salutationDelay * 0.5}`
-            )
-            .to(
-              bodySplit.chars,
-              {
-                autoAlpha: 1,
-                duration: timing.bodyCharDuration,
-                stagger: timing.bodyCharStagger,
-                ease: "sine.out",
-              },
-              ">-0.18"
-            )
-            .addLabel("closing", `>+${timing.signatureDelay}`)
-            .to(
-              ".gsap-letter-signature",
-              {
-                autoAlpha: 1,
-                clipPath: "inset(0 0% 0 0)",
-                duration: Math.max(0.45, timing.signatureCharDuration + timing.signatureCharStagger * 6),
-                ease: "power2.inOut",
-              },
-              "closing"
-            )
-            .to(
-              ".gsap-letter-cta",
-              {
-                autoAlpha: 1,
-                y: 0,
-                duration: timing.ctaRevealDuration,
-                ease: "power2.out",
-              },
-              ">-0.2"
-            );
-        });
-
-        mm.add("(prefers-reduced-motion: reduce)", () => {
-          gsap.set(".gsap-envelope-stage", { autoAlpha: 1, y: 0, scale: 1 });
-          gsap.set(".gsap-letter-sheet", { y: 0, autoAlpha: 1 });
-          gsap.set(".gsap-envelope-flap", { rotationX: 178, zIndex: 12 });
-          gsap.set(
-            [".gsap-letter-header-band", ".gsap-letter-signature", ".gsap-letter-cta"],
-            { autoAlpha: 1, clearProps: "clipPath,transform" }
-          );
-          gsap.fromTo(".gsap-envelope-stage", { autoAlpha: 0 }, { autoAlpha: 1, duration: 0.25 });
-        });
+      const computeClosedMetrics = () => {
+        const sheetH = sheetEl?.offsetHeight || 520;
+        const pocketH = pocketEl?.offsetHeight || 242;
+        const tuckedDrop = Math.max(180, sheetH - pocketH + 34);
+        const stageCenterShift = -Math.max(0, (sheetH - pocketH) * 0.42);
+        return { tuckedDrop, stageCenterShift };
       };
 
-      buildChoreography();
+      mm.add("(prefers-reduced-motion: no-preference)", () => {
+        const salutationSplit = SplitText.create(".gsap-letter-salutation", {
+          type: "words, chars",
+          aria: "auto",
+        });
+        const bodySplit = SplitText.create(".gsap-letter-body", {
+          type: "words, chars",
+          aria: "auto",
+        });
+        splitInstances.push(salutationSplit, bodySplit);
+
+        const { tuckedDrop, stageCenterShift } = computeClosedMetrics();
+
+        // Set deterministic closed-envelope initial state before revealing the stage
+        gsap.set(".gsap-envelope-stage", {
+          autoAlpha: 0,
+          y: stageCenterShift,
+          scale: 0.96,
+          force3D: true,
+        });
+        gsap.set(".gsap-letter-sheet", {
+          y: tuckedDrop,
+          autoAlpha: 1,
+          force3D: true,
+        });
+        gsap.set(".gsap-envelope-flap", {
+          rotationX: 0,
+          zIndex: 35,
+          autoAlpha: 1,
+          transformOrigin: "top center",
+          force3D: true,
+        });
+        gsap.set(".gsap-flap-inner-shade", { opacity: 0 });
+        gsap.set(".gsap-wax-seal", { zIndex: 40, scale: 1, y: 0, force3D: true });
+        gsap.set(".gsap-pocket-seam-shadow", { opacity: 0.35 });
+        gsap.set(".gsap-letter-header-band", { autoAlpha: 0, y: 6, force3D: true });
+        gsap.set([salutationSplit.chars, bodySplit.chars], { autoAlpha: 0 });
+        gsap.set(".gsap-letter-signature", {
+          autoAlpha: 0,
+          clipPath: "inset(0 100% 0 0)",
+        });
+        gsap.set(".gsap-letter-cta", { autoAlpha: 0, y: 8, force3D: true });
+
+        const openDelay = Math.max(0.15, timing.autoPlayDelay);
+        const tl = gsap.timeline({
+          defaults: { overwrite: "auto", force3D: true },
+        });
+        timelineRef.current = tl;
+
+        // Guarantee closed flap & seal z-order at frame 0 (including on Replay)
+        tl.set(".gsap-envelope-flap", { zIndex: 35, rotationX: 0, autoAlpha: 1 }, 0)
+          .set(".gsap-wax-seal", { zIndex: 40, scale: 1, y: 0 }, 0)
+          .fromTo(
+            ".gsap-envelope-stage",
+            { autoAlpha: 0, scale: 0.96, y: stageCenterShift },
+            { autoAlpha: 1, scale: 1, duration: 0.42, ease: "power2.out" },
+            0
+          )
+          .addLabel("sealRelease", openDelay)
+          .to(
+            ".gsap-wax-seal",
+            {
+              scale: 1.05,
+              y: 2,
+              duration: timing.sealBreakDuration * 0.55,
+              ease: "power2.out",
+            },
+            "sealRelease"
+          )
+          .to(
+            ".gsap-wax-seal",
+            {
+              scale: 1,
+              y: 0,
+              duration: timing.sealBreakDuration * 0.45,
+              ease: "power2.inOut",
+            },
+            ">"
+          )
+          // Flap lifts cleanly from the closed position; seal settles onto the front pocket
+          .addLabel("flapOpen", `>-${Math.min(0.06, timing.sealBreakDuration * 0.3)}`)
+          .set(".gsap-wax-seal", { zIndex: 32 }, "flapOpen")
+          .to(
+            ".gsap-envelope-flap",
+            {
+              rotationX: 178,
+              duration: timing.flapOpenDuration,
+              ease: "power3.inOut",
+            },
+            "flapOpen"
+          )
+          .set(".gsap-envelope-flap", { zIndex: 15 }, `flapOpen+=${timing.flapOpenDuration * 0.48}`)
+          .to(
+            ".gsap-flap-inner-shade",
+            {
+              opacity: 0.85,
+              duration: timing.flapOpenDuration * 0.65,
+              ease: "power2.inOut",
+            },
+            "flapOpen"
+          )
+          // Once behind the rising paper, recede open flap cleanly into the back pocket wall
+          .to(
+            ".gsap-envelope-flap",
+            {
+              autoAlpha: 0,
+              duration: timing.envelopeSettleDuration * 0.55,
+              ease: "power2.out",
+            },
+            `flapOpen+=${timing.flapOpenDuration * 0.72}`
+          )
+          // Deckle cotton letter rises out of the velvet pocket while stage settles to center
+          .addLabel("letterRise", `>-${Math.min(0.24, timing.flapOpenDuration * 0.4)}`)
+          .to(
+            ".gsap-letter-sheet",
+            {
+              y: 0,
+              duration: timing.letterRiseDuration,
+              ease: "power3.out",
+            },
+            "letterRise"
+          )
+          .to(
+            ".gsap-envelope-stage",
+            {
+              y: 0,
+              duration: timing.envelopeSettleDuration,
+              ease: "power3.inOut",
+            },
+            "letterRise"
+          )
+          .to(
+            ".gsap-pocket-seam-shadow",
+            {
+              opacity: 1,
+              duration: timing.envelopeSettleDuration * 0.7,
+              ease: "power2.out",
+            },
+            "letterRise"
+          )
+          // Refined editorial typography reveal (smooth ink-soak, zero vertical bounce)
+          .addLabel("textReveal", `>-${Math.min(0.26, timing.letterRiseDuration * 0.32)}`)
+          .to(
+            ".gsap-letter-header-band",
+            {
+              autoAlpha: 1,
+              y: 0,
+              duration: 0.38,
+              ease: "power2.out",
+            },
+            "textReveal"
+          )
+          .to(
+            salutationSplit.chars,
+            {
+              autoAlpha: 1,
+              duration: timing.salutationCharDuration,
+              stagger: timing.salutationCharStagger,
+              ease: "power2.out",
+            },
+            `>+${timing.salutationDelay * 0.5}`
+          )
+          .to(
+            bodySplit.chars,
+            {
+              autoAlpha: 1,
+              duration: timing.bodyCharDuration,
+              stagger: timing.bodyCharStagger,
+              ease: "sine.out",
+            },
+            ">-0.18"
+          )
+          .addLabel("closing", `>+${timing.signatureDelay}`)
+          .to(
+            ".gsap-letter-signature",
+            {
+              autoAlpha: 1,
+              clipPath: "inset(0 0% 0 0)",
+              duration: Math.max(0.45, timing.signatureCharDuration + timing.signatureCharStagger * 6),
+              ease: "power2.inOut",
+            },
+            "closing"
+          )
+          .to(
+            ".gsap-letter-cta",
+            {
+              autoAlpha: 1,
+              y: 0,
+              duration: timing.ctaRevealDuration,
+              ease: "power2.out",
+            },
+            ">-0.2"
+          );
+      });
+
+      mm.add("(prefers-reduced-motion: reduce)", () => {
+        gsap.set(".gsap-envelope-stage", { autoAlpha: 1, y: 0, scale: 1 });
+        gsap.set(".gsap-letter-sheet", { y: 0, autoAlpha: 1 });
+        gsap.set(".gsap-envelope-flap", { rotationX: 178, zIndex: 15, autoAlpha: 0 });
+        gsap.set(".gsap-wax-seal", { zIndex: 32 });
+        gsap.set(
+          [".gsap-letter-header-band", ".gsap-letter-signature", ".gsap-letter-cta"],
+          { autoAlpha: 1, clearProps: "clipPath,transform" }
+        );
+        gsap.fromTo(".gsap-envelope-stage", { autoAlpha: 0 }, { autoAlpha: 1, duration: 0.25 });
+      });
 
       return () => {
-        cancelled = true;
         timelineRef.current?.kill();
+        mm.revert();
         splitInstances.forEach((inst) => inst.revert());
       };
     },
-    { scope: stageRef, dependencies: [configLoaded], revertOnUpdate: true }
+    { scope: stageRef, dependencies: [readyToAnimate], revertOnUpdate: true }
   );
 
   const handleReplay = contextSafe(() => {
@@ -512,7 +504,7 @@ export function GuestWelcomeLetter({
 
   const handleOpenImmediately = contextSafe(() => {
     if (timelineRef.current && timelineRef.current.time() < timing.autoPlayDelay) {
-      timelineRef.current.play(timing.autoPlayDelay);
+      timelineRef.current.play("sealRelease");
     }
   });
 
@@ -587,9 +579,9 @@ export function GuestWelcomeLetter({
                 <stop offset="100%" stopColor="#35080B" />
               </linearGradient>
             </defs>
-            {/* Rounded pocket ear-tabs matching reference silhouette */}
+            {/* Flush pocket shoulders aligned cleanly under the top flap hinge */}
             <path
-              d="M0,265 L0,30 Q1,12 16,10 Q32,8 44,24 L230,96 L416,24 Q428,8 444,10 Q459,12 460,30 L460,265 Z"
+              d="M0,265 L0,34 Q1,28 10,28 L44,28 L230,96 L416,28 L450,28 Q459,28 460,34 L460,265 Z"
               fill="url(#env-pin-back-wall)"
             />
           </svg>
@@ -600,9 +592,9 @@ export function GuestWelcomeLetter({
           aria-hidden="true"
           className="gsap-envelope-flap pointer-events-none absolute inset-x-0 bottom-[52px] sm:bottom-[55px] h-[155px] sm:h-[172px]"
           style={{
-            zIndex: 34,
-            transformStyle: "preserve-3d",
+            zIndex: 35,
             transformOrigin: "top center",
+            backfaceVisibility: "visible",
             willChange: "transform",
           }}
         >
@@ -851,8 +843,13 @@ export function GuestWelcomeLetter({
               style={{ mixBlendMode: "soft-light" }}
             />
           </svg>
+        </div>
 
-          {/* Embossed Crimson Botanical Wax Seal at Center Pocket Notch */}
+        {/* Embossed Crimson Botanical Wax Seal (shares stage stacking context so it seals the closed flap at z=40, then settles onto front pocket at z=32) */}
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-x-0 bottom-0 h-[230px] sm:h-[252px]"
+        >
           <div
             className="gsap-wax-seal pointer-events-none absolute left-1/2 top-[53%] -translate-x-1/2 -translate-y-1/2"
             style={{ zIndex: 40, willChange: "transform" }}

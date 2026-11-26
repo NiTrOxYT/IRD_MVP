@@ -18,6 +18,7 @@ import {
   Image as ImageIcon,
 } from "lucide-react";
 import { cn } from "../ui/utils";
+import { compressImage } from "../ui/imageUtils";
 import { DEFAULT_WELCOME_MESSAGE } from "../stay/GuestWelcomeLetter";
 import {
   buildAttractionWhatsappMessage,
@@ -62,39 +63,6 @@ const PORTAL_IMAGE_SLOTS: ReadonlyArray<{
     hint: "Full-screen welcome verification backdrop shown while suite loads.",
   },
 ];
-
-async function compressImage(
-  file: File,
-  { maxSizes, quality, maxChars, errorLabel }: { maxSizes: number[]; quality: number; maxChars: number; errorLabel: string }
-): Promise<string> {
-  if (!["image/png", "image/jpeg", "image/webp"].includes(file.type)) {
-    throw new Error("Choose a PNG, JPG, or WebP image.");
-  }
-  if (file.size > 10 * 1024 * 1024) throw new Error("The image must be smaller than 10 MB.");
-
-  const objectUrl = URL.createObjectURL(file);
-  try {
-    const image = new Image();
-    image.src = objectUrl;
-    await image.decode();
-    if (image.naturalWidth > 12000 || image.naturalHeight > 12000) {
-      throw new Error(`This image is too large to process. Choose a smaller ${errorLabel}.`);
-    }
-
-    for (const maxSize of maxSizes) {
-      const scale = Math.min(1, maxSize / Math.max(image.naturalWidth, image.naturalHeight));
-      const canvas = document.createElement("canvas");
-      canvas.width = Math.max(1, Math.round(image.naturalWidth * scale));
-      canvas.height = Math.max(1, Math.round(image.naturalHeight * scale));
-      canvas.getContext("2d")!.drawImage(image, 0, 0, canvas.width, canvas.height);
-      const dataUrl = canvas.toDataURL("image/webp", quality);
-      if (dataUrl.length <= maxChars) return dataUrl;
-    }
-    throw new Error(`This ${errorLabel} could not be compressed enough. Choose a simpler image.`);
-  } finally {
-    URL.revokeObjectURL(objectUrl);
-  }
-}
 
 export function AdminSettings() {
   const [settings, setSettings] = useState<PropertySettings | null>(null);
@@ -229,9 +197,9 @@ export function AdminSettings() {
     try {
       setWelcomeBgDraft(
         await compressImage(file, {
-          maxSizes: [1440, 1080, 768],
-          quality: 0.78,
-          maxChars: 340_000,
+          maxSizes: [1440, 1080, 800, 640],
+          quality: 0.8,
+          maxChars: 700_000,
           errorLabel: "background image",
         })
       );
@@ -307,9 +275,9 @@ export function AdminSettings() {
     setPortalImagesSaved(false);
     try {
       const compressed = await compressImage(file, {
-        maxSizes: [1440, 1080, 768],
-        quality: 0.78,
-        maxChars: 340_000,
+        maxSizes: [1440, 1080, 800, 640],
+        quality: 0.8,
+        maxChars: 700_000,
         errorLabel: "hero image",
       });
       setPortalImagesDraft((prev) => ({ ...prev, [key]: compressed }));
@@ -326,6 +294,13 @@ export function AdminSettings() {
     try {
       const res = await updatePropertySettings(portalImagesDraft);
       setSettings(res.property);
+      window.dispatchEvent(
+        new CustomEvent("property-branding-updated", {
+          detail: {
+            suiteLoaderBgUrl: res.property.suiteLoaderBgUrl ?? null,
+          },
+        })
+      );
       setPortalImagesDraft({});
       setPortalImagesSaved(true);
       setTimeout(() => setPortalImagesSaved(false), 3000);
@@ -634,7 +609,7 @@ export function AdminSettings() {
                       )}
                     </div>
                     <p className="text-[11px] text-[#73685C]">
-                      PNG, JPG, or WebP · automatically compressed for mobile suite displays.
+                      PNG, JPG, or WebP · Max 10 MB (up to 12000×12000 px) · auto-compressed to WebP/JPEG ≤ 500 KB.
                     </p>
                   </div>
                 </div>
@@ -847,6 +822,18 @@ export function AdminSettings() {
                 {portalImagesError}
               </p>
             )}
+
+            <div className="rounded-2xl border border-[#E5DDD1] bg-[#FAF3E6]/70 px-4 py-3 text-[11px] text-[#5B4D42] flex flex-wrap items-center gap-x-4 gap-y-1">
+              <span>
+                <strong className="text-[#1E150F]">Formats:</strong> PNG, JPG, or WebP
+              </span>
+              <span>
+                <strong className="text-[#1E150F]">Max upload:</strong> 10 MB (up to 12000×12000 px)
+              </span>
+              <span>
+                <strong className="text-[#1E150F]">Recommended:</strong> 16:9 or 4:3 landscape · auto-compressed to WebP/JPEG ≤ 500 KB
+              </span>
+            </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {PORTAL_IMAGE_SLOTS.map((slot) => {

@@ -408,6 +408,22 @@ export async function runMigrations() {
         read_at TIMESTAMP WITHOUT TIME ZONE NOT NULL DEFAULT NOW(),
         PRIMARY KEY (message_id, stay_id)
       );
+
+      -- 22. In-Room Dining Promo Hero Carousel Cards
+      CREATE TABLE IF NOT EXISTS ird_hero_cards (
+        id SERIAL PRIMARY KEY,
+        property_id INT NOT NULL DEFAULT 1 REFERENCES properties(id) ON DELETE CASCADE,
+        title TEXT NOT NULL,
+        subtitle TEXT,
+        cta_label TEXT NOT NULL DEFAULT 'Order Now',
+        image_url TEXT,
+        is_active BOOLEAN NOT NULL DEFAULT TRUE,
+        sort_order INT NOT NULL DEFAULT 0,
+        created_at TIMESTAMP WITHOUT TIME ZONE NOT NULL DEFAULT NOW(),
+        updated_at TIMESTAMP WITHOUT TIME ZONE NOT NULL DEFAULT NOW()
+      );
+      CREATE INDEX IF NOT EXISTS idx_ird_hero_cards_property ON ird_hero_cards(property_id);
+      CREATE INDEX IF NOT EXISTS idx_ird_hero_cards_active ON ird_hero_cards(is_active);
     `);
 
     // Seed default property
@@ -661,6 +677,19 @@ export async function runMigrations() {
       ON CONFLICT (id) DO NOTHING;
     `);
 
+    // Seed IRD Promo Hero Carousel Cards (4 default cards matching initial 4 dots) only when empty
+    const heroCardCountRes = await client.query("SELECT COUNT(*)::int AS cnt FROM ird_hero_cards");
+    if ((heroCardCountRes.rows[0]?.cnt ?? 0) === 0) {
+      await client.query(`
+        INSERT INTO ird_hero_cards (property_id, title, subtitle, cta_label, image_url, is_active, sort_order)
+        VALUES
+          (1, E'Fresh.\\nPlated.\\nTo Suite.', 'Chef specials, artisan coffees & suite dining delivered fresh in 20–25 mins.', 'Order Now', COALESCE((SELECT NULLIF(BTRIM(dining_hero_url), '') FROM properties WHERE id = 1), '/in-room-dining-card.jpg'), TRUE, 1),
+          (1, E'Sunrise.\\nBreakfast.\\nIn Bed.', 'Poached heritage eggs, warm brioche & single-origin pour-over served from 06:30 AM.', 'View Breakfast', '/hero-cafe-banner.jpg', TRUE, 2),
+          (1, E'Twilight.\\nChef\\'s\\nTable.', 'Handcrafted pasta, prime Wagyu & cellar pairings brought straight to your suite.', 'Explore Mains', '/suite-welcome-card.jpg', TRUE, 3),
+          (1, E'Midnight.\\nComforts\\nOn Call.', 'Warm chocolate fondant, gourmet melts & soothing nightcaps until 06:00 AM.', 'Late Night', '/room-service-card.jpg', TRUE, 4);
+      `);
+    }
+
     // Reset SERIAL sequences
     const tables = [
       'properties',
@@ -683,6 +712,7 @@ export async function runMigrations() {
       'local_attractions',
       'faqs',
       'guest_messages',
+      'ird_hero_cards',
     ];
     for (const t of tables) {
       await client.query(`

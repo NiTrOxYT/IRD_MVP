@@ -6,6 +6,7 @@ import { PageTransition } from "../../../../core/ui/MotionPrimitives";
 import type {
   CartLineItem,
   Category,
+  IrdHeroCard,
   IrdPropertyConfig,
   ItemModifier,
   MenuItem,
@@ -62,6 +63,7 @@ export function IrdGuestPortal({
 
   const [categories, setCategories] = useState<Category[]>([]);
   const [items, setItems] = useState<MenuItem[]>([]);
+  const [heroCards, setHeroCards] = useState<IrdHeroCard[]>(() => property?.diningHeroCards ?? []);
   const [menuLoading, setMenuLoading] = useState(false);
 
   const [internalOrders, setInternalOrders] = useState<Order[]>([]);
@@ -72,12 +74,21 @@ export function IrdGuestPortal({
   const [isSubmittingOrder, setIsSubmittingOrder] = useState(false);
   const [cancellingOrderId, setCancellingOrderId] = useState<number | null>(null);
 
+  useEffect(() => {
+    if (property?.diningHeroCards && property.diningHeroCards.length > 0 && heroCards.length === 0) {
+      setHeroCards(property.diningHeroCards);
+    }
+  }, [property?.diningHeroCards, heroCards.length]);
+
   const fetchMenuData = useCallback(async () => {
     setMenuLoading(true);
     try {
       const res = await api.getGuestMenu();
       setCategories(res.categories);
       setItems(res.items);
+      if (Array.isArray(res.heroCards)) {
+        setHeroCards(res.heroCards);
+      }
     } catch (err) {
       console.error("[IRD] Menu fetch error:", err);
     } finally {
@@ -269,6 +280,7 @@ export function IrdGuestPortal({
             roomNumber={roomNumber}
             categories={categories}
             items={items}
+            heroCards={heroCards}
             menuLoading={menuLoading}
             property={property}
             cart={cart}

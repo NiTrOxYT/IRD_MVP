@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
-import { AlertCircle, CheckCircle2, ChevronLeft } from "lucide-react";
+import { AlertCircle, CheckCircle2, ChevronLeft, Clock, Sparkles } from "lucide-react";
 import { gsap, useGSAP } from "../../../../core/ui/gsap";
 import { ROOM_SERVICE_CATALOG } from "../../catalog";
 import { useRoomServiceAdapter } from "../../adapter";
@@ -73,14 +73,14 @@ export function RoomServiceGuestPortal({
         if (!heroRef.current) return;
         gsap.fromTo(
           heroRef.current,
-          { autoAlpha: 0, y: 14 },
+          { autoAlpha: 0, y: 12 },
           { autoAlpha: 1, y: 0, duration: 0.36, ease: "power2.out", force3D: true, clearProps: "transform" }
         );
       });
       mm.add("(pointer: fine) and (prefers-reduced-motion: no-preference)", () => {
         if (!heroRef.current) return;
         gsap.to(".gsap-rs-hero-img", {
-          yPercent: 12,
+          yPercent: 10,
           ease: "none",
           force3D: true,
           scrollTrigger: {
@@ -110,7 +110,7 @@ export function RoomServiceGuestPortal({
         setGuestNote("");
         setFeedback({
           type: "success",
-          message: `Your request for "${res.request.title}" has been placed. Our housekeeping team will attend to Suite ${roomNumber || ""} shortly.`,
+          message: `Your request for "${res.request.title}" has been placed. Our butler team will attend to Suite ${roomNumber || ""} shortly.`,
         });
         setTimeout(() => {
           setFeedback(null);
@@ -127,68 +127,74 @@ export function RoomServiceGuestPortal({
   };
 
   return (
-    <div ref={rsRootRef} className="mx-auto max-w-md sm:max-w-2xl lg:max-w-4xl space-y-5 sm:space-y-6">
+    <div ref={rsRootRef} className="mx-auto max-w-md sm:max-w-2xl lg:max-w-4xl space-y-6">
       {onBackToHub && (
         <div className="flex items-center justify-between gap-2">
           <button
             type="button"
             onClick={onBackToHub}
-            className="inline-flex items-center gap-1 text-xs font-bold px-3.5 py-1.5 rounded-full frost-cta-white btn-smooth-press-sm"
+            className="inline-flex items-center gap-1.5 rounded-full border border-[#C8A262]/30 bg-[#1F1C18] px-3.5 py-1.5 text-xs font-semibold text-[#F6F1E9] hover:border-[#C8A262]/60 btn-smooth-press-sm cursor-pointer"
           >
-            <ChevronLeft size={16} /> All Services
+            <ChevronLeft className="h-3.5 w-3.5 text-[#D8B472]" />
+            <span>All Services</span>
           </button>
-          <div className="text-[11px] text-white/75 tabular-nums frost-pill-chip px-3 py-1 rounded-full">
-            Suite <strong className="text-white">{roomNumber}</strong>
-          </div>
+          <span className="rounded-full border border-white/12 bg-[#1D1A16] px-3 py-1 text-[11px] font-medium text-[#D6CEC2] tabular-nums">
+            Suite <strong className="text-[#F8F4EC]">{roomNumber}</strong>
+          </span>
         </div>
       )}
 
-      {/* Reference 2 Frosted Component Hero Card */}
-      <div ref={heroRef} className="relative overflow-hidden rounded-[32px] frost-component-card">
-        <div className="relative h-[196px] sm:h-[230px] w-full overflow-hidden">
+      {/* Editorial Sanctuary Hero Card */}
+      <section
+        ref={heroRef}
+        className="relative overflow-hidden rounded-[28px] border border-[#C8A262]/24 bg-[#181613] shadow-[0_24px_48px_-18px_rgba(0,0,0,0.65)]"
+      >
+        <div className="relative h-[200px] sm:h-[238px] w-full overflow-hidden">
           <img
             src={heroImageUrl || "/room-service-card.jpg"}
             alt="Room Service & Suite Care"
             className="gsap-rs-hero-img h-full w-full scale-105 object-cover object-center"
           />
-          <div className="pointer-events-none absolute inset-0 frost-component-fade" />
-          <div className="absolute bottom-3 inset-x-0 flex justify-center gap-1.5">
-            <span className="h-1.5 w-1.5 rounded-full bg-white" />
-            <span className="h-1.5 w-1.5 rounded-full bg-white/40" />
-            <span className="h-1.5 w-1.5 rounded-full bg-white/40" />
-          </div>
+          <div
+            aria-hidden="true"
+            className="pointer-events-none absolute inset-0 bg-[linear-gradient(180deg,rgba(24,22,19,0.12)_0%,rgba(24,22,19,0.68)_65%,rgba(24,22,19,1)_100%)]"
+          />
         </div>
 
-        <div className="relative z-10 -mt-3 space-y-3 px-5 pb-6 sm:px-7 sm:pb-7">
-          <div className="flex items-start justify-between gap-3">
-            <h2 className="font-sans text-[22px] sm:text-[28px] font-bold tracking-tight text-white leading-tight">
-              Room Service & Suite Care
-            </h2>
-            <span className="shrink-0 rounded-full frost-pill-chip px-3 py-1 text-xs font-bold text-white">
+        <div className="relative z-10 -mt-8 px-5 pb-6 sm:px-7 sm:pb-7 space-y-3.5">
+          <div className="flex flex-wrap items-end justify-between gap-3">
+            <h1 className="font-serif text-[26px] sm:text-[34px] font-semibold tracking-[-0.02em] leading-[1.08] text-[#FAF6EE]">
+              Suite Care & Concierge
+            </h1>
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-[#C8A262]/35 bg-[#26211A] px-3 py-1 text-[11px] font-medium text-[#E5C58B]">
+              <Sparkles className="h-3 w-3" />
               Complimentary
             </span>
           </div>
-          <p className="text-[12.5px] sm:text-[13.5px] text-white/75 leading-relaxed max-w-[54ch]">
-            Select an item below to place a request. Our housekeeping and butler team will attend Suite {roomNumber} promptly.
+
+          <p className="text-[13px] sm:text-[14px] leading-relaxed text-[#BEB6AA] max-w-[54ch]">
+            Select any housekeeping ritual or in-suite amenity below. Requests dispatch directly to our butler desk for Suite {roomNumber}.
           </p>
-          <div className="flex flex-wrap gap-2">
-            <span className="rounded-full frost-pill-chip px-3 py-1 text-[11px] font-semibold">
-              Direct Dispatch
+
+          <div className="flex flex-wrap items-center gap-2 pt-0.5 text-[11px] text-[#D8CEC0]">
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.04] px-3 py-1">
+              <Clock className="h-3 w-3 text-[#D8B472]" />
+              24/7 Butler Dispatch
             </span>
-            <span className="rounded-full frost-pill-chip px-3 py-1 text-[11px] font-semibold">
-              24/7 Care
+            <span className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1">
+              10–15 min arrival
             </span>
           </div>
         </div>
-      </div>
+      </section>
 
       {/* Feedback Alert */}
       {feedback && (
         <div
           className={`p-4 rounded-[22px] border text-xs flex items-start gap-3 zomato-cart-enter ${
             feedback.type === "success"
-              ? "bg-emerald-500/20 border-emerald-300/35 text-emerald-100"
-              : "bg-rose-500/20 border-rose-300/35 text-rose-100"
+              ? "bg-emerald-950/75 border-emerald-400/35 text-emerald-100"
+              : "bg-rose-950/75 border-rose-400/35 text-rose-100"
           }`}
         >
           {feedback.type === "success" ? (

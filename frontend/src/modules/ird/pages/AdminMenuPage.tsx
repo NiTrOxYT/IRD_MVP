@@ -1,8 +1,25 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { irdApi } from "../api";
-import type { Category, MenuItem, MenuItemVariant } from "../types";
-const { getAdminMenu, toggleItemAvailability, createMenuItem, updateMenuItem, deleteMenuItem, createCategory, updateCategory, toggleCategoryStatus, reorderCategories, deleteCategory } = irdApi;
+import type { Category, IrdHeroCard, MenuItem } from "../types";
+const {
+  getAdminMenu,
+  toggleItemAvailability,
+  createMenuItem,
+  updateMenuItem,
+  deleteMenuItem,
+  createCategory,
+  updateCategory,
+  toggleCategoryStatus,
+  reorderCategories,
+  deleteCategory,
+  createHeroCard,
+  updateHeroCard,
+  toggleHeroCardStatus,
+  reorderHeroCards,
+  deleteHeroCard,
+} = irdApi;
 import { formatINR } from "../../../core/ui/currency";
+import { compressImage } from "../../../core/ui/imageUtils";
 import { Modal } from "../../../core/ui/Modal";
 import { PageTransition } from "../../../core/ui/MotionPrimitives";
 import { DietaryBadge } from "../components/DietaryBadge";
@@ -21,18 +38,18 @@ import {
   AlertCircle,
   FolderPlus,
   Layers,
-  Flame,
-  ChefHat,
+  Image as ImageIcon,
   Search,
-  Check,
+  Upload,
 } from "lucide-react";
 import { cn } from "../../../core/ui/utils";
 
 export function AdminMenu() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [items, setItems] = useState<MenuItem[]>([]);
+  const [heroCards, setHeroCards] = useState<IrdHeroCard[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<"items" | "categories">("items");
+  const [activeTab, setActiveTab] = useState<"items" | "categories" | "hero-cards">("items");
   const [feedback, setFeedback] = useState<{ type: "success" | "error"; text: string } | null>(null);
 
   // Search and filter for items
@@ -78,6 +95,18 @@ export function AdminMenu() {
   const [reassignTargetId, setReassignTargetId] = useState<number | "">("");
   const [isDeletingCategory, setIsDeletingCategory] = useState(false);
 
+  // ── Promo Hero Card Modal State (Create / Edit) ──
+  const [isHeroModalOpen, setIsHeroModalOpen] = useState(false);
+  const [editingHeroCard, setEditingHeroCard] = useState<IrdHeroCard | null>(null);
+  const [heroTitle, setHeroTitle] = useState("");
+  const [heroSubtitle, setHeroSubtitle] = useState("");
+  const [heroCtaLabel, setHeroCtaLabel] = useState("Order Now");
+  const [heroImageUrl, setHeroImageUrl] = useState<string | null>(null);
+  const [heroIsActive, setHeroIsActive] = useState(true);
+  const [heroImageError, setHeroImageError] = useState("");
+  const [isSubmittingHero, setIsSubmittingHero] = useState(false);
+  const [quickUploadingCardId, setQuickUploadingCardId] = useState<number | null>(null);
+
   const showFeedback = (type: "success" | "error", text: string) => {
     setFeedback({ type, text });
     setTimeout(() => setFeedback(null), 4000);
@@ -88,6 +117,9 @@ export function AdminMenu() {
       const res = await getAdminMenu();
       setCategories(res.categories);
       setItems(res.items);
+      if (Array.isArray(res.heroCards)) {
+        setHeroCards(res.heroCards);
+      }
       setLoading(false);
     } catch (err: any) {
       console.error(err);
@@ -405,6 +437,154 @@ export function AdminMenu() {
     }
   };
 
+  // ─────────────────────────────────────────────
+  // ── PROMO HERO CARDS HANDLERS ────────────────
+  // ─────────────────────────────────────────────
+
+  const handleOpenAddHeroCard = () => {
+    setEditingHeroCard(null);
+    setHeroTitle("");
+    setHeroSubtitle("");
+    setHeroCtaLabel("Order Now");
+    setHeroImageUrl(null);
+    setHeroIsActive(true);
+    setHeroImageError("");
+    setIsHeroModalOpen(true);
+  };
+
+  const handleOpenEditHeroCard = (card: IrdHeroCard) => {
+    setEditingHeroCard(card);
+    setHeroTitle(card.title);
+    setHeroSubtitle(card.subtitle || "");
+    setHeroCtaLabel(card.ctaLabel || "Order Now");
+    setHeroImageUrl(card.imageUrl ?? null);
+    setHeroIsActive(card.isActive !== false);
+    setHeroImageError("");
+    setIsHeroModalOpen(true);
+  };
+
+  const handleHeroModalFile = async (file?: File) => {
+    if (!file) return;
+    setHeroImageError("");
+    try {
+      const compressed = await compressImage(file, {
+        maxSizes: [1440, 1080, 800, 640],
+        quality: 0.8,
+        maxChars: 700_000,
+        errorLabel: "promo card image",
+      });
+      setHeroImageUrl(compressed);
+    } catch (err: any) {
+      setHeroImageError(err.message || "Could not process this image.");
+    }
+  };
+
+  const handleQuickHeroImageChange = async (card: IrdHeroCard, file?: File) => {
+    if (!file) return;
+    setQuickUploadingCardId(card.id);
+    try {
+      const compressed = await compressImage(file, {
+        maxSizes: [1440, 1080, 800, 640],
+        quality: 0.8,
+        maxChars: 700_000,
+        errorLabel: "promo card image",
+      });
+      const res = await updateHeroCard(card.id, {
+        title: card.title,
+        subtitle: card.subtitle,
+        ctaLabel: card.ctaLabel || "Order Now",
+        imageUrl: compressed,
+        isActive: card.isActive,
+        sortOrder: card.sortOrder,
+      });
+      setHeroCards((prev) => prev.map((c) => (c.id === card.id ? res.card : c)));
+      showFeedback("success", "Promo card image updated permanently.");
+    } catch (err: any) {
+      showFeedback("error", err.message || "Failed to update promo card image.");
+    } finally {
+      setQuickUploadingCardId(null);
+    }
+  };
+
+  const handleSaveHeroCard = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!heroTitle.trim()) {
+      showFeedback("error", "Promo card headline is required.");
+      return;
+    }
+
+    setIsSubmittingHero(true);
+    try {
+      const payload = {
+        title: heroTitle.trim(),
+        subtitle: heroSubtitle.trim() || null,
+        ctaLabel: heroCtaLabel.trim() || "Order Now",
+        imageUrl: heroImageUrl ? heroImageUrl.trim() || null : null,
+        isActive: heroIsActive,
+        sortOrder: editingHeroCard ? editingHeroCard.sortOrder : heroCards.length + 1,
+      };
+
+      if (editingHeroCard) {
+        await updateHeroCard(editingHeroCard.id, payload);
+        showFeedback("success", "Promo card updated.");
+      } else {
+        await createHeroCard(payload);
+        showFeedback("success", "Promo card added to carousel.");
+      }
+
+      setIsHeroModalOpen(false);
+      await fetchMenu();
+    } catch (err: any) {
+      showFeedback("error", "Failed to save promo card: " + err.message);
+    } finally {
+      setIsSubmittingHero(false);
+    }
+  };
+
+  const handleToggleHeroCardStatus = async (card: IrdHeroCard) => {
+    const nextStatus = !(card.isActive !== false);
+    try {
+      const res = await toggleHeroCardStatus(card.id, nextStatus);
+      setHeroCards((prev) => prev.map((c) => (c.id === card.id ? res.card : c)));
+      showFeedback("success", `Promo card "${card.title.replace(/\s+/g, " ")}" is now ${nextStatus ? "live" : "hidden"}.`);
+    } catch (err: any) {
+      showFeedback("error", "Status toggle failed: " + err.message);
+    }
+  };
+
+  const handleMoveHeroCard = async (index: number, direction: "up" | "down") => {
+    const targetIndex = direction === "up" ? index - 1 : index + 1;
+    if (targetIndex < 0 || targetIndex >= heroCards.length) return;
+
+    const nextCards = [...heroCards];
+    const tmp = nextCards[index];
+    nextCards[index] = nextCards[targetIndex];
+    nextCards[targetIndex] = tmp;
+
+    const orders = nextCards.map((c, idx) => ({ id: c.id, sortOrder: idx + 1 }));
+    setHeroCards(nextCards.map((c, idx) => ({ ...c, sortOrder: idx + 1 })));
+
+    try {
+      await reorderHeroCards(orders);
+      showFeedback("success", "Promo card slide order updated.");
+    } catch (err: any) {
+      showFeedback("error", "Failed to reorder promo cards: " + err.message);
+      await fetchMenu();
+    }
+  };
+
+  const handleDeleteHeroCard = async (card: IrdHeroCard) => {
+    const cleanTitle = card.title.replace(/\s+/g, " ");
+    if (!window.confirm(`Remove promo card "${cleanTitle}"?`)) return;
+    try {
+      await deleteHeroCard(card.id);
+      setHeroCards((prev) => prev.filter((c) => c.id !== card.id));
+      showFeedback("success", `Promo card "${cleanTitle}" deleted.`);
+    } catch (err: any) {
+      showFeedback("error", "Deletion failed: " + err.message);
+    }
+  };
+
   // Filtered Items
   const filteredItems = items.filter((item) => {
     if (categoryFilter !== "all" && item.categoryId !== categoryFilter) return false;
@@ -485,11 +665,11 @@ export function AdminMenu() {
       )}
 
       {/* ── Tabs Navigation ── */}
-      <div className="flex items-center gap-2 border-b border-[#E5DDD1] pb-1">
+      <div className="flex items-center gap-2 border-b border-[#E5DDD1] pb-1 overflow-x-auto no-scrollbar">
         <button
           onClick={() => setActiveTab("items")}
           className={cn(
-            "flex items-center gap-2 px-4 py-2 text-xs font-bold rounded-xl transition-[transform,background-color,color,box-shadow] duration-150 btn-smooth-press cursor-pointer",
+            "flex items-center gap-2 px-4 py-2 text-xs font-bold rounded-xl whitespace-nowrap transition-[transform,background-color,color,box-shadow] duration-150 btn-smooth-press cursor-pointer",
             activeTab === "items"
               ? "bg-[#1E150F] text-white shadow-xs"
               : "text-[#73685C] hover:text-[#1E150F] hover:bg-[#FFFDF9]"
@@ -502,7 +682,7 @@ export function AdminMenu() {
         <button
           onClick={() => setActiveTab("categories")}
           className={cn(
-            "flex items-center gap-2 px-4 py-2 text-xs font-bold rounded-xl transition-[transform,background-color,color,box-shadow] duration-150 btn-smooth-press cursor-pointer",
+            "flex items-center gap-2 px-4 py-2 text-xs font-bold rounded-xl whitespace-nowrap transition-[transform,background-color,color,box-shadow] duration-150 btn-smooth-press cursor-pointer",
             activeTab === "categories"
               ? "bg-[#1E150F] text-white shadow-xs"
               : "text-[#73685C] hover:text-[#1E150F] hover:bg-[#FFFDF9]"
@@ -510,6 +690,19 @@ export function AdminMenu() {
         >
           <Layers className="w-3.5 h-3.5" />
           <span>Category Management ({categories.length})</span>
+        </button>
+
+        <button
+          onClick={() => setActiveTab("hero-cards")}
+          className={cn(
+            "flex items-center gap-2 px-4 py-2 text-xs font-bold rounded-xl whitespace-nowrap transition-[transform,background-color,color,box-shadow] duration-150 btn-smooth-press cursor-pointer",
+            activeTab === "hero-cards"
+              ? "bg-[#1E150F] text-white shadow-xs"
+              : "text-[#73685C] hover:text-[#1E150F] hover:bg-[#FFFDF9]"
+          )}
+        >
+          <Sparkles className="w-3.5 h-3.5" />
+          <span>Promo Cards ({heroCards.length})</span>
         </button>
       </div>
 
@@ -521,9 +714,196 @@ export function AdminMenu() {
       ) : (
         <PageTransition
           viewKey={activeTab}
-          direction={activeTab === "categories" ? "forward" : "back"}
+          direction={activeTab === "items" ? "back" : "forward"}
         >
-          {activeTab === "items" ? (
+          {activeTab === "hero-cards" ? (
+            /* ──────────────── TAB 3: PROMO HERO CARDS CAROUSEL ──────────────── */
+            <div className="space-y-4 max-w-5xl">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-2">
+                <div>
+                  <h2 className="font-serif text-xl font-bold text-[#1E150F]">
+                    Dining Promo Carousel Cards
+                  </h2>
+                  <p className="text-xs text-[#73685C] mt-0.5">
+                    Add, reorder, edit copy, and upload fresh photos for the sliding cards shown at the top of In-Room Dining.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleOpenAddHeroCard}
+                  className="inline-flex items-center gap-1.5 py-2 px-4 bg-[#1E150F] text-white rounded-xl text-xs font-bold shadow-xs btn-smooth-press cursor-pointer shrink-0 self-start sm:self-auto"
+                >
+                  <Plus className="w-4 h-4 text-[#B88223]" />
+                  <span>Add Promo Card</span>
+                </button>
+              </div>
+
+              {heroCards.length === 0 ? (
+                <div className="bg-[#FFFDF9] border border-[#E5DDD1] rounded-3xl p-8 text-center">
+                  <ImageIcon className="w-7 h-7 text-[#B88223] mx-auto mb-2" />
+                  <h3 className="font-serif text-base font-bold text-[#1E150F]">No promo cards yet</h3>
+                  <p className="text-xs text-[#73685C] mt-1 mb-4">
+                    Create cards for the guest dining carousel slider.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={handleOpenAddHeroCard}
+                    className="inline-flex items-center gap-1.5 py-2 px-4 bg-[#1E150F] text-white rounded-xl text-xs font-bold cursor-pointer"
+                  >
+                    <Plus className="w-3.5 h-3.5 text-[#B88223]" />
+                    <span>Add First Card</span>
+                  </button>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                  {heroCards.map((card, idx) => {
+                    const isActive = card.isActive !== false;
+                    const cardImage = card.imageUrl || "/in-room-dining-card.jpg";
+                    const titleLines = card.title
+                      .split(/\r?\n/)
+                      .map((l) => l.trim())
+                      .filter(Boolean);
+
+                    return (
+                      <div
+                        key={card.id}
+                        className={cn(
+                          "bg-[#FFFDF9] border rounded-3xl p-4 shadow-2xs space-y-3 transition-[border-color,opacity]",
+                          isActive ? "border-[#E5DDD1]" : "border-stone-300 opacity-70 bg-stone-50"
+                        )}
+                      >
+                        {/* Live terracotta preview matching guest banner */}
+                        <div className="relative overflow-hidden rounded-[20px] bg-[linear-gradient(135deg,#CD5B34_0%,#B74823_58%,#9B3818_100%)] text-white shadow-sm">
+                          <div className="grid grid-cols-12 items-stretch">
+                            <div className="col-span-7 p-4 flex flex-col justify-between space-y-2.5">
+                              <div>
+                                <div className="flex items-center gap-1.5 mb-1">
+                                  <span className="inline-flex items-center rounded-full bg-black/25 px-2 py-0.5 text-[10px] font-bold">
+                                    Slide #{idx + 1}
+                                  </span>
+                                  {!isActive && (
+                                    <span className="inline-flex items-center rounded-full bg-stone-900/80 px-2 py-0.5 text-[10px] font-bold">
+                                      Hidden
+                                    </span>
+                                  )}
+                                </div>
+                                <h3 className="font-sans text-lg font-extrabold uppercase leading-[0.98] tracking-tight text-white">
+                                  {titleLines.length > 1
+                                    ? titleLines.map((line, lIdx) => (
+                                        <span key={lIdx} className="block">
+                                          {line}
+                                        </span>
+                                      ))
+                                    : card.title}
+                                </h3>
+                                {card.subtitle && (
+                                  <p className="mt-1 text-[11px] leading-snug text-white/85 line-clamp-2">
+                                    {card.subtitle}
+                                  </p>
+                                )}
+                              </div>
+                              <div>
+                                <span className="inline-flex items-center gap-1 rounded-full bg-[#FFFBF6] px-3 py-1 text-[10.5px] font-bold text-[#3D1C11]">
+                                  {card.ctaLabel || "Order Now"}
+                                </span>
+                              </div>
+                            </div>
+                            <div className="col-span-5 relative min-h-[136px] overflow-hidden">
+                              <img
+                                key={`${card.id}-${cardImage}`}
+                                src={cardImage}
+                                alt={card.title}
+                                className={cn(
+                                  "h-full w-full object-cover object-center",
+                                  !isActive && "grayscale"
+                                )}
+                              />
+                              <div
+                                aria-hidden="true"
+                                className="pointer-events-none absolute inset-0 bg-[linear-gradient(90deg,#B74823_0%,rgba(183,72,35,0.42)_25%,rgba(183,72,35,0)_62%)]"
+                              />
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Actions footer */}
+                        <div className="flex flex-wrap items-center justify-between gap-2 pt-1">
+                          <div className="flex items-center gap-1.5">
+                            <button
+                              type="button"
+                              disabled={idx === 0}
+                              onClick={() => handleMoveHeroCard(idx, "up")}
+                              className="p-1.5 rounded-lg bg-[#FAF8F5] border border-[#E5DDD1] text-[#73685C] hover:text-[#1E150F] disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer"
+                              title="Move Earlier"
+                            >
+                              <ArrowUp className="w-3.5 h-3.5" />
+                            </button>
+                            <button
+                              type="button"
+                              disabled={idx === heroCards.length - 1}
+                              onClick={() => handleMoveHeroCard(idx, "down")}
+                              className="p-1.5 rounded-lg bg-[#FAF8F5] border border-[#E5DDD1] text-[#73685C] hover:text-[#1E150F] disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer"
+                              title="Move Later"
+                            >
+                              <ArrowDown className="w-3.5 h-3.5" />
+                            </button>
+
+                            <label className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border border-[#ECD7A9] bg-[#FAF3E6] text-[11px] font-bold text-[#8E6314] hover:bg-[#F2E5CA] cursor-pointer">
+                              <Upload className="w-3.5 h-3.5" />
+                              <span>
+                                {quickUploadingCardId === card.id ? "Uploading…" : "Change Photo"}
+                              </span>
+                              <input
+                                type="file"
+                                accept="image/png,image/jpeg,image/webp"
+                                className="sr-only"
+                                disabled={quickUploadingCardId === card.id}
+                                onChange={(e) => {
+                                  void handleQuickHeroImageChange(card, e.target.files?.[0]);
+                                  e.currentTarget.value = "";
+                                }}
+                              />
+                            </label>
+                          </div>
+
+                          <div className="flex items-center gap-1.5">
+                            <button
+                              type="button"
+                              onClick={() => handleToggleHeroCardStatus(card)}
+                              className={cn(
+                                "px-2.5 py-1.5 rounded-xl text-xs font-semibold border btn-smooth-press cursor-pointer",
+                                isActive
+                                  ? "bg-emerald-50 text-emerald-800 border-emerald-300 hover:bg-emerald-100"
+                                  : "bg-stone-200 text-stone-700 border-stone-300 hover:bg-stone-300"
+                              )}
+                            >
+                              {isActive ? "Live" : "Hidden"}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleOpenEditHeroCard(card)}
+                              className="p-2 text-[#73685C] hover:text-[#1E150F] hover:bg-[#FAF8F5] rounded-xl border border-[#E5DDD1] btn-smooth-press cursor-pointer"
+                              title="Edit Card"
+                            >
+                              <Edit3 className="w-3.5 h-3.5" />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteHeroCard(card)}
+                              className="p-2 text-[#73685C] hover:text-red-600 hover:bg-red-50 rounded-xl border border-[#E5DDD1] btn-smooth-press cursor-pointer"
+                              title="Delete Card"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          ) : activeTab === "items" ? (
             /* ──────────────── TAB 1: MENU DISHES ──────────────── */
         <div className="space-y-6">
           {/* Filter and Search Bar */}
@@ -1235,6 +1615,156 @@ export function AdminMenu() {
             </button>
           </div>
         </div>
+      </Modal>
+
+      {/* ──────────────── MODAL 4: ADD / EDIT PROMO HERO CARD ──────────────── */}
+      <Modal
+        isOpen={isHeroModalOpen}
+        onClose={() => setIsHeroModalOpen(false)}
+        title={editingHeroCard ? "Edit Dining Promo Card" : "Add Dining Promo Card"}
+        description="Customize the headline, copy, CTA button, and photo for a slide in the guest Dining carousel"
+      >
+        <form onSubmit={handleSaveHeroCard} className="space-y-4 max-h-[75vh] overflow-y-auto pr-1 text-xs">
+          <div>
+            <label className="block text-[11px] font-bold uppercase tracking-wider text-[#1E150F] mb-1.5">
+              Headline * (one line per stacked phrase)
+            </label>
+            <textarea
+              rows={3}
+              placeholder={"Fresh.\nPlated.\nTo Suite."}
+              value={heroTitle}
+              onChange={(e) => setHeroTitle(e.target.value)}
+              className="w-full px-3.5 py-2 bg-[#FAF8F5] border border-[#E5DDD1] rounded-xl text-xs font-semibold text-[#1E150F] focus:outline-none focus:ring-2 focus:ring-[#B88223]/30"
+              required
+            />
+          </div>
+
+          <div>
+            <label className="block text-[11px] font-bold uppercase tracking-wider text-[#1E150F] mb-1.5">
+              Subtitle Copy
+            </label>
+            <textarea
+              rows={2}
+              placeholder="Chef specials, artisan coffees & suite dining delivered fresh in 20–25 mins."
+              value={heroSubtitle}
+              onChange={(e) => setHeroSubtitle(e.target.value)}
+              className="w-full px-3.5 py-2 bg-[#FAF8F5] border border-[#E5DDD1] rounded-xl text-xs text-[#1E150F] focus:outline-none focus:ring-2 focus:ring-[#B88223]/30"
+            />
+          </div>
+
+          <div>
+            <label className="block text-[11px] font-bold uppercase tracking-wider text-[#1E150F] mb-1.5">
+              Button Label *
+            </label>
+            <input
+              type="text"
+              placeholder="Order Now"
+              value={heroCtaLabel}
+              onChange={(e) => setHeroCtaLabel(e.target.value)}
+              className="w-full px-3.5 py-2 bg-[#FAF8F5] border border-[#E5DDD1] rounded-xl text-xs text-[#1E150F] focus:outline-none focus:ring-2 focus:ring-[#B88223]/30"
+              required
+            />
+          </div>
+
+          {/* Photo upload + URL override */}
+          <div className="p-3.5 bg-[#FAF8F5] border border-[#E5DDD1] rounded-2xl space-y-3">
+            <label className="block text-[11px] font-bold uppercase tracking-wider text-[#1E150F]">
+              Card Image
+            </label>
+
+            <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+              <div className="h-24 w-full sm:w-32 shrink-0 overflow-hidden rounded-xl border border-[#E5DDD1] bg-[#9B3818]">
+                <img
+                  key={heroImageUrl || "default"}
+                  src={heroImageUrl || "/in-room-dining-card.jpg"}
+                  alt="Promo preview"
+                  className="h-full w-full object-cover"
+                />
+              </div>
+              <div className="space-y-2 flex-1">
+                <div className="flex flex-wrap gap-2">
+                  <label className="inline-flex cursor-pointer items-center gap-1.5 rounded-xl border border-[#E5DDD1] bg-white px-3 py-2 text-xs font-semibold text-[#1E150F] hover:bg-[#F2EBE1]">
+                    <Upload className="h-3.5 w-3.5 text-[#8E6314]" /> Upload Photo
+                    <input
+                      type="file"
+                      accept="image/png,image/jpeg,image/webp"
+                      className="sr-only"
+                      onChange={(e) => {
+                        void handleHeroModalFile(e.target.files?.[0]);
+                        e.currentTarget.value = "";
+                      }}
+                    />
+                  </label>
+                  {heroImageUrl && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setHeroImageUrl(null);
+                        setHeroImageError("");
+                      }}
+                      className="inline-flex items-center gap-1.5 rounded-xl border border-[#E5DDD1] bg-white px-3 py-2 text-xs font-semibold text-[#73685C] hover:bg-[#FAF8F5] cursor-pointer"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" /> Reset Default
+                    </button>
+                  )}
+                </div>
+                <p className="text-[10.5px] text-[#73685C]">
+                  PNG, JPG, or WebP · Max 10 MB · auto-compressed for instant loading.
+                </p>
+                {heroImageError && (
+                  <p role="alert" className="text-[11px] font-medium text-red-700">
+                    {heroImageError}
+                  </p>
+                )}
+              </div>
+            </div>
+
+            {!heroImageUrl?.startsWith("data:") && (
+              <div>
+                <label className="block text-[10.5px] font-semibold text-[#73685C] mb-1">
+                  Or paste image URL
+                </label>
+                <input
+                  type="text"
+                  placeholder="/in-room-dining-card.jpg or https://..."
+                  value={heroImageUrl || ""}
+                  onChange={(e) => setHeroImageUrl(e.target.value || null)}
+                  className="w-full px-3 py-1.5 bg-white border border-[#E5DDD1] rounded-xl text-xs text-[#1E150F] focus:outline-none focus:ring-2 focus:ring-[#B88223]/30"
+                />
+              </div>
+            )}
+          </div>
+
+          <div className="flex items-center gap-2 pt-1">
+            <input
+              type="checkbox"
+              id="heroCardActiveCheckbox"
+              checked={heroIsActive}
+              onChange={(e) => setHeroIsActive(e.target.checked)}
+              className="rounded text-[#B88223] w-4 h-4"
+            />
+            <label htmlFor="heroCardActiveCheckbox" className="text-xs font-semibold text-[#1E150F] cursor-pointer">
+              Card is active and sliding on guest Dining menu
+            </label>
+          </div>
+
+          <div className="flex justify-end gap-2.5 pt-4 border-t border-[#E5DDD1]">
+            <button
+              type="button"
+              onClick={() => setIsHeroModalOpen(false)}
+              className="px-4 py-2 text-xs font-medium text-[#73685C] hover:bg-[#FAF8F5] rounded-xl btn-smooth-press"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={isSubmittingHero}
+              className="px-5 py-2.5 text-xs font-bold text-white bg-[#1E150F] hover:bg-[#29231F] rounded-xl shadow-md btn-smooth-press cursor-pointer disabled:opacity-50"
+            >
+              {isSubmittingHero ? "Saving..." : editingHeroCard ? "Update Card" : "Create Card"}
+            </button>
+          </div>
+        </form>
       </Modal>
     </div>
   );

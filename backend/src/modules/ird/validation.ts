@@ -71,3 +71,36 @@ export const menuItemSchema = z.object({
   prepTimeMinutes: z.number().int().min(1).default(20),
   variants: z.array(menuItemVariantSchema).optional().default([]),
 });
+
+const heroImageUrlSchema = z
+  .string()
+  .max(750_000)
+  .refine(
+    (v) =>
+      v === "" ||
+      v.startsWith("/") ||
+      v.startsWith("https://") ||
+      v.startsWith("http://") ||
+      v.startsWith("data:image/"),
+    "Use an uploaded PNG/JPG/WebP image or a valid image URL"
+  );
+
+export const heroCardSchema = z.object({
+  title: z.string().trim().min(1, "Card headline is required").max(80, "Headline must be 80 characters or fewer"),
+  subtitle: z.string().trim().max(200, "Subtitle must be 200 characters or fewer").nullable().optional(),
+  ctaLabel: z.string().trim().min(1, "Button label is required").max(32).default("Order Now"),
+  imageUrl: heroImageUrlSchema.nullable().optional(),
+  isActive: z.boolean().default(true),
+  sortOrder: z.number().int().default(0),
+});
+
+export const reorderHeroCardsSchema = z.object({
+  orders: z
+    .array(
+      z.object({
+        id: z.number().int().positive(),
+        sortOrder: z.number().int(),
+      })
+    )
+    .min(1, "At least one promo card is required to reorder"),
+});

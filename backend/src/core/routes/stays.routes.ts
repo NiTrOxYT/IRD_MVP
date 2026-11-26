@@ -46,6 +46,14 @@ export function createStaysRouter(): Router {
         return;
       }
 
+      const heroRes = await query(
+        `SELECT id, property_id, title, subtitle, cta_label, image_url, is_active, sort_order
+         FROM ird_hero_cards
+         WHERE property_id = $1 AND is_active = TRUE
+         ORDER BY sort_order ASC, id ASC`,
+        [row.property_id]
+      ).catch(() => ({ rows: [] as any[] }));
+
       res.json({
         stay: {
           id: row.id,
@@ -78,6 +86,16 @@ export function createStaysRouter(): Router {
           roomServiceHeroUrl: row.room_service_hero_url ?? null,
           attractionsHeroUrl: row.attractions_hero_url ?? null,
           suiteLoaderBgUrl: row.suite_loader_bg_url ?? null,
+          diningHeroCards: heroRes.rows.map((card) => ({
+            id: card.id,
+            propertyId: card.property_id,
+            title: card.title,
+            subtitle: card.subtitle ?? null,
+            ctaLabel: card.cta_label || "Order Now",
+            imageUrl: card.image_url ?? null,
+            isActive: Boolean(card.is_active),
+            sortOrder: Number(card.sort_order ?? 0),
+          })),
         },
       });
     } catch (err) {

@@ -4,6 +4,8 @@ import {
   menuItemSchema,
   reorderCategoriesSchema,
   createOrderSchema,
+  heroCardSchema,
+  reorderHeroCardsSchema,
 } from "../modules/ird/validation.js";
 
 describe("Menu Variants & Categories Validation", () => {
@@ -69,5 +71,39 @@ describe("Menu Variants & Categories Validation", () => {
       assert.equal(orderWithVariant.data.items[0].variantId, 2);
       assert.equal(orderWithVariant.data.items[0].quantity, 2);
     }
+  });
+
+  it("validates IRD promo hero cards with uploaded data URLs and nullable removal", () => {
+    const valid = heroCardSchema.safeParse({
+      title: "Fresh.\nPlated.\nTo Suite.",
+      subtitle: "Chef specials delivered fresh in 20–25 mins.",
+      ctaLabel: "Order Now",
+      imageUrl: "data:image/webp;base64,UklGRh4AAABXRUJQVlA4",
+      isActive: true,
+      sortOrder: 1,
+    });
+    assert.equal(valid.success, true);
+
+    const removedImg = heroCardSchema.safeParse({
+      title: "Midnight Comforts",
+      imageUrl: null,
+    });
+    assert.equal(removedImg.success, true);
+
+    const badProtocol = heroCardSchema.safeParse({
+      title: "Test",
+      imageUrl: "javascript:alert(1)",
+    });
+    assert.equal(badProtocol.success, false);
+  });
+
+  it("validates promo card reorder payload", () => {
+    const valid = reorderHeroCardsSchema.safeParse({
+      orders: [
+        { id: 2, sortOrder: 1 },
+        { id: 1, sortOrder: 2 },
+      ],
+    });
+    assert.equal(valid.success, true);
   });
 });
