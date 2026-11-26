@@ -21,6 +21,10 @@ function serializeProperty(row: any) {
     welcomeMode: row.welcome_mode || "every_time",
     welcomeMessage: row.welcome_message ?? null,
     welcomeBgUrl: row.welcome_bg_url ?? null,
+    diningHeroUrl: row.dining_hero_url ?? null,
+    roomServiceHeroUrl: row.room_service_hero_url ?? null,
+    attractionsHeroUrl: row.attractions_hero_url ?? null,
+    suiteLoaderBgUrl: row.suite_loader_bg_url ?? null,
   };
 }
 
@@ -62,6 +66,10 @@ export function createSettingsRouter(): Router {
       welcomeMode,
       welcomeMessage,
       welcomeBgUrl,
+      diningHeroUrl,
+      roomServiceHeroUrl,
+      attractionsHeroUrl,
+      suiteLoaderBgUrl,
     } = parse.data;
     const staff = req.staff!;
     const cleanWhatsappNumber =
@@ -85,7 +93,11 @@ export function createSettingsRouter(): Router {
              welcome_message = CASE WHEN $12 THEN $13 ELSE welcome_message END,
              welcome_bg_url = CASE WHEN $14 THEN $15 ELSE welcome_bg_url END,
              whatsapp_number = CASE WHEN $16 THEN $17 ELSE whatsapp_number END,
-             attraction_booking_template = CASE WHEN $18 THEN $19 ELSE attraction_booking_template END
+             attraction_booking_template = CASE WHEN $18 THEN $19 ELSE attraction_booking_template END,
+             dining_hero_url = CASE WHEN $20 THEN $21 ELSE dining_hero_url END,
+             room_service_hero_url = CASE WHEN $22 THEN $23 ELSE room_service_hero_url END,
+             attractions_hero_url = CASE WHEN $24 THEN $25 ELSE attractions_hero_url END,
+             suite_loader_bg_url = CASE WHEN $26 THEN $27 ELSE suite_loader_bg_url END
          WHERE id = 1
          RETURNING *`,
         [
@@ -108,6 +120,14 @@ export function createSettingsRouter(): Router {
           cleanWhatsappNumber ?? null,
           cleanBookingTemplate !== undefined,
           cleanBookingTemplate ?? null,
+          diningHeroUrl !== undefined,
+          diningHeroUrl,
+          roomServiceHeroUrl !== undefined,
+          roomServiceHeroUrl,
+          attractionsHeroUrl !== undefined,
+          attractionsHeroUrl,
+          suiteLoaderBgUrl !== undefined,
+          suiteLoaderBgUrl,
         ]
       );
 
@@ -124,6 +144,14 @@ export function createSettingsRouter(): Router {
             logoUpdated: logoUrl !== undefined,
             welcomeBgUrl: undefined,
             welcomeBgUpdated: welcomeBgUrl !== undefined,
+            diningHeroUrl: undefined,
+            diningHeroUpdated: diningHeroUrl !== undefined,
+            roomServiceHeroUrl: undefined,
+            roomServiceHeroUpdated: roomServiceHeroUrl !== undefined,
+            attractionsHeroUrl: undefined,
+            attractionsHeroUpdated: attractionsHeroUrl !== undefined,
+            suiteLoaderBgUrl: undefined,
+            suiteLoaderBgUpdated: suiteLoaderBgUrl !== undefined,
           }),
         ]
       );

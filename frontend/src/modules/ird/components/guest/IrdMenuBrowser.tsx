@@ -1,7 +1,20 @@
 import React, { useMemo, useRef, useState } from "react";
-import { ChevronDown, Clock, Coffee, Croissant, Minus, Plus, Search, Utensils, X } from "lucide-react";
-import { HeritageCrestIcon } from "../../../../core/ui/CustomResortIcons";
-import { setupScrollBatchCards, useGSAP } from "../../../../core/ui/gsap";
+import {
+  ArrowRight,
+  ChevronDown,
+  Clock,
+  Coffee,
+  Croissant,
+  Flame,
+  MapPin,
+  Minus,
+  Plus,
+  Search,
+  Utensils,
+  X,
+} from "lucide-react";
+import { SuiteCareBellIcon } from "../../../../core/ui/CustomResortIcons";
+import { setupScrollBatchCards, smoothScrollToTarget, useGSAP } from "../../../../core/ui/gsap";
 import { cn } from "../../../../core/ui/utils";
 import { useIrdAdapter } from "../../adapter";
 import { DietaryBadge } from "../DietaryBadge";
@@ -9,6 +22,7 @@ import { IrdHeroBanner } from "./IrdHeroBanner";
 import type { CartLineItem, Category, IrdPropertyConfig, MenuItem } from "../../types";
 
 interface IrdMenuBrowserProps {
+  roomNumber?: string;
   categories: Category[];
   items: MenuItem[];
   menuLoading: boolean;
@@ -17,9 +31,11 @@ interface IrdMenuBrowserProps {
   onOpenItemDetails: (item: MenuItem) => void;
   onQuickAdd: (item: MenuItem) => void;
   onUpdateCartQuantity: (cartItemId: string, delta: number) => void;
+  onSwitchToRoomService?: () => void;
 }
 
 export function IrdMenuBrowser({
+  roomNumber,
   categories,
   items,
   menuLoading,
@@ -28,6 +44,7 @@ export function IrdMenuBrowser({
   onOpenItemDetails,
   onQuickAdd,
   onUpdateCartQuantity,
+  onSwitchToRoomService,
 }: IrdMenuBrowserProps) {
   const { formatPrice } = useIrdAdapter();
   const browserRef = useRef<HTMLDivElement>(null);
@@ -104,25 +121,29 @@ export function IrdMenuBrowser({
     return [{ id: category?.id ?? "search-results", title: category?.name ?? "Search Results", items: filteredItems }];
   }, [categories, filteredItems, searchQuery, selectedCategory]);
 
-  const chefsPicks = useMemo(
-    () =>
-      items
-        .filter(
-          (item) =>
-            item.available &&
-            item.dietaryFlags?.some((flag) =>
-              ["chef_special", "signature"].includes(flag.toLowerCase())
-            )
-        )
-        .slice(0, 4),
-    [items]
-  );
+  const chefsPicks = useMemo(() => {
+    const specials = items.filter(
+      (item) =>
+        item.available &&
+        item.dietaryFlags?.some((flag) => ["chef_special", "signature"].includes(flag.toLowerCase()))
+    );
+    return (specials.length > 0 ? specials : items.filter((i) => i.available)).slice(0, 6);
+  }, [items]);
+
+  const categoryThumbs = useMemo(() => {
+    const map = new Map<number, string>();
+    categories.forEach((cat) => {
+      const firstWithImg = items.find((i) => i.categoryId === cat.id && i.imageUrl);
+      if (firstWithImg?.imageUrl) map.set(cat.id, firstWithImg.imageUrl);
+    });
+    return map;
+  }, [categories, items]);
 
   useGSAP(
     () => {
       const el = browserRef.current;
       if (!el || menuLoading || items.length === 0) return;
-      setupScrollBatchCards(el, ".gsap-menu-card", { stagger: 0.04, y: 12, start: "top 95%" });
+      setupScrollBatchCards(el, ".gsap-menu-card", { stagger: 0.035, y: 12, start: "top 95%" });
     },
     {
       scope: browserRef,
@@ -133,35 +154,110 @@ export function IrdMenuBrowser({
 
   return (
     <div ref={browserRef} className="mx-auto max-w-md space-y-5 sm:max-w-2xl sm:space-y-6 lg:max-w-4xl">
-      <IrdHeroBanner property={property} />
-
-      {/* Sticky Frosted Search & Dietary Filter Bar */}
-      <div
-        id="ird-menu-items"
-        className="sticky top-[57px] z-20 rounded-[26px] frost-component-card px-3.5 py-3 space-y-2.5"
-      >
-        <div className="relative">
-          <Search className="w-4 h-4 text-white/75 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
-          <input
-            id="ird-menu-search"
-            type="text"
-            placeholder="Search dishes, coffee, desserts..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full rounded-full border border-white/18 bg-black/28 py-2.5 pl-10 pr-9 text-xs text-white placeholder:text-white/55 focus:border-white/40 focus:outline-none sm:text-sm"
-          />
-          {searchQuery && (
+      {/* Deliver to Suite + Search Pill (matching reference delivery bar) */}
+      <div className="rounded-[22px] border border-[#EAE0D4] bg-[#FFFBF6] px-4 py-2.5 shadow-[0_8px_22px_-12px_rgba(64,28,12,0.14)]">
+        <div className="flex items-center gap-2.5">
+          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#C44D27]/12 text-[#C44D27]">
+            <MapPin className="h-4 w-4" />
+          </div>
+          <div className="min-w-0 flex-1">
+            <span className="block text-[10px] font-semibold text-[#7B5F54] tabular-nums">
+              Deliver to Suite {roomNumber || "Guest"}
+            </span>
+            <input
+              id="ird-menu-search"
+              type="text"
+              placeholder="Search dishes, coffees, desserts..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full bg-transparent text-[13px] font-bold text-[#3D1C11] placeholder:font-medium placeholder:text-[#9A7F74] focus:outline-none"
+            />
+          </div>
+          {searchQuery ? (
             <button
               type="button"
               onClick={() => setSearchQuery("")}
               aria-label="Clear search"
-              className="absolute right-3 top-1/2 -translate-y-1/2 rounded-full p-1 text-white/75 hover:bg-white/15 hover:text-white"
+              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#F4E9DB] text-[#3D1C11] hover:bg-[#EBD9C5] cursor-pointer"
             >
-              <X className="w-3.5 h-3.5" />
+              <X className="h-4 w-4" />
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={() => document.getElementById("ird-menu-search")?.focus()}
+              aria-label="Search menu"
+              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[#3D1C11] hover:bg-[#F4E9DB] cursor-pointer"
+            >
+              <Search className="h-4 w-4" />
             </button>
           )}
         </div>
+      </div>
 
+      {/* Terracotta Promo Banner */}
+      <IrdHeroBanner property={property} />
+
+      {/* Category Thumbnail Tiles Strip */}
+      <div id="ird-menu-items" className="space-y-3">
+        <div className="flex gap-2.5 overflow-x-auto py-1 no-scrollbar">
+          <button
+            type="button"
+            onClick={() => setSelectedCategory("all")}
+            className={cn(
+              "w-[74px] shrink-0 rounded-[18px] border p-2 text-center transition-[border-color,background-color,box-shadow] cursor-pointer btn-smooth-press-sm",
+              selectedCategory === "all"
+                ? "border-[#C44D27] bg-white shadow-[0_8px_20px_-8px_rgba(196,77,39,0.28)]"
+                : "border-[#EAE0D4] bg-[#FFFBF6] hover:border-[#D9C7B4]"
+            )}
+          >
+            <div className="mx-auto flex h-11 w-11 items-center justify-center rounded-2xl bg-[#F4E9DB] text-[#C44D27]">
+              <Utensils className="h-5 w-5" />
+            </div>
+            <span className="mt-1.5 block truncate text-[11px] font-bold text-[#3D1C11]">All</span>
+          </button>
+
+          {categories.map((cat) => {
+            const active = selectedCategory === cat.id;
+            const thumb = categoryThumbs.get(cat.id);
+            const isDessert =
+              cat.name.toLowerCase().includes("dessert") || cat.name.toLowerCase().includes("sweet");
+            const isDrink =
+              cat.name.toLowerCase().includes("drink") ||
+              cat.name.toLowerCase().includes("coffee") ||
+              cat.name.toLowerCase().includes("beverage");
+            return (
+              <button
+                key={cat.id}
+                type="button"
+                onClick={() => setSelectedCategory(cat.id)}
+                className={cn(
+                  "w-[78px] shrink-0 rounded-[18px] border p-2 text-center transition-[border-color,background-color,box-shadow] cursor-pointer btn-smooth-press-sm",
+                  active
+                    ? "border-[#C44D27] bg-white shadow-[0_8px_20px_-8px_rgba(196,77,39,0.28)]"
+                    : "border-[#EAE0D4] bg-[#FFFBF6] hover:border-[#D9C7B4]"
+                )}
+              >
+                <div className="mx-auto flex h-11 w-11 items-center justify-center overflow-hidden rounded-2xl bg-[#F4E9DB] text-[#C44D27]">
+                  {thumb ? (
+                    <img src={thumb} alt={cat.name} className="h-full w-full object-cover" />
+                  ) : isDessert ? (
+                    <Croissant className="h-5 w-5" />
+                  ) : isDrink ? (
+                    <Coffee className="h-5 w-5" />
+                  ) : (
+                    <Utensils className="h-5 w-5" />
+                  )}
+                </div>
+                <span className="mt-1.5 block truncate text-[11px] font-semibold text-[#3D1C11]">
+                  {cat.name}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Dietary Chips + Sort Strip */}
         <div className="flex items-center justify-between gap-2">
           <div className="flex gap-1.5 overflow-x-auto no-scrollbar py-0.5">
             {[
@@ -176,8 +272,10 @@ export function IrdMenuBrowser({
                 type="button"
                 onClick={() => setDietaryFilter(diet.id)}
                 className={cn(
-                  "whitespace-nowrap rounded-full px-3.5 py-1.5 text-[11px] font-bold transition-colors duration-150 btn-smooth-press-sm",
-                  dietaryFilter === diet.id ? "frost-cta-white" : "frost-pill-chip text-white/85"
+                  "whitespace-nowrap rounded-full border px-3 py-1.5 text-[11px] font-bold transition-colors btn-smooth-press-sm cursor-pointer",
+                  dietaryFilter === diet.id
+                    ? "border-[#C44D27] bg-[#C44D27] text-white"
+                    : "border-[#EAE0D4] bg-[#FFFBF6] text-[#5B4137] hover:bg-[#F3E7DA]"
                 )}
               >
                 {diet.label}
@@ -190,308 +288,290 @@ export function IrdMenuBrowser({
               aria-label="Sort dishes"
               value={menuSort}
               onChange={(e) => setMenuSort(e.target.value)}
-              className="appearance-none rounded-full border border-white/18 bg-black/32 py-1.5 pl-3 pr-7 text-[11px] font-semibold text-white focus:border-white/40 focus:outline-none"
+              className="appearance-none rounded-full border border-[#EAE0D4] bg-[#FFFBF6] py-1.5 pl-3 pr-7 text-[11px] font-bold text-[#3D1C11] focus:border-[#C44D27] focus:outline-none"
             >
-              <option value="recommended" className="bg-[#23241C] text-white">Recommended</option>
-              <option value="price_low" className="bg-[#23241C] text-white">Price: Low–High</option>
-              <option value="price_high" className="bg-[#23241C] text-white">Price: High–Low</option>
-              <option value="quickest" className="bg-[#23241C] text-white">Fastest Prep</option>
+              <option value="recommended">Recommended</option>
+              <option value="price_low">Price: Low–High</option>
+              <option value="price_high">Price: High–Low</option>
+              <option value="quickest">Fastest Prep</option>
             </select>
-            <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-white/75" />
+            <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[#7B5F54]" />
           </div>
         </div>
       </div>
 
-      {/* Category Pill Strip */}
-      <div className="flex gap-2 overflow-x-auto py-1 no-scrollbar">
-        <button
-          type="button"
-          onClick={() => setSelectedCategory("all")}
-          className={cn(
-            "inline-flex shrink-0 items-center gap-2 rounded-full px-4 py-2 text-xs font-bold transition-colors btn-smooth-press-sm",
-            selectedCategory === "all" ? "frost-cta-white" : "frost-pill-chip text-white/85"
-          )}
-        >
-          <Utensils className="h-3.5 w-3.5" />
-          <span>All</span>
-        </button>
-
-        {categories.map((cat) => {
-          const active = selectedCategory === cat.id;
-          const isDessert =
-            cat.name.toLowerCase().includes("dessert") || cat.name.toLowerCase().includes("sweet");
-          const isDrink =
-            cat.name.toLowerCase().includes("drink") ||
-            cat.name.toLowerCase().includes("coffee") ||
-            cat.name.toLowerCase().includes("beverage");
-          return (
-            <button
-              key={cat.id}
-              type="button"
-              onClick={() => setSelectedCategory(cat.id)}
-              className={cn(
-                "inline-flex shrink-0 items-center gap-2 rounded-full px-4 py-2 text-xs font-bold transition-colors btn-smooth-press-sm",
-                active ? "frost-cta-white" : "frost-pill-chip text-white/85"
-              )}
-            >
-              {isDessert ? (
-                <Croissant className="h-3.5 w-3.5" />
-              ) : isDrink ? (
-                <Coffee className="h-3.5 w-3.5" />
-              ) : (
-                <Utensils className="h-3.5 w-3.5" />
-              )}
-              <span className="whitespace-nowrap">{cat.name}</span>
-            </button>
-          );
-        })}
-      </div>
-
-      {/* Chef's Bestsellers Frosted Cards */}
+      {/* Popular Picks Horizontal Strip (exact Tortilla 3-column mobile look) */}
       {dietaryFilter === "all" && selectedCategory === "all" && !searchQuery && chefsPicks.length > 0 && (
         <section className="space-y-3">
-          <div className="flex items-center justify-between px-1">
-            <h2 className="font-sans text-lg sm:text-xl font-bold text-white flex items-center gap-2">
-              <HeritageCrestIcon className="w-4 h-4 text-white/90" />
-              Chef’s Bestsellers
+          <div className="flex items-center justify-between px-0.5">
+            <h2 className="font-sans text-[17px] sm:text-xl font-bold tracking-tight text-[#3D1C11]">
+              Popular Picks
             </h2>
-            <span className="text-[11px] font-semibold text-white/70">Top Rated</span>
+            <button
+              type="button"
+              onClick={() => smoothScrollToTarget("#ird-full-menu", 68)}
+              className="inline-flex items-center gap-1 text-xs font-semibold text-[#7B5F54] hover:text-[#C44D27] cursor-pointer"
+            >
+              <span>View All</span>
+              <ArrowRight className="h-3.5 w-3.5" />
+            </button>
           </div>
 
-          <div className="flex gap-3.5 overflow-x-auto pb-1 no-scrollbar snap-x snap-mandatory sm:grid sm:grid-cols-2 lg:grid-cols-4 sm:overflow-visible">
+          <div className="flex gap-3 overflow-x-auto pb-1 no-scrollbar snap-x snap-mandatory sm:grid sm:grid-cols-3 lg:grid-cols-4 sm:overflow-visible">
             {chefsPicks.map((item) => {
-              const minPrice =
-                item.variants && item.variants.length > 0
-                  ? Math.min(...item.variants.map((v) => Number(v.price)))
-                  : Number(item.price);
+              const qtyInCart = getItemCartQuantity(item.id);
+              const hasVariants = Boolean(item.variants && item.variants.length > 0);
+              const isCustomizable = hasVariants || Boolean(item.modifiers && item.modifiers.length > 0);
+              const minPrice = hasVariants
+                ? Math.min(...item.variants!.map((v) => Number(v.price)))
+                : Number(item.price);
+
               return (
-                <button
+                <div
                   key={item.id}
-                  type="button"
                   onClick={() => onOpenItemDetails(item)}
-                  className="gsap-menu-card group w-[228px] shrink-0 snap-start overflow-hidden rounded-[28px] frost-component-card text-left sm:w-auto cursor-pointer flex flex-col justify-between"
+                  className="gsap-menu-card group w-[148px] sm:w-auto shrink-0 snap-start rounded-[22px] border border-[#EAE0D4] bg-[#FFFBF6] p-2.5 shadow-[0_8px_22px_-14px_rgba(64,28,12,0.16)] flex flex-col justify-between cursor-pointer"
                 >
                   <div>
-                    {item.imageUrl && (
-                      <div className="relative h-[136px] w-full overflow-hidden">
+                    <div className="relative h-[98px] sm:h-[118px] w-full overflow-hidden rounded-[16px] bg-[#F4E9DB]">
+                      {item.imageUrl ? (
                         <img
                           src={item.imageUrl}
                           alt={item.name}
-                          className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+                          className="h-full w-full object-cover"
                         />
-                        <div className="pointer-events-none absolute inset-0 frost-component-fade" />
-                        <div className="absolute bottom-2 inset-x-0 flex justify-center gap-1">
-                          <span className="h-1 w-1 rounded-full bg-white" />
-                          <span className="h-1 w-1 rounded-full bg-white/40" />
-                          <span className="h-1 w-1 rounded-full bg-white/40" />
+                      ) : (
+                        <div className="flex h-full w-full items-center justify-center text-[#C44D27]">
+                          <Utensils className="h-6 w-6" />
                         </div>
-                      </div>
-                    )}
-                    <div className="px-4 pb-3 pt-1">
-                      <div className="flex items-start justify-between gap-2">
-                        <strong className="font-sans text-sm font-bold text-white line-clamp-1">
-                          {item.name}
-                        </strong>
-                        <span className="shrink-0 rounded-full frost-pill-chip px-2 py-0.5 text-[10px] font-bold tabular-nums">
-                          {item.variants && item.variants.length > 0
-                            ? formatPrice(minPrice)
-                            : formatPrice(item.price)}
-                        </span>
-                      </div>
-                      <span className="mt-1.5 inline-block rounded-full frost-pill-chip px-2.5 py-0.5 text-[10px] font-semibold">
-                        Bestseller
+                      )}
+                      <span className="absolute left-2 top-2 inline-flex items-center gap-0.5 rounded-full bg-[#4B2316]/85 px-2 py-0.5 text-[9.5px] font-bold text-white">
+                        <Flame className="h-2.5 w-2.5 text-[#FF8C5A]" /> Hot
                       </span>
                     </div>
+
+                    <h3 className="mt-2 font-sans text-[13px] font-bold leading-snug text-[#3D1C11] line-clamp-2 min-h-[34px]">
+                      {item.name}
+                    </h3>
                   </div>
-                  <div className="px-4 pb-4">
-                    <span className="flex w-full items-center justify-center rounded-full frost-cta-white py-2 text-[11px] font-bold">
-                      Order Dish
+
+                  <div
+                    className="mt-2.5 flex items-center justify-between gap-1.5"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <span className="font-sans text-[13.5px] font-bold text-[#5E453B] tabular-nums">
+                      {hasVariants ? formatPrice(minPrice) : formatPrice(item.price)}
                     </span>
+
+                    {qtyInCart > 0 && !isCustomizable ? (
+                      <span className="inline-flex h-7 items-center gap-1.5 rounded-full bg-[#C44D27] px-2 text-[11px] font-bold text-white tabular-nums">
+                        {qtyInCart}×
+                      </span>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => (isCustomizable ? onOpenItemDetails(item) : onQuickAdd(item))}
+                        aria-label={`Add ${item.name}`}
+                        className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#C44D27] text-white shadow-xs transition-transform hover:scale-105 active:scale-95 cursor-pointer"
+                      >
+                        <Plus className="h-4 w-4" />
+                      </button>
+                    )}
                   </div>
-                </button>
+                </div>
               );
             })}
           </div>
         </section>
       )}
 
-      {/* Dish Cards — Reference 2 Seamless Photo-to-Frosted Card Architecture */}
-      {menuLoading ? (
-        <div className="frost-component-card rounded-[30px] py-12 text-center text-xs text-white/75">
-          <div className="w-7 h-7 rounded-full border-2 border-white border-t-transparent animate-spin mx-auto mb-2.5" />
-          Loading freshly plated culinary menu...
-        </div>
-      ) : filteredItems.length === 0 ? (
-        <div className="frost-component-card rounded-[30px] p-8 text-center my-6">
-          <Utensils className="w-8 h-8 text-white/75 mx-auto mb-2.5" />
-          <h3 className="font-sans text-base font-bold text-white">No items match your filter</h3>
-          <p className="text-xs text-white/70 mt-1">
-            Try adjusting your search query or dietary preferences.
-          </p>
-        </div>
-      ) : (
-        <div className="space-y-8 pt-1">
-          {itemSections.map((section) => (
-            <section key={section.id} className="space-y-3.5">
-              {section.title && (
-                <div className="flex items-baseline justify-between border-b border-white/15 pb-2 px-1">
-                  <h2 className="font-sans text-lg font-bold tracking-tight text-white sm:text-xl">
-                    {section.title}
-                  </h2>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (typeof section.id === "number") setSelectedCategory(section.id);
-                    }}
-                    className="text-xs font-semibold text-white/70 hover:text-white tabular-nums"
-                  >
-                    {section.items.length} {section.items.length === 1 ? "dish" : "dishes"}
-                  </button>
-                </div>
-              )}
-
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                {section.items.map((item) => {
-                  const qtyInCart = getItemCartQuantity(item.id);
-                  const isAvailable = item.available;
-                  const hasVariants = Boolean(item.variants && item.variants.length > 0);
-                  const isCustomizable = hasVariants || Boolean(item.modifiers && item.modifiers.length > 0);
-                  const minPrice = hasVariants
-                    ? Math.min(...item.variants!.map((v) => Number(v.price)))
-                    : Number(item.price);
-
-                  return (
-                    <article
-                      key={item.id}
-                      onClick={() => isAvailable && onOpenItemDetails(item)}
-                      className={cn(
-                        "gsap-menu-card group relative flex flex-col justify-between overflow-hidden rounded-[30px] frost-component-card",
-                        !isAvailable ? "opacity-60 cursor-not-allowed" : "cursor-pointer"
-                      )}
+      {/* Full Menu Sections */}
+      <div id="ird-full-menu">
+        {menuLoading ? (
+          <div className="rounded-[26px] border border-[#EAE0D4] bg-[#FFFBF6] py-12 text-center text-xs text-[#7B5F54]">
+            <div className="w-7 h-7 rounded-full border-2 border-[#C44D27] border-t-transparent animate-spin mx-auto mb-2.5" />
+            Loading freshly plated culinary menu...
+          </div>
+        ) : filteredItems.length === 0 ? (
+          <div className="rounded-[26px] border border-[#EAE0D4] bg-[#FFFBF6] p-8 text-center my-6">
+            <Utensils className="w-8 h-8 text-[#C44D27] mx-auto mb-2.5" />
+            <h3 className="font-sans text-base font-bold text-[#3D1C11]">No items match your filter</h3>
+            <p className="text-xs text-[#7B5F54] mt-1">
+              Try adjusting your search query or dietary preferences.
+            </p>
+          </div>
+        ) : (
+          <div className="space-y-7 pt-1">
+            {itemSections.map((section) => (
+              <section key={section.id} className="space-y-3">
+                {section.title && (
+                  <div className="flex items-baseline justify-between border-b border-[#E7DACB] pb-2 px-0.5">
+                    <h2 className="font-sans text-[17px] sm:text-xl font-bold tracking-tight text-[#3D1C11]">
+                      {section.title}
+                    </h2>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (typeof section.id === "number") setSelectedCategory(section.id);
+                      }}
+                      className="text-xs font-semibold text-[#7B5F54] hover:text-[#C44D27] tabular-nums cursor-pointer"
                     >
-                      <div>
-                        {/* Seamless Photo-to-Frosted Card Top when photo exists */}
+                      {section.items.length} {section.items.length === 1 ? "dish" : "dishes"}
+                    </button>
+                  </div>
+                )}
+
+                <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-2">
+                  {section.items.map((item) => {
+                    const qtyInCart = getItemCartQuantity(item.id);
+                    const isAvailable = item.available;
+                    const hasVariants = Boolean(item.variants && item.variants.length > 0);
+                    const isCustomizable = hasVariants || Boolean(item.modifiers && item.modifiers.length > 0);
+                    const minPrice = hasVariants
+                      ? Math.min(...item.variants!.map((v) => Number(v.price)))
+                      : Number(item.price);
+
+                    return (
+                      <article
+                        key={item.id}
+                        onClick={() => isAvailable && onOpenItemDetails(item)}
+                        className={cn(
+                          "gsap-menu-card group flex gap-3.5 rounded-[24px] border border-[#EAE0D4] bg-[#FFFBF6] p-3.5 shadow-[0_8px_22px_-14px_rgba(64,28,12,0.14)]",
+                          !isAvailable ? "opacity-60 cursor-not-allowed" : "cursor-pointer"
+                        )}
+                      >
+                        {/* Left Clean Square Food Photo */}
                         {item.imageUrl && (
-                          <div className="relative h-[168px] w-full overflow-hidden">
+                          <div className="relative h-24 w-24 sm:h-28 sm:w-28 shrink-0 overflow-hidden rounded-[18px] bg-[#F4E9DB]">
                             <img
                               src={item.imageUrl}
                               alt={item.name}
                               loading="lazy"
-                              className={cn(
-                                "h-full w-full object-cover transition-transform duration-500 group-hover:scale-105",
-                                !isAvailable && "grayscale"
-                              )}
+                              className={cn("h-full w-full object-cover", !isAvailable && "grayscale")}
                             />
-                            <div className="pointer-events-none absolute inset-0 frost-component-fade" />
-                            <div className="absolute bottom-2.5 inset-x-0 flex justify-center gap-1.5">
-                              <span className="h-1.5 w-1.5 rounded-full bg-white" />
-                              <span className="h-1.5 w-1.5 rounded-full bg-white/40" />
-                              <span className="h-1.5 w-1.5 rounded-full bg-white/40" />
+                          </div>
+                        )}
+
+                        {/* Right Details + Terracotta Add / Stepper */}
+                        <div className="flex min-w-0 flex-1 flex-col justify-between">
+                          <div className="space-y-1">
+                            <div className="flex items-start justify-between gap-2">
+                              <h3 className="font-sans text-[15px] sm:text-base font-bold leading-snug text-[#3D1C11] line-clamp-2">
+                                {item.name}
+                              </h3>
+                            </div>
+
+                            {item.description && (
+                              <p className="line-clamp-2 text-[11.5px] leading-relaxed text-[#7B5F54]">
+                                {item.description}
+                              </p>
+                            )}
+
+                            <div className="flex flex-wrap items-center gap-1 pt-0.5">
+                              <span className="inline-flex items-center gap-1 rounded-md border border-[#EAE0D4] bg-[#FAF3EA] px-1.5 py-0.5 text-[10px] font-semibold text-[#5E453B] tabular-nums">
+                                <Clock className="h-2.5 w-2.5 text-[#C44D27]" />
+                                {item.prepTimeMinutes}m
+                              </span>
+                              {item.dietaryFlags?.map((f) => (
+                                <DietaryBadge key={f} tag={f} variant="light" />
+                              ))}
                             </div>
                           </div>
-                        )}
 
-                        <div className={cn("px-5 pb-3.5 space-y-2.5", item.imageUrl ? "-mt-1" : "pt-5")}>
-                          {/* Title Left + Frosted Price Pill Right (Reference 2 layout) */}
-                          <div className="flex items-start justify-between gap-2.5">
-                            <h3 className="font-sans text-[17px] sm:text-[18px] font-bold leading-snug text-white">
-                              {item.name}
-                            </h3>
-                            <span className="shrink-0 rounded-full frost-pill-chip px-3 py-1 text-xs font-bold text-white tabular-nums">
+                          <div
+                            className="mt-2.5 flex items-center justify-between gap-2"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <span className="font-sans text-[14px] sm:text-[15px] font-extrabold text-[#3D1C11] tabular-nums">
                               {hasVariants ? `From ${formatPrice(minPrice)}` : formatPrice(item.price)}
                             </span>
-                          </div>
 
-                          {item.description && (
-                            <p className="line-clamp-2 text-[12px] leading-relaxed text-white/75">
-                              {item.description}
-                            </p>
-                          )}
-
-                          {/* Frosted Meta Badges Row */}
-                          <div className="flex flex-wrap items-center gap-1.5">
-                            <span className="inline-flex items-center gap-1 rounded-full frost-pill-chip px-2.5 py-0.5 text-[10.5px] font-semibold tabular-nums">
-                              <Clock className="h-3 w-3 text-white/80" />
-                              {item.prepTimeMinutes}m prep
-                            </span>
-                            {item.dietaryFlags?.map((f) => (
-                              <DietaryBadge key={f} tag={f} variant="glass" />
-                            ))}
+                            {!isAvailable ? (
+                              <span className="rounded-full bg-[#F4E9DB] px-3 py-1 text-[11px] font-semibold text-[#7B5F54]">
+                                Sold Out
+                              </span>
+                            ) : isCustomizable ? (
+                              <button
+                                type="button"
+                                onClick={() => onOpenItemDetails(item)}
+                                className="inline-flex h-8 items-center gap-1 rounded-full bg-[#C44D27] px-3.5 text-[11px] font-bold text-white shadow-xs btn-smooth-press cursor-pointer"
+                              >
+                                <span>{qtyInCart > 0 ? `Custom (${qtyInCart})` : "Select"}</span>
+                                <Plus className="h-3.5 w-3.5" />
+                              </button>
+                            ) : qtyInCart > 0 ? (
+                              <div className="inline-flex h-8 items-center gap-2 rounded-full bg-[#C44D27] px-2 text-white zomato-stepper-in">
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    const match = cart.find((c) => c.item.id === item.id);
+                                    if (match) onUpdateCartQuantity(match.cartItemId, -1);
+                                  }}
+                                  className="flex h-6 w-6 items-center justify-center rounded-full hover:bg-black/15 cursor-pointer"
+                                  aria-label="Decrease quantity"
+                                >
+                                  <Minus className="h-3.5 w-3.5" />
+                                </button>
+                                <span
+                                  key={qtyInCart}
+                                  className="min-w-4 text-center text-xs font-extrabold tabular-nums zomato-qty-pop"
+                                >
+                                  {qtyInCart}
+                                </span>
+                                <button
+                                  type="button"
+                                  onClick={() => onQuickAdd(item)}
+                                  className="flex h-6 w-6 items-center justify-center rounded-full hover:bg-black/15 cursor-pointer"
+                                  aria-label="Increase quantity"
+                                >
+                                  <Plus className="h-3.5 w-3.5" />
+                                </button>
+                              </div>
+                            ) : (
+                              <button
+                                type="button"
+                                onClick={() => onQuickAdd(item)}
+                                aria-label={`Add ${item.name} to tray`}
+                                className="flex h-8 w-8 items-center justify-center rounded-full bg-[#C44D27] text-white shadow-xs transition-transform hover:scale-105 btn-smooth-press cursor-pointer"
+                              >
+                                <Plus className="h-4 w-4" />
+                              </button>
+                            )}
                           </div>
                         </div>
-                      </div>
+                      </article>
+                    );
+                  })}
+                </div>
+              </section>
+            ))}
+          </div>
+        )}
+      </div>
 
-                      {/* Signature White Pill CTA / Stepper */}
-                      <div
-                        className="px-5 pb-5 pt-1"
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        {!isAvailable ? (
-                          <div className="w-full rounded-full frost-pill-chip py-2.5 text-center text-xs font-semibold text-white/70">
-                            Sold Out
-                          </div>
-                        ) : isCustomizable ? (
-                          <button
-                            type="button"
-                            onClick={() => onOpenItemDetails(item)}
-                            className="flex h-10 w-full items-center justify-center gap-1.5 rounded-full frost-cta-white text-xs font-bold btn-smooth-press cursor-pointer"
-                          >
-                            <span>{qtyInCart > 0 ? "Customize / Add" : "Select Options"}</span>
-                            <Plus className="h-3.5 w-3.5" />
-                            {qtyInCart > 0 && (
-                              <span
-                                key={qtyInCart}
-                                className="ml-1 flex h-4.5 min-w-4.5 items-center justify-center rounded-full bg-[#171714] px-1.5 text-[10px] font-bold text-white tabular-nums zomato-qty-pop"
-                              >
-                                {qtyInCart}
-                              </span>
-                            )}
-                          </button>
-                        ) : qtyInCart > 0 ? (
-                          <div className="flex h-10 w-full items-center justify-between rounded-full frost-cta-white px-2 zomato-stepper-in">
-                            <button
-                              type="button"
-                              onClick={() => {
-                                const match = cart.find((c) => c.item.id === item.id);
-                                if (match) onUpdateCartQuantity(match.cartItemId, -1);
-                              }}
-                              className="flex h-7 w-7 items-center justify-center rounded-full hover:bg-black/10 active:scale-90 transition-transform cursor-pointer"
-                              aria-label="Decrease quantity"
-                            >
-                              <Minus className="h-3.5 w-3.5" />
-                            </button>
-                            <span
-                              key={qtyInCart}
-                              className="text-xs font-extrabold tabular-nums zomato-qty-pop"
-                            >
-                              {qtyInCart} in Tray
-                            </span>
-                            <button
-                              type="button"
-                              onClick={() => onQuickAdd(item)}
-                              className="flex h-7 w-7 items-center justify-center rounded-full hover:bg-black/10 active:scale-90 transition-transform cursor-pointer"
-                              aria-label="Increase quantity"
-                            >
-                              <Plus className="h-3.5 w-3.5" />
-                            </button>
-                          </div>
-                        ) : (
-                          <button
-                            type="button"
-                            onClick={() => onQuickAdd(item)}
-                            className="flex h-10 w-full items-center justify-center gap-1.5 rounded-full frost-cta-white text-xs font-bold btn-smooth-press cursor-pointer"
-                          >
-                            <span>Add to Tray</span>
-                            <Plus className="h-3.5 w-3.5" />
-                          </button>
-                        )}
-                      </div>
-                    </article>
-                  );
-                })}
-              </div>
-            </section>
-          ))}
+      {/* Bottom Suite Concierge Callout Strip (matches Tortilla Rewards banner layout) */}
+      {onSwitchToRoomService && (
+        <div className="rounded-[22px] border border-[#EAE0D4] bg-[#FFFBF6] p-3.5 shadow-[0_8px_22px_-14px_rgba(64,28,12,0.12)] flex items-center justify-between gap-3">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#FAF3EA] border border-[#EAE0D4] text-[#C44D27]">
+              <SuiteCareBellIcon className="h-5 w-5" />
+            </div>
+            <div className="min-w-0">
+              <p className="font-sans text-[11px] font-extrabold uppercase tracking-wider text-[#3D1C11]">
+                Need Extra Amenities?
+              </p>
+              <p className="text-[11px] text-[#7B5F54] truncate">
+                Fresh towels, ice buckets, cutlery or turndown care on demand.
+              </p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={onSwitchToRoomService}
+            className="shrink-0 rounded-full bg-[#C44D27] px-4 py-2 text-[11.5px] font-bold text-white shadow-xs hover:bg-[#B2411D] btn-smooth-press cursor-pointer"
+          >
+            Suite Care
+          </button>
         </div>
       )}
     </div>

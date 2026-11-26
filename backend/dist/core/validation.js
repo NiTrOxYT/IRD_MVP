@@ -25,4 +25,8 @@ export const settingsSchema = z.object({
     welcomeMode: z.enum(["every_time", "once_per_stay", "disabled"]).optional(),
     welcomeMessage: z.string().max(4000).nullable().optional(),
     welcomeBgUrl: z.string().max(350_000).nullable().optional(),
+    diningHeroUrl: z.string().max(350_000).nullable().optional(),
+    roomServiceHeroUrl: z.string().max(350_000).nullable().optional(),
+    attractionsHeroUrl: z.string().max(350_000).nullable().optional(),
+    suiteLoaderBgUrl: z.string().max(350_000).nullable().optional(),
 });

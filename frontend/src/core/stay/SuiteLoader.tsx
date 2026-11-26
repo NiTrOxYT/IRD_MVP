@@ -2,9 +2,10 @@ import React from "react";
 
 interface SuiteLoaderProps {
   logoUrl?: string | null;
+  bgUrl?: string | null;
 }
 
-export function SuiteLoader({ logoUrl }: SuiteLoaderProps) {
+export function SuiteLoader({ logoUrl, bgUrl }: SuiteLoaderProps) {
   return (
     <div
       className="relative isolate flex min-h-[100dvh] flex-col items-center justify-center overflow-hidden bg-[#302015] px-6 py-10 text-center"
@@ -12,10 +13,13 @@ export function SuiteLoader({ logoUrl }: SuiteLoaderProps) {
       aria-live="polite"
     >
       <img
-        src="/suite-loader-scene.jpg"
+        src={bgUrl || "/suite-loader-scene.jpg"}
         alt=""
         aria-hidden="true"
         className="suite-loader-scene pointer-events-none absolute inset-0 z-0 h-full w-full object-cover object-[58%_center]"
+        onError={(e) => {
+          (e.target as HTMLImageElement).src = "/suite-loader-scene.jpg";
+        }}
       />
       <div
         aria-hidden="true"

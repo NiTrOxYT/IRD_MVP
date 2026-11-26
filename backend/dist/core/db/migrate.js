@@ -24,12 +24,20 @@ export async function runMigrations() {
         welcome_mode TEXT NOT NULL DEFAULT 'every_time',
         welcome_message TEXT,
         welcome_bg_url TEXT,
+        dining_hero_url TEXT,
+        room_service_hero_url TEXT,
+        attractions_hero_url TEXT,
+        suite_loader_bg_url TEXT,
         created_at TIMESTAMP WITHOUT TIME ZONE DEFAULT NOW()
       );
 
       ALTER TABLE properties ADD COLUMN IF NOT EXISTS welcome_mode TEXT NOT NULL DEFAULT 'every_time';
       ALTER TABLE properties ADD COLUMN IF NOT EXISTS welcome_message TEXT;
       ALTER TABLE properties ADD COLUMN IF NOT EXISTS welcome_bg_url TEXT;
+      ALTER TABLE properties ADD COLUMN IF NOT EXISTS dining_hero_url TEXT;
+      ALTER TABLE properties ADD COLUMN IF NOT EXISTS room_service_hero_url TEXT;
+      ALTER TABLE properties ADD COLUMN IF NOT EXISTS attractions_hero_url TEXT;
+      ALTER TABLE properties ADD COLUMN IF NOT EXISTS suite_loader_bg_url TEXT;
       ALTER TABLE properties ADD COLUMN IF NOT EXISTS whatsapp_number TEXT;
       ALTER TABLE properties ADD COLUMN IF NOT EXISTS attraction_booking_template TEXT;
 

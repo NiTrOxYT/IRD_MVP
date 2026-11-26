@@ -54,8 +54,9 @@ export function usePropertyName(enabled = true) {
   return propertyName;
 }
 
-export function usePropertyLogo(enabled = true) {
+export function usePropertyBranding(enabled = true) {
   const [logoUrl, setLogoUrl] = useState<string | null>(null);
+  const [suiteLoaderBgUrl, setSuiteLoaderBgUrl] = useState<string | null>(null);
 
   useEffect(() => {
     const onLogoUpdated = (event: Event) => {
@@ -66,7 +67,9 @@ export function usePropertyLogo(enabled = true) {
     let active = true;
     getPropertySettings()
       .then(({ property }) => {
-        if (active) setLogoUrl(property.logoUrl || null);
+        if (!active) return;
+        setLogoUrl(property.logoUrl || null);
+        setSuiteLoaderBgUrl(property.suiteLoaderBgUrl || null);
       })
       .catch(() => {});
     return () => {
@@ -79,5 +82,9 @@ export function usePropertyLogo(enabled = true) {
     setPropertyFavicon(logoUrl);
   }, [logoUrl]);
 
-  return logoUrl;
+  return { logoUrl, suiteLoaderBgUrl };
+}
+
+export function usePropertyLogo(enabled = true) {
+  return usePropertyBranding(enabled).logoUrl;
 }

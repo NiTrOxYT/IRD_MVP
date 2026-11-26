@@ -11,6 +11,7 @@ import { RoomServiceRequestModal } from "./RoomServiceRequestModal";
 export interface RoomServiceGuestPortalProps {
   roomNumber?: string;
   guestName?: string;
+  heroImageUrl?: string | null;
   requests?: HousekeepingRequest[];
   onRequestsChange?: React.Dispatch<React.SetStateAction<HousekeepingRequest[]>>;
   onBackToHub?: () => void;
@@ -20,6 +21,7 @@ export interface RoomServiceGuestPortalProps {
 export function RoomServiceGuestPortal({
   roomNumber,
   guestName,
+  heroImageUrl,
   requests: controlledRequests,
   onRequestsChange,
   onBackToHub,
@@ -145,7 +147,7 @@ export function RoomServiceGuestPortal({
       <div ref={heroRef} className="relative overflow-hidden rounded-[32px] frost-component-card">
         <div className="relative h-[196px] sm:h-[230px] w-full overflow-hidden">
           <img
-            src="/room-service-card.jpg"
+            src={heroImageUrl || "/room-service-card.jpg"}
             alt="Room Service & Suite Care"
             className="gsap-rs-hero-img h-full w-full scale-105 object-cover object-center"
           />

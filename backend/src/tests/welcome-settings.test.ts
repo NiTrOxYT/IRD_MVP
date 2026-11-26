@@ -35,4 +35,14 @@ describe("Welcome Letter Settings Validation", () => {
     });
     assert.equal(parsed.success, false);
   });
+
+  it("accepts editable portal and service hero images and nullable resets", () => {
+    const parsed = settingsSchema.safeParse({
+      diningHeroUrl: "data:image/webp;base64,UklGRh4AAABXRUJQVlA4",
+      roomServiceHeroUrl: "data:image/webp;base64,UklGRh4AAABXRUJQVlA4",
+      attractionsHeroUrl: null,
+      suiteLoaderBgUrl: "data:image/webp;base64,UklGRh4AAABXRUJQVlA4",
+    });
+    assert.equal(parsed.success, true);
+  });
 });

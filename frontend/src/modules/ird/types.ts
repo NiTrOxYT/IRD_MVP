@@ -105,6 +105,7 @@ export interface IrdPropertyConfig {
   irdEnabled?: boolean;
   openingTime?: string;
   closingTime?: string;
+  diningHeroUrl?: string | null;
 }
 
 export interface InventoryItem {

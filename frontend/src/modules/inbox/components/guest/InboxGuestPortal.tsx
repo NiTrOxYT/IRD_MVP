@@ -67,9 +67,9 @@ export function InboxGuestPortal({
     () => {
       const el = containerRef.current;
       if (!el || loading || filteredMessages.length === 0) return;
-      setupScrollBatchCards(el, ".gsap-inbox-card", { stagger: 0.06, y: 20, start: "top 94%" });
+      setupScrollBatchCards(el, ".gsap-inbox-card", { stagger: 0.035, y: 12, start: "top 95%" });
     },
-    { scope: containerRef, dependencies: [loading, filteredMessages.length, filter], revertOnUpdate: true }
+    { scope: containerRef, dependencies: [loading, filteredMessages.length] }
   );
 
   return (

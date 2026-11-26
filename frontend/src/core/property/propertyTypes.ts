@@ -15,6 +15,10 @@ export interface PropertySettings {
   welcomeMode?: "every_time" | "once_per_stay" | "disabled";
   welcomeMessage?: string | null;
   welcomeBgUrl?: string | null;
+  diningHeroUrl?: string | null;
+  roomServiceHeroUrl?: string | null;
+  attractionsHeroUrl?: string | null;
+  suiteLoaderBgUrl?: string | null;
 }
 
 export interface Room {

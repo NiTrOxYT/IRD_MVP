@@ -15,6 +15,7 @@ import {
   Trash2,
   MessageCircle,
   ExternalLink,
+  Image as ImageIcon,
 } from "lucide-react";
 import { cn } from "../ui/utils";
 import { DEFAULT_WELCOME_MESSAGE } from "../stay/GuestWelcomeLetter";
@@ -23,6 +24,44 @@ import {
   buildAttractionWhatsappUrl,
   DEFAULT_ATTRACTION_WHATSAPP_TEMPLATE,
 } from "../../modules/attractions/whatsapp";
+
+type PortalImageKey =
+  | "diningHeroUrl"
+  | "roomServiceHeroUrl"
+  | "attractionsHeroUrl"
+  | "suiteLoaderBgUrl";
+
+const PORTAL_IMAGE_SLOTS: ReadonlyArray<{
+  key: PortalImageKey;
+  label: string;
+  defaultSrc: string;
+  hint: string;
+}> = [
+  {
+    key: "diningHeroUrl",
+    label: "In-Room Dining Hero",
+    defaultSrc: "/in-room-dining-card.jpg",
+    hint: "Shown in Home Dining spotlight & In-Room Dining promo banner.",
+  },
+  {
+    key: "roomServiceHeroUrl",
+    label: "Suite Care / Room Service Hero",
+    defaultSrc: "/room-service-card.jpg",
+    hint: "Shown in Home Care spotlight & Suite Care header card.",
+  },
+  {
+    key: "attractionsHeroUrl",
+    label: "Explore Attractions Hero",
+    defaultSrc: "/suite-welcome-card.jpg",
+    hint: "Shown in Home Explore spotlight & Local Attractions hub tile.",
+  },
+  {
+    key: "suiteLoaderBgUrl",
+    label: "Suite Loading Scene Backdrop",
+    defaultSrc: "/suite-loader-scene.jpg",
+    hint: "Full-screen welcome verification backdrop shown while suite loads.",
+  },
+];
 
 async function compressImage(
   file: File,
@@ -83,6 +122,14 @@ export function AdminSettings() {
   const [whatsappSaved, setWhatsappSaved] = useState(false);
   const [whatsappError, setWhatsappError] = useState("");
 
+  // Portal & Service Hero Images
+  const [portalImagesDraft, setPortalImagesDraft] = useState<
+    Partial<Record<PortalImageKey, string | null>>
+  >({});
+  const [portalImagesSaving, setPortalImagesSaving] = useState(false);
+  const [portalImagesSaved, setPortalImagesSaved] = useState(false);
+  const [portalImagesError, setPortalImagesError] = useState("");
+
   // Form
   const [name, setName] = useState("");
   const [currency, setCurrency] = useState("INR");
@@ -113,6 +160,7 @@ export function AdminSettings() {
       setWelcomeMode(prop.welcomeMode || "every_time");
       setWelcomeMessage(prop.welcomeMessage ?? DEFAULT_WELCOME_MESSAGE);
       setWelcomeBgDraft(undefined);
+      setPortalImagesDraft({});
       setWhatsappNumber(prop.whatsappNumber || "");
       setAttractionTemplate(prop.attractionBookingTemplate ?? DEFAULT_ATTRACTION_WHATSAPP_TEMPLATE);
 
@@ -250,6 +298,41 @@ export function AdminSettings() {
       setLogoError(err.message || "Failed to save the logo.");
     } finally {
       setLogoSaving(false);
+    }
+  };
+
+  const handlePortalImageFile = async (key: PortalImageKey, file?: File) => {
+    if (!file) return;
+    setPortalImagesError("");
+    setPortalImagesSaved(false);
+    try {
+      const compressed = await compressImage(file, {
+        maxSizes: [1440, 1080, 768],
+        quality: 0.78,
+        maxChars: 340_000,
+        errorLabel: "hero image",
+      });
+      setPortalImagesDraft((prev) => ({ ...prev, [key]: compressed }));
+    } catch (err: any) {
+      setPortalImagesError(err.message || "Could not process this image.");
+    }
+  };
+
+  const handleSavePortalImages = async () => {
+    if (Object.keys(portalImagesDraft).length === 0) return;
+    setPortalImagesSaving(true);
+    setPortalImagesError("");
+    setPortalImagesSaved(false);
+    try {
+      const res = await updatePropertySettings(portalImagesDraft);
+      setSettings(res.property);
+      setPortalImagesDraft({});
+      setPortalImagesSaved(true);
+      setTimeout(() => setPortalImagesSaved(false), 3000);
+    } catch (err: any) {
+      setPortalImagesError(err.message || "Failed to save portal images.");
+    } finally {
+      setPortalImagesSaving(false);
     }
   };
 
@@ -727,6 +810,116 @@ export function AdminSettings() {
                 {whatsappSaving ? "Saving WhatsApp Settings..." : "Save WhatsApp Settings"}
               </button>
             </form>
+          </section>
+
+          {/* Portal & Service Hero Images Configuration */}
+          <section className="bg-[#FFFDF9] border border-[#E5DDD1] rounded-3xl p-6 shadow-xs space-y-5">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-[#E5DDD1]">
+              <div>
+                <h2 className="font-serif text-xl font-bold text-[#1E150F] flex items-center gap-2">
+                  <ImageIcon className="w-5 h-5 text-[#B88223]" />
+                  <span>Guest Portal & Service Images</span>
+                </h2>
+                <p className="text-xs text-[#73685C] mt-0.5">
+                  Customize every hero photo shown across Guest Home, In-Room Dining, Suite Care, Explore, and Arrival Loader.
+                </p>
+              </div>
+              {Object.keys(portalImagesDraft).length > 0 && (
+                <button
+                  type="button"
+                  onClick={handleSavePortalImages}
+                  disabled={portalImagesSaving}
+                  className="shrink-0 px-5 py-2.5 rounded-xl font-bold text-xs text-white bg-[#1E150F] hover:bg-[#29231F] transition-colors shadow-sm disabled:opacity-50 btn-smooth-press"
+                >
+                  {portalImagesSaving ? "Saving Images..." : "Save Portal Images"}
+                </button>
+              )}
+            </div>
+
+            {portalImagesSaved && (
+              <div className="p-3 bg-emerald-50 border border-emerald-300 text-emerald-900 text-xs rounded-2xl flex items-center gap-2 font-medium">
+                <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                <span>Guest portal & service hero images saved.</span>
+              </div>
+            )}
+            {portalImagesError && (
+              <p role="alert" className="text-xs text-red-700 font-medium">
+                {portalImagesError}
+              </p>
+            )}
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {PORTAL_IMAGE_SLOTS.map((slot) => {
+                const draftVal = portalImagesDraft[slot.key];
+                const savedVal = settings?.[slot.key] ?? null;
+                const currentPreview =
+                  draftVal !== undefined ? draftVal || slot.defaultSrc : savedVal || slot.defaultSrc;
+                const hasCustom = draftVal !== undefined ? draftVal !== null : Boolean(savedVal);
+
+                return (
+                  <div
+                    key={slot.key}
+                    className="rounded-2xl border border-[#E5DDD1] bg-[#FAF8F5] p-4 space-y-3"
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <div>
+                        <p className="text-xs font-bold text-[#1E150F]">{slot.label}</p>
+                        <p className="text-[11px] text-[#73685C] mt-0.5">{slot.hint}</p>
+                      </div>
+                    </div>
+
+                    <div className="h-28 w-full overflow-hidden rounded-xl border border-[#E5DDD1] bg-[#241811]">
+                      <img
+                        src={currentPreview}
+                        alt={slot.label}
+                        className="h-full w-full object-cover"
+                      />
+                    </div>
+
+                    <div className="flex flex-wrap gap-2">
+                      <label className="inline-flex cursor-pointer items-center gap-1.5 rounded-xl border border-[#E5DDD1] bg-white px-3 py-1.5 text-xs font-semibold text-[#1E150F] hover:bg-[#F2EBE1]">
+                        <Upload className="h-3.5 w-3.5 text-[#8E6314]" /> Upload
+                        <input
+                          type="file"
+                          accept="image/png,image/jpeg,image/webp"
+                          className="sr-only"
+                          onChange={(e) => {
+                            void handlePortalImageFile(slot.key, e.target.files?.[0]);
+                            e.currentTarget.value = "";
+                          }}
+                        />
+                      </label>
+                      {hasCustom && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setPortalImagesDraft((prev) => ({ ...prev, [slot.key]: null }));
+                            setPortalImagesError("");
+                            setPortalImagesSaved(false);
+                          }}
+                          className="inline-flex items-center gap-1.5 rounded-xl border border-[#E5DDD1] bg-white px-3 py-1.5 text-xs font-semibold text-[#73685C] hover:bg-[#FAF8F5]"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" /> Reset Default
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {Object.keys(portalImagesDraft).length > 0 && (
+              <div className="pt-1 flex justify-end">
+                <button
+                  type="button"
+                  onClick={handleSavePortalImages}
+                  disabled={portalImagesSaving}
+                  className="px-5 py-2.5 rounded-xl font-bold text-xs text-white bg-[#1E150F] hover:bg-[#29231F] transition-colors shadow-sm disabled:opacity-50 btn-smooth-press"
+                >
+                  {portalImagesSaving ? "Saving Images..." : "Save Portal Images"}
+                </button>
+              </div>
+            )}
           </section>
 
           {/* Audit Log Table */}

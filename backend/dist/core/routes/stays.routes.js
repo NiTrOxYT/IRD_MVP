@@ -18,7 +18,8 @@ export function createStaysRouter() {
                 r.id as room_id, r.room_number, r.floor, r.wing,
                 p.name as property_name, p.currency, p.tax_rate_percent, p.service_charge_percent, p.ird_enabled, p.logo_url,
                 p.contact_number, p.whatsapp_number, p.attraction_booking_template,
-                p.welcome_mode, p.welcome_message, p.welcome_bg_url
+                p.welcome_mode, p.welcome_message, p.welcome_bg_url,
+                p.dining_hero_url, p.room_service_hero_url, p.attractions_hero_url, p.suite_loader_bg_url
          FROM stays s
          JOIN rooms r ON s.room_id = r.id
          JOIN properties p ON s.property_id = p.id
@@ -64,6 +65,10 @@ export function createStaysRouter() {
                     welcomeMode: row.welcome_mode || "every_time",
                     welcomeMessage: row.welcome_message ?? null,
                     welcomeBgUrl: row.welcome_bg_url ?? null,
+                    diningHeroUrl: row.dining_hero_url ?? null,
+                    roomServiceHeroUrl: row.room_service_hero_url ?? null,
+                    attractionsHeroUrl: row.attractions_hero_url ?? null,
+                    suiteLoaderBgUrl: row.suite_loader_bg_url ?? null,
                 },
             });
         }

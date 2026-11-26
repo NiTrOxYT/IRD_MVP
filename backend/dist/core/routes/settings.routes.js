@@ -20,6 +20,10 @@ function serializeProperty(row) {
         welcomeMode: row.welcome_mode || "every_time",
         welcomeMessage: row.welcome_message ?? null,
         welcomeBgUrl: row.welcome_bg_url ?? null,
+        diningHeroUrl: row.dining_hero_url ?? null,
+        roomServiceHeroUrl: row.room_service_hero_url ?? null,
+        attractionsHeroUrl: row.attractions_hero_url ?? null,
+        suiteLoaderBgUrl: row.suite_loader_bg_url ?? null,
     };
 }
 export function createSettingsRouter() {
@@ -43,7 +47,7 @@ export function createSettingsRouter() {
             res.status(400).json({ error: parse.error.errors[0].message });
             return;
         }
-        const { name, currency, taxRatePercent, serviceChargePercent, irdEnabled, openingTime, closingTime, contactNumber, whatsappNumber, attractionBookingTemplate, logoUrl, welcomeMode, welcomeMessage, welcomeBgUrl, } = parse.data;
+        const { name, currency, taxRatePercent, serviceChargePercent, irdEnabled, openingTime, closingTime, contactNumber, whatsappNumber, attractionBookingTemplate, logoUrl, welcomeMode, welcomeMessage, welcomeBgUrl, diningHeroUrl, roomServiceHeroUrl, attractionsHeroUrl, suiteLoaderBgUrl, } = parse.data;
         const staff = req.staff;
         const cleanWhatsappNumber = whatsappNumber === undefined ? undefined : whatsappNumber?.trim() || null;
         const cleanBookingTemplate = attractionBookingTemplate === undefined ? undefined : attractionBookingTemplate?.trim() || null;
@@ -62,7 +66,11 @@ export function createSettingsRouter() {
              welcome_message = CASE WHEN $12 THEN $13 ELSE welcome_message END,
              welcome_bg_url = CASE WHEN $14 THEN $15 ELSE welcome_bg_url END,
              whatsapp_number = CASE WHEN $16 THEN $17 ELSE whatsapp_number END,
-             attraction_booking_template = CASE WHEN $18 THEN $19 ELSE attraction_booking_template END
+             attraction_booking_template = CASE WHEN $18 THEN $19 ELSE attraction_booking_template END,
+             dining_hero_url = CASE WHEN $20 THEN $21 ELSE dining_hero_url END,
+             room_service_hero_url = CASE WHEN $22 THEN $23 ELSE room_service_hero_url END,
+             attractions_hero_url = CASE WHEN $24 THEN $25 ELSE attractions_hero_url END,
+             suite_loader_bg_url = CASE WHEN $26 THEN $27 ELSE suite_loader_bg_url END
          WHERE id = 1
          RETURNING *`, [
                 name,
@@ -84,6 +92,14 @@ export function createSettingsRouter() {
                 cleanWhatsappNumber ?? null,
                 cleanBookingTemplate !== undefined,
                 cleanBookingTemplate ?? null,
+                diningHeroUrl !== undefined,
+                diningHeroUrl,
+                roomServiceHeroUrl !== undefined,
+                roomServiceHeroUrl,
+                attractionsHeroUrl !== undefined,
+                attractionsHeroUrl,
+                suiteLoaderBgUrl !== undefined,
+                suiteLoaderBgUrl,
             ]);
             await query(`INSERT INTO audit_logs (property_id, staff_user_id, staff_username, action, target_type, target_id, details)
          VALUES ($1, $2, $3, 'SETTINGS_UPDATE', 'settings', '1', $4)`, [
@@ -96,6 +112,14 @@ export function createSettingsRouter() {
                     logoUpdated: logoUrl !== undefined,
                     welcomeBgUrl: undefined,
                     welcomeBgUpdated: welcomeBgUrl !== undefined,
+                    diningHeroUrl: undefined,
+                    diningHeroUpdated: diningHeroUrl !== undefined,
+                    roomServiceHeroUrl: undefined,
+                    roomServiceHeroUpdated: roomServiceHeroUrl !== undefined,
+                    attractionsHeroUrl: undefined,
+                    attractionsHeroUpdated: attractionsHeroUrl !== undefined,
+                    suiteLoaderBgUrl: undefined,
+                    suiteLoaderBgUpdated: suiteLoaderBgUrl !== undefined,
                 }),
             ]);
             res.json({ success: true, property: serializeProperty(result.rows[0]) });

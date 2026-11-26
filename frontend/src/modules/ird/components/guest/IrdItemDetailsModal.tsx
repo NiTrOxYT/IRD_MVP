@@ -46,7 +46,7 @@ export function IrdItemDetailsModal({ item, onClose, onAddToCart }: IrdItemDetai
 
   if (!item) {
     return (
-      <Modal variant="glass" isOpen={false} onClose={onClose} title="">
+      <Modal variant="light" isOpen={false} onClose={onClose} title="">
         {null}
       </Modal>
     );
@@ -66,15 +66,14 @@ export function IrdItemDetailsModal({ item, onClose, onAddToCart }: IrdItemDetai
   }
 
   return (
-    <Modal variant="glass" isOpen={Boolean(item)} onClose={onClose} title="">
-      <div className="space-y-4 text-xs text-white">
+    <Modal variant="light" isOpen={Boolean(item)} onClose={onClose} title="">
+      <div className="space-y-4 text-xs text-[#3D1C11]">
         {item.imageUrl && (
-          <div className="relative -mx-6 -mt-6 h-[200px] overflow-hidden">
+          <div className="relative -mx-6 -mt-6 h-[200px] overflow-hidden bg-[#F4E9DB]">
             <img src={item.imageUrl} alt={item.name} className="w-full h-full object-cover" />
-            <div className="pointer-events-none absolute inset-0 frost-component-fade" />
             <div className="absolute top-3 left-4 flex flex-wrap gap-1">
               {item.dietaryFlags?.map((f) => (
-                <DietaryBadge key={f} tag={f} variant="glass" className="text-[10px]" />
+                <DietaryBadge key={f} tag={f} variant="light" className="text-[10px]" />
               ))}
             </div>
           </div>
@@ -82,39 +81,39 @@ export function IrdItemDetailsModal({ item, onClose, onAddToCart }: IrdItemDetai
 
         <div>
           <div className="flex items-start justify-between gap-3">
-            <h2 className="font-sans text-xl sm:text-2xl font-bold leading-snug text-white break-words whitespace-normal">
+            <h2 className="font-sans text-xl sm:text-2xl font-bold leading-snug text-[#3D1C11] break-words whitespace-normal">
               {item.name}
             </h2>
-            <span className="shrink-0 rounded-full frost-pill-chip px-3 py-1 font-sans text-sm font-bold text-white tabular-nums">
+            <span className="shrink-0 rounded-full bg-[#FAF3EA] border border-[#E5D7C6] px-3 py-1 font-sans text-sm font-bold text-[#3D1C11] tabular-nums">
               {formatPrice(singleUnitPrice)}
             </span>
           </div>
 
           <div className="flex flex-wrap items-center gap-2 mt-2">
-            <span className="inline-flex items-center gap-1 text-[11px] font-medium text-white/85 frost-pill-chip px-2.5 py-0.5 rounded-full">
-              <Clock className="w-3 h-3 text-white/80" />~{item.prepTimeMinutes} mins prep
+            <span className="inline-flex items-center gap-1 text-[11px] font-medium text-[#5B4137] bg-[#FAF3EA] border border-[#EAE0D4] px-2.5 py-0.5 rounded-full">
+              <Clock className="w-3 h-3 text-[#C44D27]" />~{item.prepTimeMinutes} mins prep
             </span>
             {selectedVariant && (
-              <span className="inline-flex items-center text-[11px] font-medium text-white/85 frost-pill-chip px-2.5 py-0.5 rounded-full">
+              <span className="inline-flex items-center text-[11px] font-medium text-[#5B4137] bg-[#FAF3EA] border border-[#EAE0D4] px-2.5 py-0.5 rounded-full">
                 {selectedVariant.name}
               </span>
             )}
           </div>
 
           {item.description && (
-            <p className="mt-2.5 text-xs text-white/75 leading-relaxed break-words whitespace-normal">
+            <p className="mt-2.5 text-xs text-[#7B5F54] leading-relaxed break-words whitespace-normal">
               {item.description}
             </p>
           )}
         </div>
 
         {item.variants && item.variants.length > 0 && (
-          <div className="space-y-2 pt-3 border-t border-white/15">
+          <div className="space-y-2 pt-3 border-t border-[#EDE1D3]">
             <div className="flex items-center justify-between">
-              <label className="text-[11px] font-bold uppercase tracking-wider text-white/90">
+              <label className="text-[11px] font-bold uppercase tracking-wider text-[#3D1C11]">
                 Select Portion / Size
               </label>
-              <span className="text-[10px] text-white/70 font-semibold">Required</span>
+              <span className="text-[10px] text-[#7B5F54] font-semibold">Required</span>
             </div>
             <div className="grid grid-cols-2 gap-2">
               {item.variants.map((v) => {
@@ -128,23 +127,23 @@ export function IrdItemDetailsModal({ item, onClose, onAddToCart }: IrdItemDetai
                     onClick={() => setSelectedVariant(v)}
                     className={cn(
                       "flex flex-col p-3 rounded-2xl text-left transition-colors btn-smooth-press cursor-pointer border",
-                      !v.available && "opacity-45 cursor-not-allowed bg-white/5 border-white/10",
+                      !v.available && "opacity-45 cursor-not-allowed bg-[#F4E9DB] border-[#E5D7C6]",
                       isSelected
-                        ? "bg-white/22 border-white/40 text-white"
-                        : "bg-black/22 border-white/15 text-white/80 hover:bg-white/12"
+                        ? "bg-[#C44D27]/10 border-[#C44D27] text-[#3D1C11]"
+                        : "bg-[#FAF3EA] border-[#EAE0D4] text-[#5B4137] hover:bg-[#F3E7DA]"
                     )}
                   >
                     <div className="flex items-center justify-between w-full gap-1.5">
-                      <span className="font-sans font-bold text-xs text-white flex items-center gap-1.5">
-                        {isSelected && <Check className="h-3.5 w-3.5 text-white shrink-0" />}
+                      <span className="font-sans font-bold text-xs text-[#3D1C11] flex items-center gap-1.5">
+                        {isSelected && <Check className="h-3.5 w-3.5 text-[#C44D27] shrink-0" />}
                         {v.name}
                       </span>
-                      <span className="font-mono text-xs font-bold text-white/90">
+                      <span className="font-mono text-xs font-bold text-[#3D1C11]">
                         {formatPrice(v.price)}
                       </span>
                     </div>
                     {!v.available && (
-                      <span className="text-[9px] text-rose-300 font-semibold mt-0.5">Sold Out</span>
+                      <span className="text-[9px] text-rose-600 font-semibold mt-0.5">Sold Out</span>
                     )}
                   </button>
                 );
@@ -154,8 +153,8 @@ export function IrdItemDetailsModal({ item, onClose, onAddToCart }: IrdItemDetai
         )}
 
         {Object.entries(modGroups).map(([groupName, mods]) => (
-          <div key={groupName} className="space-y-2 pt-3 border-t border-white/15">
-            <label className="block text-[11px] font-bold uppercase tracking-wider text-white/90">
+          <div key={groupName} className="space-y-2 pt-3 border-t border-[#EDE1D3]">
+            <label className="block text-[11px] font-bold uppercase tracking-wider text-[#3D1C11]">
               {groupName}
             </label>
             <div className="grid grid-cols-1 gap-1.5">
@@ -174,15 +173,15 @@ export function IrdItemDetailsModal({ item, onClose, onAddToCart }: IrdItemDetai
                     className={cn(
                       "flex items-center justify-between px-3.5 py-2.5 rounded-full text-xs font-medium transition-colors text-left btn-smooth-press min-h-[42px] cursor-pointer border",
                       isSelected
-                        ? "bg-white/22 border-white/40 text-white"
-                        : "border-white/12 bg-black/20 hover:bg-white/12 text-white/80"
+                        ? "bg-[#C44D27]/10 border-[#C44D27] text-[#3D1C11]"
+                        : "border-[#EAE0D4] bg-[#FAF3EA] hover:bg-[#F3E7DA] text-[#5B4137]"
                     )}
                   >
-                    <span className="font-semibold text-white flex items-center gap-2">
-                      {isSelected && <Check className="h-3.5 w-3.5 text-white shrink-0" />}
+                    <span className="font-semibold text-[#3D1C11] flex items-center gap-2">
+                      {isSelected && <Check className="h-3.5 w-3.5 text-[#C44D27] shrink-0" />}
                       <span>{mod.name}</span>
                     </span>
-                    <span className="font-mono text-xs font-bold text-white/85">
+                    <span className="font-mono text-xs font-bold text-[#5B4137]">
                       {Number(mod.priceDelta) > 0 ? `+${formatPrice(mod.priceDelta)}` : "Included"}
                     </span>
                   </button>
@@ -193,7 +192,7 @@ export function IrdItemDetailsModal({ item, onClose, onAddToCart }: IrdItemDetai
         ))}
 
         <div className="pt-2">
-          <label className="block text-[11px] font-bold uppercase tracking-wider text-white/85 mb-1.5">
+          <label className="block text-[11px] font-bold uppercase tracking-wider text-[#5B4137] mb-1.5">
             Special Requests / In-Suite Preparation Notes
           </label>
           <input
@@ -201,25 +200,25 @@ export function IrdItemDetailsModal({ item, onClose, onAddToCart }: IrdItemDetai
             placeholder="e.g. Extra hot, dressing on the side, no onions..."
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
-            className="w-full px-4 py-2.5 rounded-full border border-white/18 bg-black/25 text-xs text-white placeholder:text-white/50 focus:border-white/40 focus:outline-none"
+            className="w-full px-4 py-2.5 rounded-full border border-[#E5D7C6] bg-[#FAF3EA] text-xs text-[#3D1C11] placeholder:text-[#9A7F74] focus:border-[#C44D27] focus:outline-none"
           />
         </div>
 
-        <div className="pt-3 border-t border-white/15 flex items-center justify-between gap-3">
-          <div className="flex items-center gap-2 frost-pill-chip p-1.5 rounded-full">
+        <div className="pt-3 border-t border-[#EDE1D3] flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2 border border-[#EAE0D4] bg-[#FAF3EA] p-1.5 rounded-full">
             <button
               type="button"
               onClick={() => setQuantity((q) => Math.max(1, q - 1))}
-              className="w-8 h-8 rounded-full bg-white/12 flex items-center justify-center text-white active:scale-95 cursor-pointer"
+              className="w-8 h-8 rounded-full bg-white border border-[#E5D7C6] flex items-center justify-center text-[#3D1C11] active:scale-95 cursor-pointer"
               aria-label="Decrease quantity"
             >
               <Minus className="w-3.5 h-3.5" />
             </button>
-            <span className="font-mono text-sm font-bold w-6 text-center text-white">{quantity}</span>
+            <span className="font-mono text-sm font-bold w-6 text-center text-[#3D1C11]">{quantity}</span>
             <button
               type="button"
               onClick={() => setQuantity((q) => q + 1)}
-              className="w-8 h-8 rounded-full bg-white/12 flex items-center justify-center text-white active:scale-95 cursor-pointer"
+              className="w-8 h-8 rounded-full bg-[#C44D27] flex items-center justify-center text-white active:scale-95 cursor-pointer"
               aria-label="Increase quantity"
             >
               <Plus className="w-3.5 h-3.5" />
@@ -231,7 +230,7 @@ export function IrdItemDetailsModal({ item, onClose, onAddToCart }: IrdItemDetai
             onClick={() =>
               onAddToCart(item, selectedVariant, Object.values(selectedMods), notes, quantity)
             }
-            className="flex-1 py-3 px-5 rounded-full font-bold text-xs frost-cta-white flex items-center justify-between min-h-[46px] btn-smooth-press cursor-pointer"
+            className="flex-1 py-3 px-5 rounded-full font-bold text-xs bg-[#C44D27] hover:bg-[#B2411D] text-white flex items-center justify-between min-h-[46px] btn-smooth-press cursor-pointer shadow-[0_10px_24px_-8px_rgba(196,77,39,0.55)]"
           >
             <span>Add to Order</span>
             <span className="font-mono font-bold text-sm">

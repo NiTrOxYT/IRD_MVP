@@ -37,25 +37,24 @@ export function setupScrollBatchCards(
       };
       if (!noMotion) return;
 
-      const offsetY = isCoarse ? Math.min(y, 10) : y;
-      const stepStagger = isCoarse ? Math.min(stagger, 0.035) : stagger;
+      const offsetY = isCoarse ? 0 : y;
+      const stepStagger = isCoarse ? 0.02 : stagger;
 
-      gsap.set(cards, { autoAlpha: 0, y: offsetY, force3D: true });
+      gsap.set(cards, { autoAlpha: 0, y: offsetY });
       ScrollTrigger.batch(cards, {
-        start,
+        start: isCoarse ? "top 98%" : start,
         once: true,
-        interval: 0.06,
+        interval: isCoarse ? 0.015 : 0.06,
         batchMax: 6,
         onEnter: (batch) => {
           gsap.to(batch, {
             autoAlpha: 1,
             y: 0,
-            duration: isCoarse ? 0.34 : 0.46,
+            duration: isCoarse ? 0.22 : 0.42,
             stagger: stepStagger,
             ease: "power2.out",
-            force3D: true,
             overwrite: true,
-            clearProps: "transform",
+            clearProps: isCoarse ? "" : "transform",
           });
         },
       });

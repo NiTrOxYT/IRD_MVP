@@ -113,7 +113,7 @@ function MediaPreviewThumb({
           />
         )}
         <span className="pointer-events-none absolute inset-0 flex items-center justify-center bg-black/25">
-          <span className="flex h-5 w-5 items-center justify-center rounded-full border border-white/60 bg-black/65 text-white backdrop-blur-xs">
+          <span className="flex h-5 w-5 items-center justify-center rounded-full border border-white/60 bg-black/75 text-white">
             <Play className="h-2.5 w-2.5 fill-white ml-0.5" />
           </span>
         </span>
@@ -258,8 +258,8 @@ export function AttractionsGuestPortal({
       mm.add("(prefers-reduced-motion: no-preference)", () => {
         gsap.fromTo(
           ".gsap-attr-hud",
-          { autoAlpha: 0, y: 18 },
-          { autoAlpha: 1, y: 0, duration: 0.45, ease: "power3.out", clearProps: "transform" }
+          { autoAlpha: 0, y: 10 },
+          { autoAlpha: 1, y: 0, duration: 0.28, ease: "power2.out", force3D: true, clearProps: "transform" }
         );
       });
     },

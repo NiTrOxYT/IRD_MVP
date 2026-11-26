@@ -147,7 +147,7 @@
 
   body {
     @apply font-sans antialiased bg-background text-foreground;
-    min-height: 100dvh;
+    min-height: 100svh;
     background-color: #FAF8F5;
     color: #1F1B18;
   }
@@ -226,8 +226,10 @@
     border-color 180ms ease;
 }
 
-.card-smooth-press:active {
-  transform: scale3d(0.985, 0.985, 1);
+@media (hover: hover) and (pointer: fine) {
+  .card-smooth-press:active {
+    transform: scale3d(0.985, 0.985, 1);
+  }
 }
 
 /* =========================================================================
@@ -560,6 +562,44 @@
   background: #FFFFFF;
 }
 
+/* Landing Hero & Warm Sandstone-Terracotta Dock Tokens */
+.luma-hero-scrim {
+  background:
+    radial-gradient(ellipse at 72% 44%, rgba(235, 118, 66, 0.22) 0%, rgba(128, 36, 12, 0.15) 48%, rgba(36, 9, 4, 0.56) 100%),
+    linear-gradient(180deg, rgba(44, 11, 5, 0.62) 0%, rgba(82, 24, 10, 0.36) 38%, rgba(58, 16, 7, 0.68) 76%, rgba(28, 8, 3, 0.96) 100%);
+}
+
+.luma-squircle {
+  background: rgba(88, 28, 12, 0.54);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  color: rgba(255, 255, 255, 0.92);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.14);
+}
+
+.luma-squircle:hover {
+  background: rgba(124, 42, 18, 0.68);
+  border-color: rgba(255, 255, 255, 0.28);
+}
+
+.luma-squircle-active {
+  background: linear-gradient(180deg, #FF5A0A 0%, #E84600 100%);
+  border: 1px solid rgba(255, 180, 130, 0.55);
+  color: #FFFFFF;
+  box-shadow:
+    0 12px 26px -8px rgba(255, 81, 0, 0.62),
+    inset 0 1px 0 rgba(255, 255, 255, 0.32);
+}
+
+.luma-dock {
+  background: rgba(46, 16, 8, 0.84);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.18),
+    0 18px 40px -10px rgba(10, 3, 1, 0.72);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
 .backdrop-fade-enter {
   animation: backdrop-fade-enter 200ms ease-out both;
 }
@@ -604,27 +644,27 @@
   }
 }
 
-.card-3d-wrap:active .card-3d-surface {
-  transform: scale3d(0.982, 0.982, 1) translate3d(0, 0, 0);
-}
-
-.card-3d-glare::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  border-radius: inherit;
-  pointer-events: none;
-  opacity: 0;
-  background: radial-gradient(420px circle at var(--mx) var(--my),
-      rgba(236, 215, 169, 0.2),
-      transparent 62%);
-  transition: opacity 220ms ease;
-  z-index: 20;
-}
-
 @media (hover: hover) and (pointer: fine) {
+  .card-3d-glare::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    pointer-events: none;
+    opacity: 0;
+    background: radial-gradient(420px circle at var(--mx) var(--my),
+        rgba(236, 215, 169, 0.2),
+        transparent 62%);
+    transition: opacity 220ms ease;
+    z-index: 20;
+  }
+
   .card-3d-wrap:hover .card-3d-glare::after {
     opacity: 1;
+  }
+
+  .card-3d-wrap:active .card-3d-surface {
+    transform: scale3d(0.982, 0.982, 1) translate3d(0, 0, 0);
   }
 }
 

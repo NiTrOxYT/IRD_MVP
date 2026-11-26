@@ -15,7 +15,7 @@ export function RoomServiceCatalogGrid({ services, onSelectService }: RoomServic
   useGSAP(
     () => {
       if (!gridRef.current) return;
-      setupScrollBatchCards(gridRef.current, ".gsap-rs-card", { stagger: 0.06, y: 22, start: "top 92%" });
+      setupScrollBatchCards(gridRef.current, ".gsap-rs-card", { stagger: 0.035, y: 12, start: "top 95%" });
     },
     { scope: gridRef, dependencies: [services.length] }
   );

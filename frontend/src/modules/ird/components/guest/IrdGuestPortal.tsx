@@ -236,12 +236,12 @@ export function IrdGuestPortal({
   return (
     <>
       {(onBackToHub || onSwitchToRoomService) && (
-        <div className="mx-auto max-w-md sm:max-w-2xl lg:max-w-4xl flex items-center justify-between gap-2">
+        <div className="mx-auto max-w-md sm:max-w-2xl lg:max-w-4xl flex items-center justify-between gap-2 pb-1">
           {onBackToHub ? (
             <button
               type="button"
               onClick={onBackToHub}
-              className="inline-flex items-center gap-1 text-xs font-bold px-3.5 py-1.5 rounded-full frost-cta-white btn-smooth-press-sm"
+              className="inline-flex items-center gap-1 text-xs font-bold px-3.5 py-1.5 rounded-full border border-[#E5D7C6] bg-[#FFFBF6] text-[#3D1C11] hover:bg-[#F3E7DA] btn-smooth-press-sm"
             >
               <ChevronLeft size={16} /> All Services
             </button>
@@ -252,9 +252,9 @@ export function IrdGuestPortal({
             <button
               type="button"
               onClick={onSwitchToRoomService}
-              className="inline-flex items-center gap-1.5 text-xs font-semibold px-3.5 py-1.5 rounded-full frost-pill-chip text-white btn-smooth-press-sm"
+              className="inline-flex items-center gap-1.5 text-xs font-semibold px-3.5 py-1.5 rounded-full border border-[#E5D7C6] bg-[#FFFBF6] text-[#5B4137] hover:bg-[#F3E7DA] btn-smooth-press-sm"
             >
-              <SuiteCareBellIcon className="w-3.5 h-3.5 text-white" /> Room Service
+              <SuiteCareBellIcon className="w-3.5 h-3.5 text-[#C44D27]" /> Suite Care
             </button>
           )}
         </div>
@@ -266,6 +266,7 @@ export function IrdGuestPortal({
       >
         {activeTab === "menu" ? (
           <IrdMenuBrowser
+            roomNumber={roomNumber}
             categories={categories}
             items={items}
             menuLoading={menuLoading}
@@ -274,6 +275,7 @@ export function IrdGuestPortal({
             onOpenItemDetails={handleOpenItemDetails}
             onQuickAdd={(item) => addToCart(item, null, [], "", 1)}
             onUpdateCartQuantity={updateCartQuantity}
+            onSwitchToRoomService={onSwitchToRoomService}
           />
         ) : (
           <IrdOrdersTracker
@@ -289,16 +291,16 @@ export function IrdGuestPortal({
       </PageTransition>
 
       {cart.length > 0 && activeTab === "menu" && (
-        <div className="fixed bottom-[calc(4.65rem+env(safe-area-inset-bottom))] inset-x-0 z-30 px-3.5 max-w-md mx-auto zomato-cart-enter">
+        <div className="fixed bottom-[calc(4.9rem+env(safe-area-inset-bottom))] inset-x-0 z-30 px-3.5 max-w-md mx-auto zomato-cart-enter">
           <button
             type="button"
             onClick={() => setIsCartOpen(true)}
-            className="w-full frost-component-card text-white px-4 py-3 rounded-[26px] flex items-center justify-between cursor-pointer btn-smooth-press"
+            className="w-full border border-[#E2D4C4] bg-[#3D1C11] text-white px-4 py-3 rounded-[22px] shadow-[0_14px_30px_-8px_rgba(61,28,17,0.45)] flex items-center justify-between cursor-pointer btn-smooth-press"
           >
             <div className="flex items-center gap-3">
               <div
                 key={totalCartCount}
-                className="h-9 min-w-9 px-2.5 rounded-full frost-pill-chip text-white flex items-center justify-center font-bold text-xs font-mono tabular-nums zomato-qty-pop"
+                className="h-9 min-w-9 px-2.5 rounded-full bg-[#C44D27] text-white flex items-center justify-center font-bold text-xs font-mono tabular-nums zomato-qty-pop"
               >
                 {totalCartCount} {totalCartCount === 1 ? "item" : "items"}
               </div>
@@ -306,13 +308,13 @@ export function IrdGuestPortal({
                 <span className="block text-[10px] uppercase tracking-wider text-white/75 font-bold tabular-nums">
                   Suite {roomNumber} · {formatPrice(subtotal)}
                 </span>
-                <span className="font-sans text-xs font-semibold text-white">Extra charges may apply</span>
+                <span className="font-sans text-xs font-semibold text-white">Tap to review order</span>
               </div>
             </div>
 
-            <div className="flex items-center gap-1.5 rounded-full frost-cta-white px-3.5 py-1.5 font-bold text-xs">
+            <div className="flex items-center gap-1.5 rounded-full bg-[#FFFBF6] text-[#3D1C11] px-3.5 py-1.5 font-bold text-xs">
               <span>View Cart</span>
-              <ArrowRight className="w-3.5 h-3.5" />
+              <ArrowRight className="w-3.5 h-3.5 text-[#C44D27]" />
             </div>
           </button>
         </div>
