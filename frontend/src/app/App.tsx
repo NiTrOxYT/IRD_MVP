@@ -30,6 +30,9 @@ import { AdminAttractions } from "../modules/attractions/pages/AdminAttractionsP
 // FAQ Module Pages
 import { AdminFaq } from "../modules/faq/pages/AdminFaqPage";
 
+// Guest Inbox Module Pages
+import { AdminInbox } from "../modules/inbox";
+
 export function App() {
   const [location] = useLocation();
   const isStaffRoute =
@@ -47,6 +50,7 @@ export function App() {
       <Route path="/stay/menu" component={GuestPortalShell} />
       <Route path="/stay/housekeeping" component={GuestPortalShell} />
       <Route path="/stay/attractions" component={GuestPortalShell} />
+      <Route path="/stay/inbox" component={GuestPortalShell} />
       <Route path="/order/:id" component={GuestOrderTracking} />
       <Route path="/orders" component={GuestPortalShell} />
 
@@ -70,6 +74,7 @@ export function App() {
       <Route path="/admin/menu" component={AdminMenu} />
       <Route path="/admin/attractions" component={AdminAttractions} />
       <Route path="/admin/faq" component={AdminFaq} />
+      <Route path="/admin/inbox" component={AdminInbox} />
       <Route path="/admin/inventory" component={AdminInventory} />
       <Route path="/admin/users" component={AdminUsers} />
       <Route path="/admin/settings" component={AdminSettings} />

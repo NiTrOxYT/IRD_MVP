@@ -1,5 +1,6 @@
-import React from "react";
-import { AlertCircle, ArrowRight, Clock } from "lucide-react";
+import React, { useRef } from "react";
+import { AlertCircle, Clock } from "lucide-react";
+import { gsap, smoothScrollToTarget, useGSAP } from "../../../../core/ui/gsap";
 import type { IrdPropertyConfig } from "../../types";
 
 interface IrdHeroBannerProps {
@@ -8,62 +9,103 @@ interface IrdHeroBannerProps {
 }
 
 export function IrdHeroBanner({ property, onExploreClick }: IrdHeroBannerProps) {
+  const bannerRef = useRef<HTMLElement>(null);
+
+  useGSAP(
+    () => {
+      const el = bannerRef.current;
+      if (!el) return;
+
+      const mm = gsap.matchMedia();
+      mm.add("(prefers-reduced-motion: no-preference)", () => {
+        gsap.fromTo(
+          el,
+          { autoAlpha: 0, y: 14 },
+          { autoAlpha: 1, y: 0, duration: 0.36, ease: "power2.out", force3D: true, clearProps: "transform" }
+        );
+      });
+      mm.add("(pointer: fine) and (prefers-reduced-motion: no-preference)", () => {
+        gsap.to(".gsap-ird-hero-img", {
+          yPercent: 12,
+          ease: "none",
+          force3D: true,
+          scrollTrigger: {
+            trigger: el,
+            start: "top top",
+            end: "bottom top",
+            scrub: 0.5,
+          },
+        });
+      });
+    },
+    { scope: bannerRef }
+  );
+
   return (
-    <section className="overflow-hidden rounded-xl border border-[rgba(20,18,16,0.1)] bg-white shadow-[0_1px_2px_rgba(20,18,16,0.03)]">
-      <div className="grid grid-cols-1 sm:grid-cols-[1.15fr_0.85fr]">
-        <div className="flex flex-col justify-between gap-4 p-5 sm:p-7">
-          <div className="space-y-2.5">
-            <h1 className="font-serif text-[30px] font-semibold leading-[1.06] tracking-[-0.02em] text-[#141210] sm:text-[38px]">
-              In-Room Dining
-            </h1>
-            <p className="max-w-[40ch] text-[13px] leading-relaxed text-[#5C554E]">
-              Prepared to order in our kitchen and served directly to your suite.
-            </p>
-          </div>
+    <section
+      ref={bannerRef}
+      className="relative overflow-hidden rounded-[32px] frost-component-card"
+    >
+      <div className="relative h-[210px] sm:h-[250px] w-full overflow-hidden">
+        <img
+          src="/in-room-dining-card.jpg"
+          alt="Artisanal In-Room Dining"
+          loading="eager"
+          decoding="async"
+          className="gsap-ird-hero-img h-full w-full scale-105 object-cover object-center"
+          onError={(e) => {
+            (e.target as HTMLImageElement).src = "/hero-cafe-banner.jpg";
+          }}
+        />
+        <div className="pointer-events-none absolute inset-0 frost-component-fade" />
 
-          <div className="flex flex-wrap items-center gap-3 pt-1">
-            <button
-              type="button"
-              onClick={
-                onExploreClick ||
-                (() => document.getElementById("ird-menu-items")?.scrollIntoView({ behavior: "smooth" }))
-              }
-              className="inline-flex h-9 items-center gap-2 rounded-lg bg-[#141210] px-4 text-xs font-medium text-white transition-colors hover:bg-[#2B2622] btn-smooth-press"
-            >
-              <span>Browse Menu</span>
-              <ArrowRight className="h-3.5 w-3.5 text-[#D9C7A3]" strokeWidth={1.5} />
-            </button>
+        <div className="absolute bottom-3 inset-x-0 flex justify-center gap-1.5">
+          <span className="h-1.5 w-1.5 rounded-full bg-white" />
+          <span className="h-1.5 w-1.5 rounded-full bg-white/40" />
+          <span className="h-1.5 w-1.5 rounded-full bg-white/40" />
+        </div>
+      </div>
 
-            {property?.openingTime?.trim() && property?.closingTime?.trim() && (
-              <span className="inline-flex items-center gap-1.5 text-xs text-[#5C554E] tabular-nums">
-                <Clock className="h-3.5 w-3.5 text-[#966F29]" strokeWidth={1.5} />
-                <span>
-                  {property.openingTime} – {property.closingTime}
-                </span>
-              </span>
-            )}
-          </div>
+      <div className="relative z-10 -mt-3 space-y-3.5 px-5 pb-6 sm:px-7 sm:pb-7">
+        <div className="flex items-start justify-between gap-3">
+          <h2 className="font-sans text-[22px] sm:text-[28px] font-bold tracking-tight text-white leading-tight">
+            In-Room Dining
+          </h2>
+          <span className="shrink-0 inline-flex items-center gap-1.5 rounded-full frost-pill-chip px-3 py-1 text-xs font-bold text-white tabular-nums">
+            <Clock className="h-3 w-3 text-white/80" />
+            20–25m
+          </span>
+        </div>
 
-          {property && !property.irdEnabled && (
-            <div className="flex items-center gap-2 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-800">
-              <AlertCircle className="h-3.5 w-3.5 shrink-0 text-rose-600" strokeWidth={1.5} />
-              <span>Ordering is currently paused by front desk.</span>
-            </div>
+        <p className="text-[12.5px] sm:text-[13.5px] leading-relaxed text-white/75 max-w-[52ch]">
+          Freshly prepared dishes, artisan coffees, and chef specials plated and delivered straight to your suite.
+        </p>
+
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="rounded-full frost-pill-chip px-3 py-1 text-[11px] font-semibold">
+            Chef Curated
+          </span>
+          {property?.openingTime?.trim() && property?.closingTime?.trim() && (
+            <span className="rounded-full frost-pill-chip px-3 py-1 text-[11px] font-semibold tabular-nums">
+              {property.openingTime} – {property.closingTime}
+            </span>
           )}
         </div>
 
-        <div className="relative aspect-[16/10] w-full overflow-hidden border-t border-[rgba(20,18,16,0.08)] bg-[#EFECE5] sm:aspect-auto sm:min-h-[210px] sm:border-l sm:border-t-0">
-          <img
-            src="/banner.png"
-            alt="Suite culinary service"
-            loading="eager"
-            decoding="async"
-            className="h-full w-full object-cover object-center"
-            onError={(e) => {
-              (e.target as HTMLImageElement).src = "/hero-cafe-banner.jpg";
-            }}
-          />
-        </div>
+        {property && !property.irdEnabled && (
+          <div className="p-2.5 rounded-2xl bg-rose-500/20 border border-rose-300/35 text-rose-100 text-[11px] font-medium flex items-center gap-1.5">
+            <AlertCircle className="w-3.5 h-3.5 text-rose-300 shrink-0" />
+            <span>In-room ordering paused by front desk.</span>
+          </div>
+        )}
+
+        <button
+          type="button"
+          onClick={onExploreClick || (() => smoothScrollToTarget("#ird-menu-items", 68))}
+          className="flex w-full items-center justify-center rounded-full frost-cta-white py-3 text-[13px] font-bold btn-smooth-press cursor-pointer"
+        >
+          Explore Menu
+        </button>
       </div>
     </section>
   );

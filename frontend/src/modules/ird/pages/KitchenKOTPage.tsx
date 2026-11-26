@@ -175,11 +175,13 @@ export function KitchenKOT() {
             <span className="text-sm text-[#A89886]">Connecting to Kitchen Order Tickets...</span>
           </div>
         ) : tickets.length === 0 ? (
-          <div className="bg-[#292019] border border-[#3D3025] rounded-xl p-14 text-center max-w-lg mx-auto shadow-xl">
-            <ChefHat className="w-8 h-8 text-[#D9C7A3] mx-auto mb-3" strokeWidth={1.4} />
-            <h3 className="font-serif text-2xl font-semibold text-white mb-1.5">All Culinary Tickets Clear</h3>
+          <div className="bg-[#292019] border border-[#3D3025] rounded-3xl p-16 text-center max-w-lg mx-auto shadow-xl">
+            <div className="w-16 h-16 rounded-3xl bg-[#1E150F] text-[#B88223] flex items-center justify-center mx-auto mb-4 border border-[#3D3025]">
+              <ChefHat className="w-8 h-8" />
+            </div>
+            <h3 className="font-serif text-xl font-bold text-white mb-1.5">All Culinary Tickets Clear</h3>
             <p className="text-xs text-[#A89886] leading-relaxed">
-              No active in-room dining tickets currently require preparation. New orders chime automatically.
+              No active in-room dining tickets currently require preparation. New orders will chime automatically.
             </p>
           </div>
         ) : (

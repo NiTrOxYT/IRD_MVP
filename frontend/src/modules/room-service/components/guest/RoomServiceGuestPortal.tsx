@@ -1,5 +1,6 @@
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import { AlertCircle, CheckCircle2, ChevronLeft } from "lucide-react";
+import { gsap, useGSAP } from "../../../../core/ui/gsap";
 import { ROOM_SERVICE_CATALOG } from "../../catalog";
 import { useRoomServiceAdapter } from "../../adapter";
 import type { HousekeepingRequest, RoomServiceCatalogItem } from "../../types";
@@ -25,6 +26,8 @@ export function RoomServiceGuestPortal({
   catalog = ROOM_SERVICE_CATALOG,
 }: RoomServiceGuestPortalProps) {
   const { api, realtime } = useRoomServiceAdapter();
+  const rsRootRef = useRef<HTMLDivElement>(null);
+  const heroRef = useRef<HTMLDivElement>(null);
   const [internalRequests, setInternalRequests] = useState<HousekeepingRequest[]>([]);
   const requests = controlledRequests ?? internalRequests;
   const setRequests = onRequestsChange ?? setInternalRequests;
@@ -61,6 +64,35 @@ export function RoomServiceGuestPortal({
     };
   }, [controlledRequests, fetchRequests, realtime, setRequests]);
 
+  useGSAP(
+    () => {
+      const mm = gsap.matchMedia();
+      mm.add("(prefers-reduced-motion: no-preference)", () => {
+        if (!heroRef.current) return;
+        gsap.fromTo(
+          heroRef.current,
+          { autoAlpha: 0, y: 14 },
+          { autoAlpha: 1, y: 0, duration: 0.36, ease: "power2.out", force3D: true, clearProps: "transform" }
+        );
+      });
+      mm.add("(pointer: fine) and (prefers-reduced-motion: no-preference)", () => {
+        if (!heroRef.current) return;
+        gsap.to(".gsap-rs-hero-img", {
+          yPercent: 12,
+          ease: "none",
+          force3D: true,
+          scrollTrigger: {
+            trigger: heroRef.current,
+            start: "top top",
+            end: "bottom top",
+            scrub: 0.5,
+          },
+        });
+      });
+    },
+    { scope: rsRootRef }
+  );
+
   const handleConfirmRequest = async () => {
     if (!selectedService || isSubmitting) return;
     setIsSubmitting(true);
@@ -93,48 +125,74 @@ export function RoomServiceGuestPortal({
   };
 
   return (
-    <div className="mx-auto max-w-5xl space-y-5">
+    <div ref={rsRootRef} className="mx-auto max-w-md sm:max-w-2xl lg:max-w-4xl space-y-5 sm:space-y-6">
       {onBackToHub && (
         <div className="flex items-center justify-between gap-2">
           <button
             type="button"
             onClick={onBackToHub}
-            className="inline-flex h-8 items-center gap-1 rounded-lg border border-[rgba(20,18,16,0.12)] bg-white px-2.5 text-xs font-medium text-[#141210] transition-colors hover:border-[rgba(20,18,16,0.26)] btn-smooth-press-sm"
+            className="inline-flex items-center gap-1 text-xs font-bold px-3.5 py-1.5 rounded-full frost-cta-white btn-smooth-press-sm"
           >
-            <ChevronLeft className="h-3.5 w-3.5 text-[#5C554E]" strokeWidth={1.5} />
-            <span>All Services</span>
+            <ChevronLeft size={16} /> All Services
           </button>
-          <span className="text-xs text-[#5C554E] tabular-nums">
-            Suite <strong className="font-medium text-[#141210]">{roomNumber}</strong>
-          </span>
+          <div className="text-[11px] text-white/75 tabular-nums frost-pill-chip px-3 py-1 rounded-full">
+            Suite <strong className="text-white">{roomNumber}</strong>
+          </div>
         </div>
       )}
 
-      {/* Editorial Header */}
-      <section className="rounded-xl border border-[rgba(20,18,16,0.1)] bg-white p-5 sm:p-7">
-        <div className="max-w-xl space-y-2">
-          <h1 className="font-serif text-[30px] font-semibold leading-tight tracking-[-0.02em] text-[#141210] sm:text-[36px]">
-            Suite Care & Replenishment
-          </h1>
-          <p className="text-[13px] leading-relaxed text-[#5C554E]">
-            Request housekeeping, linen refresh, bath amenities, or luggage assistance directly to Suite {roomNumber}.
-          </p>
+      {/* Reference 2 Frosted Component Hero Card */}
+      <div ref={heroRef} className="relative overflow-hidden rounded-[32px] frost-component-card">
+        <div className="relative h-[196px] sm:h-[230px] w-full overflow-hidden">
+          <img
+            src="/room-service-card.jpg"
+            alt="Room Service & Suite Care"
+            className="gsap-rs-hero-img h-full w-full scale-105 object-cover object-center"
+          />
+          <div className="pointer-events-none absolute inset-0 frost-component-fade" />
+          <div className="absolute bottom-3 inset-x-0 flex justify-center gap-1.5">
+            <span className="h-1.5 w-1.5 rounded-full bg-white" />
+            <span className="h-1.5 w-1.5 rounded-full bg-white/40" />
+            <span className="h-1.5 w-1.5 rounded-full bg-white/40" />
+          </div>
         </div>
-      </section>
+
+        <div className="relative z-10 -mt-3 space-y-3 px-5 pb-6 sm:px-7 sm:pb-7">
+          <div className="flex items-start justify-between gap-3">
+            <h2 className="font-sans text-[22px] sm:text-[28px] font-bold tracking-tight text-white leading-tight">
+              Room Service & Suite Care
+            </h2>
+            <span className="shrink-0 rounded-full frost-pill-chip px-3 py-1 text-xs font-bold text-white">
+              Complimentary
+            </span>
+          </div>
+          <p className="text-[12.5px] sm:text-[13.5px] text-white/75 leading-relaxed max-w-[54ch]">
+            Select an item below to place a request. Our housekeeping and butler team will attend Suite {roomNumber} promptly.
+          </p>
+          <div className="flex flex-wrap gap-2">
+            <span className="rounded-full frost-pill-chip px-3 py-1 text-[11px] font-semibold">
+              Direct Dispatch
+            </span>
+            <span className="rounded-full frost-pill-chip px-3 py-1 text-[11px] font-semibold">
+              24/7 Care
+            </span>
+          </div>
+        </div>
+      </div>
 
       {/* Feedback Alert */}
       {feedback && (
         <div
-          className={`flex items-start gap-3 rounded-xl border p-4 text-xs animate-in fade-in ${
+          className={`p-4 rounded-[22px] border text-xs flex items-start gap-3 zomato-cart-enter ${
             feedback.type === "success"
-              ? "border-emerald-200 bg-emerald-50 text-emerald-900"
-              : "border-rose-200 bg-rose-50 text-rose-900"
+              ? "bg-emerald-500/20 border-emerald-300/35 text-emerald-100"
+              : "bg-rose-500/20 border-rose-300/35 text-rose-100"
           }`}
         >
           {feedback.type === "success" ? (
-            <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-700" strokeWidth={1.5} />
+            <CheckCircle2 className="w-4 h-4 text-emerald-300 shrink-0 mt-0.5" />
           ) : (
-            <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-rose-700" strokeWidth={1.5} />
+            <AlertCircle className="w-4 h-4 text-rose-300 shrink-0 mt-0.5" />
           )}
           <span className="leading-relaxed">{feedback.message}</span>
         </div>

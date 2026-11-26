@@ -4,6 +4,13 @@ export interface AttractionMediaItem {
   caption?: string;
 }
 
+export interface AttractionPricingOption {
+  id: string;
+  label: string;
+  price: number | null;
+  details?: string | null;
+}
+
 export interface LocalAttraction {
   id: number;
   propertyId: number;
@@ -19,6 +26,7 @@ export interface LocalAttraction {
   entryFee: number | null;
   packagePrice: number | null;
   packageDetails: string | null;
+  pricingOptions?: AttractionPricingOption[];
   media: AttractionMediaItem[];
   isFeatured: boolean;
   isActive: boolean;

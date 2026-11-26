@@ -1,16 +1,19 @@
-import React from "react";
-import { ArrowRight, Phone } from "lucide-react";
-import type { VerifiedStaySession } from "../property/propertyTypes";
+import React, { useRef } from "react";
+import { Clock, Mail, PhoneCall } from "lucide-react";
+import type { PropertySettings, VerifiedStaySession } from "../property/propertyTypes";
+import { gsap, setupScrollBatchCards, useGSAP } from "../ui/gsap";
 import { Tilt3DCard } from "../ui/MotionPrimitives";
-import { ArchFolioIcon } from "../ui/EnterpriseIcons";
 
 export interface GuestServiceTile {
   id: string;
+  badge: string;
   title: string;
+  subtitle: string;
   description: string;
   ctaLabel: string;
   imageSrc: string;
   icon: React.ReactNode;
+  iconWrapperClassName?: string;
   activeBadgeText?: string | null;
   statusSummaryText?: string | null;
   statusActionLabel?: string | null;
@@ -20,69 +23,165 @@ export interface GuestServiceTile {
 
 interface GuestServiceHubProps {
   stay: VerifiedStaySession;
+  property?: PropertySettings | null;
   services: GuestServiceTile[];
+  unreadInboxCount?: number;
+  onOpenMenu?: () => void;
+  onOpenOrders?: () => void;
+  onOpenHousekeeping?: () => void;
+  onOpenAttractions?: () => void;
+  onOpenInbox?: () => void;
+  onScrollToFaq?: () => void;
 }
 
-export function GuestServiceHub({ stay, services }: GuestServiceHubProps) {
+export function GuestServiceHub({
+  stay,
+  property,
+  services,
+  unreadInboxCount = 0,
+  onOpenMenu,
+  onOpenInbox,
+  onScrollToFaq,
+}: GuestServiceHubProps) {
+  const hubRef = useRef<HTMLDivElement>(null);
+  const heroRef = useRef<HTMLElement>(null);
   const activeServices = services.filter((s) => Boolean(s.statusSummaryText));
+  const propertyName = property?.name?.trim() || "Seaview Sanctuary";
+  const heroPhoto = property?.welcomeBgUrl || "/suite-welcome-card.jpg";
+
+  useGSAP(
+    () => {
+      const root = hubRef.current;
+      if (!root) return;
+
+      const mm = gsap.matchMedia();
+      mm.add("(pointer: fine) and (prefers-reduced-motion: no-preference)", () => {
+        if (heroRef.current) {
+          gsap.to(".gsap-hub-hero-photo", {
+            yPercent: 12,
+            ease: "none",
+            force3D: true,
+            scrollTrigger: {
+              trigger: heroRef.current,
+              start: "top top",
+              end: "bottom top",
+              scrub: 0.5,
+            },
+          });
+        }
+      });
+
+      setupScrollBatchCards(root, ".gsap-hub-card", { stagger: 0.055, y: 16 });
+    },
+    { scope: hubRef }
+  );
 
   return (
-    <div className="mx-auto max-w-5xl space-y-5 sm:space-y-7">
-      {/* Asymmetric Editorial Suite Masthead */}
-      <section className="overflow-hidden rounded-xl border border-[rgba(20,18,16,0.1)] bg-white shadow-[0_1px_2px_rgba(20,18,16,0.03)]">
-        <div className="grid grid-cols-1 md:grid-cols-[1.15fr_0.85fr]">
-          <div className="flex flex-col justify-between gap-5 p-6 sm:p-8 lg:p-10">
-            <div className="space-y-3">
-              <p className="text-xs font-medium text-[#847C73]">
-                Prepared for {stay.guestName || "Guest"}
-              </p>
-              <h1 className="font-serif text-[34px] font-semibold leading-[1.04] tracking-[-0.02em] text-[#141210] sm:text-[44px]">
-                Suite <span className="tabular-nums">{stay.room?.roomNumber}</span>
-              </h1>
-              <p className="max-w-[44ch] text-[13.5px] leading-relaxed text-[#5C554E] sm:text-sm">
-                Private dining, suite replenishment, and curated local itineraries dispatched directly to our hospitality desk.
-              </p>
-            </div>
+    <div ref={hubRef} className="mx-auto max-w-md sm:max-w-2xl lg:max-w-4xl space-y-5 sm:space-y-6">
+      {/* Reference 2 Frosted Component Hero Card (Top Photo -> Seamless Frosted Dark Surface) */}
+      <section
+        ref={heroRef}
+        className="gsap-hub-card relative overflow-hidden rounded-[32px] frost-component-card"
+      >
+        <div className="relative h-[220px] sm:h-[260px] w-full overflow-hidden">
+          <img
+            src={heroPhoto}
+            alt={propertyName}
+            className="gsap-hub-hero-photo h-full w-full scale-105 object-cover object-center"
+            onError={(e) => {
+              (e.target as HTMLImageElement).src = "/suite-welcome-card.jpg";
+            }}
+          />
+          <div className="pointer-events-none absolute inset-0 frost-component-fade" />
 
-            <div className="flex flex-wrap items-center gap-x-5 gap-y-2 border-t border-[rgba(20,18,16,0.08)] pt-4 text-xs text-[#5C554E]">
-              <span>24-hour suite reception</span>
-              <span className="h-3 w-px bg-[rgba(20,18,16,0.14)]" aria-hidden="true" />
-              <span>Real-time kitchen & butler status</span>
-            </div>
+          {/* Subtle carousel indicator dots matching Reference 2 */}
+          <div className="absolute bottom-3 inset-x-0 flex justify-center gap-1.5">
+            <span className="h-1.5 w-1.5 rounded-full bg-white" />
+            <span className="h-1.5 w-1.5 rounded-full bg-white/40" />
+            <span className="h-1.5 w-1.5 rounded-full bg-white/40" />
+          </div>
+        </div>
+
+        <div className="relative z-10 -mt-3 space-y-3.5 px-5 pb-6 sm:px-7 sm:pb-7">
+          <div className="flex items-start justify-between gap-3">
+            <h2 className="font-sans text-[22px] sm:text-[28px] font-bold tracking-tight text-white leading-tight">
+              {propertyName}
+            </h2>
+            <span className="shrink-0 rounded-full frost-pill-chip px-3 py-1 text-xs font-bold text-white tabular-nums">
+              Suite {stay.room?.roomNumber}
+            </span>
           </div>
 
-          <div className="relative aspect-[16/10] w-full overflow-hidden border-t border-[rgba(20,18,16,0.08)] bg-[#EFECE5] md:aspect-auto md:min-h-[260px] md:border-l md:border-t-0">
-            <img
-              src="/suite-welcome-card.jpg"
-              alt={`Suite ${stay.room?.roomNumber || ""} interior`}
-              className="h-full w-full object-cover object-center"
-            />
+          <p className="text-[12.5px] sm:text-[13.5px] leading-relaxed text-white/75 max-w-[54ch]">
+            Welcome, {stay.guestName}. Browse bespoke in-suite dining, housekeeping care, and curated local discoveries from one calm place.
+          </p>
+
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="rounded-full frost-pill-chip px-3 py-1 text-[11px] font-semibold">
+              In-Suite Butler
+            </span>
+            <span className="rounded-full frost-pill-chip px-3 py-1 text-[11px] font-semibold">
+              24/7 Live Service
+            </span>
+            {onOpenInbox && (
+              <button
+                type="button"
+                onClick={onOpenInbox}
+                className="inline-flex items-center gap-1.5 rounded-full frost-pill-chip px-3 py-1 text-[11px] font-semibold cursor-pointer"
+              >
+                <Mail className="h-3 w-3" />
+                <span>Suite Inbox</span>
+                {unreadInboxCount > 0 && (
+                  <span className="ml-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-rose-500 px-1 text-[9px] font-bold text-white tabular-nums">
+                    {unreadInboxCount}
+                  </span>
+                )}
+              </button>
+            )}
+            {onScrollToFaq && (
+              <button
+                type="button"
+                onClick={onScrollToFaq}
+                className="rounded-full frost-pill-chip px-3 py-1 text-[11px] font-semibold cursor-pointer"
+              >
+                House Guide
+              </button>
+            )}
           </div>
+
+          <button
+            type="button"
+            onClick={onOpenMenu}
+            className="mt-1 flex w-full items-center justify-center rounded-full frost-cta-white py-3 text-[13px] font-bold btn-smooth-press cursor-pointer"
+          >
+            Browse Dining Menu
+          </button>
         </div>
       </section>
 
-      {/* Live Request Ledger (Only shown when active requests/orders exist) */}
+      {/* Active Requests Tracker Bar */}
       {activeServices.length > 0 && (
-        <section
-          aria-label="Active suite requests"
-          className="flex flex-col gap-3 rounded-xl border border-[#D9C7A3] bg-[#FBF8F1] px-4 py-3.5 sm:flex-row sm:items-center sm:justify-between sm:px-5"
-        >
-          <div className="flex items-start gap-3">
-            <ArchFolioIcon className="mt-0.5 h-4 w-4 shrink-0 text-[#966F29]" />
-            <div className="flex flex-wrap items-center gap-2 text-xs text-[#141210]">
-              <span className="font-semibold">Live dispatch</span>
+        <div className="gsap-hub-card rounded-[28px] frost-component-card p-4 sm:p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+          <div className="space-y-1.5">
+            <div className="text-[11px] font-bold uppercase tracking-wider text-white/90 flex items-center gap-2">
+              <span className="relative flex h-2.5 w-2.5 items-center justify-center">
+                <span className="absolute inline-flex h-full w-full rounded-full bg-emerald-400 zomato-beacon-ring" />
+                <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-400" />
+              </span>
+              <Clock className="w-3.5 h-3.5 text-white/80" /> Active In-Suite Requests
+            </div>
+            <div className="text-xs text-white flex flex-wrap gap-2">
               {activeServices.map((srv) => (
                 <span
                   key={srv.id}
-                  className="inline-flex items-center rounded-md border border-[#E2D4B7] bg-white px-2.5 py-0.5 text-xs font-medium text-[#5C554E] tabular-nums"
+                  className="inline-flex items-center gap-1 rounded-full frost-pill-chip px-3 py-1 text-xs font-semibold"
                 >
                   {srv.statusSummaryText}
                 </span>
               ))}
             </div>
           </div>
-
-          <div className="flex items-center gap-4 self-end sm:self-center">
+          <div className="flex items-center gap-2.5 self-end sm:self-center">
             {activeServices.map(
               (srv) =>
                 srv.statusActionLabel &&
@@ -91,81 +190,94 @@ export function GuestServiceHub({ stay, services }: GuestServiceHubProps) {
                     key={srv.id}
                     type="button"
                     onClick={srv.onStatusAction}
-                    className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#141210] underline underline-offset-4 decoration-[#966F29]/50 transition-colors hover:text-[#966F29]"
+                    className="rounded-full frost-cta-white px-4 py-1.5 text-xs font-bold btn-smooth-press-sm"
                   >
-                    <span>{srv.statusActionLabel}</span>
-                    <ArrowRight className="h-3.5 w-3.5" strokeWidth={1.5} />
+                    {srv.statusActionLabel}
                   </button>
                 )
             )}
           </div>
-        </section>
+        </div>
       )}
 
-      {/* Architectural Service Directory */}
-      <section aria-label="Suite services directory">
-        <div
-          className={`grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-5 ${
-            services.length >= 3 ? "lg:grid-cols-3" : ""
-          }`}
-        >
-          {services.map((srv) => (
-            <Tilt3DCard
-              key={srv.id}
-              maxTilt={3.5}
-              onClick={srv.onSelect}
-              className="cursor-pointer"
-              surfaceClassName="group flex h-full flex-col overflow-hidden rounded-xl border border-[rgba(20,18,16,0.1)] bg-white hover:border-[rgba(20,18,16,0.28)]"
-            >
-              <div className="relative aspect-[16/10] w-full overflow-hidden bg-[#EFECE5]">
+      {/* Main Service Cards — Exact Reference 2 ("Iceland Cabin") Frosted Fade Architecture */}
+      <div
+        className={`grid grid-cols-1 gap-5 sm:grid-cols-2 ${
+          services.length >= 3 ? "lg:grid-cols-3" : ""
+        }`}
+      >
+        {services.map((srv) => (
+          <Tilt3DCard
+            key={srv.id}
+            onClick={srv.onSelect}
+            className="gsap-hub-card cursor-pointer"
+            surfaceClassName="group relative flex h-full flex-col justify-between overflow-hidden rounded-[32px] frost-component-card"
+          >
+            <div>
+              {/* Top Seamless Photo fading straight into Frosted Dark Surface */}
+              <div className="relative h-[196px] w-full overflow-hidden">
                 <img
                   src={srv.imageSrc}
                   alt={srv.title}
-                  className="h-full w-full object-cover object-center transition-transform duration-500 ease-out group-hover:scale-[1.03]"
+                  className="h-full w-full object-cover object-center transition-transform duration-700 group-hover:scale-105"
                 />
-                {srv.activeBadgeText && (
-                  <span className="absolute right-3 top-3 rounded-md border border-[rgba(20,18,16,0.12)] bg-white/95 px-2.5 py-1 text-[11px] font-medium text-[#141210] tabular-nums backdrop-blur-sm">
-                    {srv.activeBadgeText}
+                <div className="pointer-events-none absolute inset-0 frost-component-fade" />
+
+                <div className="absolute bottom-3 inset-x-0 flex justify-center gap-1.5">
+                  <span className="h-1.5 w-1.5 rounded-full bg-white" />
+                  <span className="h-1.5 w-1.5 rounded-full bg-white/40" />
+                  <span className="h-1.5 w-1.5 rounded-full bg-white/40" />
+                </div>
+              </div>
+
+              <div className="-mt-2 px-5 pb-4 space-y-2.5">
+                <div className="flex items-start justify-between gap-2">
+                  <h3 className="font-sans text-[20px] font-bold tracking-tight text-white leading-tight">
+                    {srv.title}
+                  </h3>
+                  <span className="shrink-0 rounded-full frost-pill-chip px-2.5 py-1 text-[11px] font-bold text-white">
+                    {srv.activeBadgeText || "24/7"}
                   </span>
-                )}
-              </div>
-
-              <div className="flex flex-1 flex-col justify-between border-t border-[rgba(20,18,16,0.08)] p-5">
-                <div className="space-y-2">
-                  <div className="flex items-start justify-between gap-3">
-                    <h2 className="font-serif text-[22px] font-semibold leading-tight tracking-[-0.01em] text-[#141210] transition-colors group-hover:text-[#966F29]">
-                      {srv.title}
-                    </h2>
-                    <span className="mt-0.5 shrink-0 text-[#847C73] transition-colors group-hover:text-[#141210]">
-                      {srv.icon}
-                    </span>
-                  </div>
-                  <p className="text-[13px] leading-relaxed text-[#5C554E]">{srv.description}</p>
                 </div>
 
-                <div className="mt-5 flex items-center justify-between border-t border-[rgba(20,18,16,0.07)] pt-3.5 text-xs font-medium text-[#141210]">
-                  <span>{srv.ctaLabel}</span>
-                  <ArrowRight
-                    className="h-3.5 w-3.5 text-[#847C73] transition-transform duration-200 group-hover:translate-x-1 group-hover:text-[#141210]"
-                    strokeWidth={1.5}
-                  />
+                <p className="text-[12.5px] leading-[1.55] text-white/75 line-clamp-3">
+                  {srv.description}
+                </p>
+
+                <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
+                  <span className="rounded-full frost-pill-chip px-3 py-1 text-[11px] font-semibold">
+                    {srv.subtitle}
+                  </span>
+                  <span className="rounded-full frost-pill-chip px-3 py-1 text-[11px] font-semibold">
+                    Suite {stay.room?.roomNumber}
+                  </span>
                 </div>
               </div>
-            </Tilt3DCard>
-          ))}
-        </div>
-      </section>
+            </div>
 
-      {/* Architectural Concierge Footer Strip */}
-      <footer className="flex flex-col gap-2 rounded-xl border border-[rgba(20,18,16,0.09)] bg-white px-5 py-4 text-xs text-[#5C554E] sm:flex-row sm:items-center sm:justify-between">
+            <div className="px-5 pb-5 pt-1">
+              <div className="flex w-full items-center justify-center rounded-full frost-cta-white py-3 text-[13px] font-bold transition-transform duration-200 group-hover:scale-[1.01]">
+                {srv.ctaLabel}
+              </div>
+            </div>
+          </Tilt3DCard>
+        ))}
+      </div>
+
+      {/* Front Desk Extension Frosted Card */}
+      <div className="gsap-hub-card rounded-[26px] frost-component-card p-4 sm:p-5 flex items-center justify-between gap-3 text-xs text-white/75">
         <div className="flex items-center gap-3">
-          <Phone className="h-4 w-4 shrink-0 text-[#966F29]" strokeWidth={1.4} />
-          <span>
-            Concierge desk available 24 hours via in-suite telephone.
-          </span>
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full frost-pill-chip text-white">
+            <PhoneCall className="w-4 h-4" />
+          </div>
+          <div>
+            <span className="font-bold text-white text-sm block">Need Special Concierge Assistance?</span>
+            <span>
+              Dial <strong className="text-white">Extension 0</strong> from your in-suite telephone. Available 24 hours.
+            </span>
+          </div>
         </div>
-        <span className="font-medium text-[#141210] tabular-nums">Dial Extension 0</span>
-      </footer>
+      </div>
     </div>
   );
 }

@@ -16,6 +16,7 @@ import { createIrdModule } from "./modules/ird/module.js";
 import { createRoomServiceModule } from "./modules/room-service/module.js";
 import { createAttractionsModule } from "./modules/attractions/module.js";
 import { createFaqModule } from "./modules/faq/module.js";
+import { createInboxModule } from "./modules/inbox/module.js";
 
 dotenv.config();
 
@@ -44,7 +45,7 @@ app.get("/api/health", (_req: Request, res: Response) => {
   res.json({
     status: "ok",
     service: "Aura Resort Modular Platform API",
-    modules: ["core", "ird", "room-service", "attractions", "faq"],
+    modules: ["core", "ird", "room-service", "attractions", "faq", "inbox"],
     timestamp: new Date().toISOString(),
   });
 });
@@ -57,6 +58,7 @@ const irdModule = createIrdModule(moduleDeps);
 const roomServiceModule = createRoomServiceModule(moduleDeps);
 const attractionsModule = createAttractionsModule(moduleDeps);
 const faqModule = createFaqModule(moduleDeps);
+const inboxModule = createInboxModule(moduleDeps);
 
 // Register permissions & realtime socket handlers for each module
 registerPermissionModules([
@@ -64,11 +66,13 @@ registerPermissionModules([
   ...roomServiceModule.permissions,
   ...attractionsModule.permissions,
   ...faqModule.permissions,
+  ...inboxModule.permissions,
 ]);
 irdModule.registerRealtime();
 roomServiceModule.registerRealtime();
 attractionsModule.registerRealtime();
 faqModule.registerRealtime();
+inboxModule.registerRealtime();
 
 // Initialize WebSocket gateway after modules register their room handlers
 socketGateway.init(server, configuredOrigins.length > 0 ? configuredOrigins : "*");
@@ -79,6 +83,7 @@ app.use("/api", irdModule.router);
 app.use("/api", roomServiceModule.router);
 app.use("/api", attractionsModule.router);
 app.use("/api", faqModule.router);
+app.use("/api", inboxModule.router);
 
 // Global Error Handler
 app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
@@ -106,4 +111,4 @@ if (process.env.NODE_ENV !== "test") {
   startServer();
 }
 
-export { app, server, irdModule, roomServiceModule, attractionsModule, faqModule };
+export { app, server, irdModule, roomServiceModule, attractionsModule, faqModule, inboxModule };

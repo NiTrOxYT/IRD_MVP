@@ -75,6 +75,12 @@ export const PERMISSION_MODULES: PermissionModule[] = [
     actions: ["view", "create", "edit", "delete", "manage"],
   },
   {
+    id: "inbox",
+    name: "Guest Inbox & Notifications",
+    description: "Push targeted room notifications and resort-wide guest inbox announcements",
+    actions: ["view", "create", "edit", "delete", "manage"],
+  },
+  {
     id: "users",
     name: "User Management",
     description: "Staff accounts, role creation, password resets, and access permissions",

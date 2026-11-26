@@ -78,6 +78,12 @@ const DEFAULT_MODULE_PERMISSIONS = [
         description: "Manageable list of frequently asked guest questions and answers",
         actions: ["view", "create", "edit", "delete", "manage"],
     },
+    {
+        id: "inbox",
+        name: "Guest Inbox & Notifications",
+        description: "Push targeted room notifications and resort-wide guest inbox announcements",
+        actions: ["view", "create", "edit", "delete", "manage"],
+    },
     CORE_PERMISSION_MODULES[4],
 ];
 const registeredPermissions = new Map(DEFAULT_MODULE_PERMISSIONS.map((m) => [m.id, m]));

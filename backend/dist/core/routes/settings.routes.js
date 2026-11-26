@@ -15,6 +15,8 @@ function serializeProperty(row) {
         closingTime: row.closing_time,
         logoUrl: row.logo_url,
         contactNumber: row.contact_number,
+        whatsappNumber: row.whatsapp_number ?? null,
+        attractionBookingTemplate: row.attraction_booking_template ?? null,
         welcomeMode: row.welcome_mode || "every_time",
         welcomeMessage: row.welcome_message ?? null,
         welcomeBgUrl: row.welcome_bg_url ?? null,
@@ -41,8 +43,10 @@ export function createSettingsRouter() {
             res.status(400).json({ error: parse.error.errors[0].message });
             return;
         }
-        const { name, currency, taxRatePercent, serviceChargePercent, irdEnabled, openingTime, closingTime, contactNumber, logoUrl, welcomeMode, welcomeMessage, welcomeBgUrl, } = parse.data;
+        const { name, currency, taxRatePercent, serviceChargePercent, irdEnabled, openingTime, closingTime, contactNumber, whatsappNumber, attractionBookingTemplate, logoUrl, welcomeMode, welcomeMessage, welcomeBgUrl, } = parse.data;
         const staff = req.staff;
+        const cleanWhatsappNumber = whatsappNumber === undefined ? undefined : whatsappNumber?.trim() || null;
+        const cleanBookingTemplate = attractionBookingTemplate === undefined ? undefined : attractionBookingTemplate?.trim() || null;
         try {
             const result = await query(`UPDATE properties
          SET name = COALESCE($1, name),
@@ -56,7 +60,9 @@ export function createSettingsRouter() {
              logo_url = CASE WHEN $9 THEN $10 ELSE logo_url END,
              welcome_mode = COALESCE($11, welcome_mode),
              welcome_message = CASE WHEN $12 THEN $13 ELSE welcome_message END,
-             welcome_bg_url = CASE WHEN $14 THEN $15 ELSE welcome_bg_url END
+             welcome_bg_url = CASE WHEN $14 THEN $15 ELSE welcome_bg_url END,
+             whatsapp_number = CASE WHEN $16 THEN $17 ELSE whatsapp_number END,
+             attraction_booking_template = CASE WHEN $18 THEN $19 ELSE attraction_booking_template END
          WHERE id = 1
          RETURNING *`, [
                 name,
@@ -74,6 +80,10 @@ export function createSettingsRouter() {
                 welcomeMessage,
                 welcomeBgUrl !== undefined,
                 welcomeBgUrl,
+                cleanWhatsappNumber !== undefined,
+                cleanWhatsappNumber ?? null,
+                cleanBookingTemplate !== undefined,
+                cleanBookingTemplate ?? null,
             ]);
             await query(`INSERT INTO audit_logs (property_id, staff_user_id, staff_username, action, target_type, target_id, details)
          VALUES ($1, $2, $3, 'SETTINGS_UPDATE', 'settings', '1', $4)`, [

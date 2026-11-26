@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Guest Welcome Envelope & Letter GSAP Animation Timing Configuration
+  Edit any duration, delay, or stagger value below (in seconds) and reload the app.
+  Changes take effect immediately at runtime without rebuilding.
+-->
+<welcomeEnvelopeAnimation>
+  <!-- Pause before the envelope automatically unseals (seconds) -->
+  <autoPlayDelay>0.35</autoPlayDelay>
+
+  <!-- Step 1: Botanical wax seal subtle release before flap lifts -->
+  <sealBreakDuration>0.22</sealBreakDuration>
+
+  <!-- Step 2: Textured burgundy top flap 3D unfold duration -->
+  <flapOpenDuration>0.62</flapOpenDuration>
+
+  <!-- Step 3: Deckle-edge cotton letter glides upward out of envelope pocket -->
+  <letterRiseDuration>0.85</letterRiseDuration>
+
+  <!-- Step 4: Envelope assembly settles into editorial resting center -->
+  <envelopeSettleDuration>0.72</envelopeSettleDuration>
+
+  <!-- Step 5: SplitText ink reveal for "Dear {Guest}," salutation -->
+  <salutationDelay>0.04</salutationDelay>
+  <salutationCharStagger>0.020</salutationCharStagger>
+  <salutationCharDuration>0.40</salutationCharDuration>
+
+  <!-- Step 6: SplitText ink-wash character reveal for welcome letter body -->
+  <bodyCharStagger>0.006</bodyCharStagger>
+  <bodyCharDuration>0.36</bodyCharDuration>
+
+  <!-- Step 7: Cursive signature pen sweep & Enter Suite button entrance -->
+  <signatureDelay>0.08</signatureDelay>
+  <signatureCharStagger>0.022</signatureCharStagger>
+  <signatureCharDuration>0.55</signatureCharDuration>
+  <ctaRevealDuration>0.40</ctaRevealDuration>
+
+  <!-- Step 8: Exit transition duration when guest enters the suite portal -->
+  <exitDuration>0.32</exitDuration>
+</welcomeEnvelopeAnimation>

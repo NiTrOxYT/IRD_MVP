@@ -418,40 +418,43 @@ export function AdminMenu() {
   });
 
   return (
-    <div className="min-h-[100dvh] bg-[#F6F4EF] py-7 px-4 sm:px-6 max-w-7xl mx-auto space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-5 border-b border-[rgba(20,18,16,0.09)]">
+    <div className="min-h-[100dvh] bg-[#FAF8F5] py-8 px-4 sm:px-6 max-w-7xl mx-auto space-y-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-5 border-b border-[#E5DDD1]">
         <div>
-          <h1 className="font-serif text-3xl font-semibold text-[#141210] tracking-[-0.015em]">
+          <span className="text-[10px] font-bold uppercase tracking-widest text-[#8E6314]">
+            Culinary Management · In-Room Dining
+          </span>
+          <h1 className="font-serif text-3xl font-bold text-[#1E150F] tracking-tight mt-0.5">
             Menu Catalog & Categories
           </h1>
-          <p className="text-xs text-[#5C554E] mt-1">
-            Configure dishes, portion variants, pricing in INR, and display order.
+          <p className="text-xs text-[#73685C] mt-1">
+            Configure dishes, portions, sizes, prices in Indian Rupees (₹), and category organization.
           </p>
         </div>
 
-        <div className="flex items-center gap-2 flex-wrap">
+        <div className="flex items-center gap-2.5 flex-wrap">
           <button
             onClick={() => void fetchMenu()}
             disabled={loading}
-            className="inline-flex h-9 items-center gap-1.5 px-3 rounded-lg text-xs font-medium bg-white border border-[rgba(20,18,16,0.12)] text-[#141210] hover:border-[rgba(20,18,16,0.26)] btn-smooth-press-sm cursor-pointer"
+            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold bg-[#FFFDF9] border border-[#E5DDD1] text-[#1E150F] hover:bg-[#FAF8F5] shadow-2xs btn-smooth-press cursor-pointer"
           >
-            <RotateCcw className={cn("w-3.5 h-3.5 text-[#5C554E]", loading && "animate-spin")} strokeWidth={1.5} />
+            <RotateCcw className={cn("w-3.5 h-3.5", loading && "animate-spin")} />
             <span>Refresh</span>
           </button>
 
           <button
             onClick={handleOpenAddCategory}
-            className="inline-flex h-9 items-center gap-1.5 px-3 bg-white hover:border-[rgba(20,18,16,0.26)] text-[#141210] border border-[rgba(20,18,16,0.12)] rounded-lg text-xs font-medium btn-smooth-press-sm cursor-pointer"
+            className="inline-flex items-center gap-1.5 py-2 px-3.5 bg-[#FFFDF9] hover:bg-[#FAF8F5] text-[#1E150F] border border-[#E5DDD1] rounded-xl text-xs font-semibold shadow-2xs btn-smooth-press cursor-pointer"
           >
-            <FolderPlus className="w-3.5 h-3.5 text-[#966F29]" strokeWidth={1.5} />
+            <FolderPlus className="w-4 h-4 text-[#8E6314]" />
             <span>New Category</span>
           </button>
 
           <button
             onClick={handleOpenAddItem}
-            className="inline-flex h-9 items-center gap-1.5 px-3.5 bg-[#141210] hover:bg-[#2B2622] text-white rounded-lg text-xs font-medium btn-smooth-press-sm cursor-pointer"
+            className="inline-flex items-center gap-2 py-2 px-4 bg-[#1E150F] hover:bg-[#29231F] text-white rounded-xl text-xs font-bold shadow-md btn-smooth-press cursor-pointer"
           >
-            <Plus className="w-3.5 h-3.5 text-[#D9C7A3]" strokeWidth={1.5} />
+            <Plus className="w-4 h-4 text-[#B88223]" />
             <span>Add Menu Item</span>
           </button>
         </div>
@@ -554,10 +557,10 @@ export function AdminMenu() {
           </div>
 
           {filteredItems.length === 0 ? (
-            <div className="bg-white border border-[rgba(20,18,16,0.1)] rounded-xl p-10 text-center my-6">
-              <UtensilsCrossed className="w-7 h-7 text-[#847C73] mx-auto mb-2.5" strokeWidth={1.4} />
-              <h3 className="font-serif text-lg font-semibold text-[#141210]">No dishes match your filter</h3>
-              <p className="text-xs text-[#5C554E] mt-1">Try resetting the search or category selection.</p>
+            <div className="bg-[#FFFDF9] border border-[#E5DDD1] rounded-3xl p-8 text-center my-6">
+              <UtensilsCrossed className="w-7 h-7 text-[#B88223] mx-auto mb-2" />
+              <h3 className="font-serif text-base font-bold text-[#1E150F]">No dishes match your filter</h3>
+              <p className="text-xs text-[#73685C] mt-1">Try resetting the search or category selection.</p>
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">

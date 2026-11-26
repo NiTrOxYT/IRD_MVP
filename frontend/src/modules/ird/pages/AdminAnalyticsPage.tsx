@@ -61,23 +61,24 @@ function formatCompact(value: number) {
 
 function MetricCard({ icon, label, value, detail }: { icon: React.ReactNode; label: string; value: string; detail: string }) {
   return (
-    <article className="rounded-xl border border-[rgba(20,18,16,0.09)] bg-white p-4 sm:p-5">
-      <div className="flex items-center justify-between gap-2">
-        <p className="text-xs font-medium text-[#5C554E]">{label}</p>
-        <span className="text-[#847C73]">{icon}</span>
+    <article className="rounded-2xl border border-[#E5DDD1] bg-[#FFFDF9] p-4 shadow-[0_3px_14px_rgba(41,35,31,0.035)] sm:p-5 enterprise-surface-interactive">
+      <div className="flex items-start justify-between gap-3">
+        <span className="grid h-10 w-10 place-items-center rounded-xl border border-[#ECD7A9] bg-[#FAF3E6] text-[#8E6314]">{icon}</span>
+        <span className="mt-1 h-1.5 w-1.5 rounded-full bg-[#B88223]/60" />
       </div>
-      <p className="mt-2 font-sans text-2xl font-semibold tracking-[-0.02em] text-[#141210] tabular-nums sm:text-[26px]">{value}</p>
-      <p className="mt-1 text-xs text-[#847C73] tabular-nums">{detail}</p>
+      <p className="mt-4 text-[10px] font-bold uppercase tracking-[0.15em] text-[#766B61]">{label}</p>
+      <p className="mt-1 font-serif text-[22px] font-bold leading-tight tracking-tight text-[#29231F] tabular-nums sm:text-2xl">{value}</p>
+      <p className="mt-1 text-[11px] leading-relaxed text-[#766B61] tabular-nums">{detail}</p>
     </article>
   );
 }
 
 function Panel({ title, subtitle, children, className }: { title: string; subtitle: string; children: React.ReactNode; className?: string }) {
   return (
-    <section className={cn("min-w-0 rounded-xl border border-[rgba(20,18,16,0.09)] bg-white p-4 sm:p-5", className)}>
+    <section className={cn("min-w-0 rounded-2xl border border-[#E5DDD1] bg-[#FFFDF9] p-4 shadow-[0_3px_14px_rgba(41,35,31,0.035)] sm:p-5", className)}>
       <div className="mb-4">
-        <h3 className="font-serif text-xl font-semibold text-[#141210]">{title}</h3>
-        <p className="mt-0.5 text-xs text-[#5C554E]">{subtitle}</p>
+        <h3 className="font-serif text-lg font-bold text-[#29231F] sm:text-xl">{title}</h3>
+        <p className="mt-0.5 text-[11px] text-[#766B61]">{subtitle}</p>
       </div>
       {children}
     </section>
@@ -220,16 +221,17 @@ export function AdminAnalytics() {
     <main className="mx-auto w-full max-w-7xl space-y-5 px-4 py-5 sm:space-y-6 sm:px-6 sm:py-7">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
         <div>
-          <h1 className="font-serif text-3xl font-semibold tracking-[-0.015em] text-[#141210] sm:text-4xl">Analytics</h1>
-          <p className="mt-1 max-w-xl text-xs leading-relaxed text-[#5C554E]">Revenue, room demand, guest stays, and menu performance from order history.</p>
+          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#8E6314]">IN-ROOM DINING · PERFORMANCE</p>
+          <h1 className="mt-1 font-serif text-3xl font-bold text-[#29231F] sm:text-4xl">Analytics</h1>
+          <p className="mt-1 max-w-xl text-xs leading-relaxed text-[#766B61]">Revenue, room demand, guest stays, and menu performance from your order history.</p>
         </div>
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-          <div className="flex max-w-full gap-1 overflow-x-auto rounded-lg border border-[rgba(20,18,16,0.1)] bg-white p-1 no-scrollbar">
-            {ranges.map(({ key, label }) => <button key={key} onClick={() => setRange(key)} className={cn("shrink-0 rounded-md px-2.5 py-1.5 text-xs font-medium transition-colors", range === key ? "bg-[#141210] text-white" : "text-[#5C554E] hover:bg-[#F6F4EF]")}>{label}</button>)}
+          <div className="flex max-w-full gap-1 overflow-x-auto rounded-xl border border-[#E5DDD1] bg-[#FFFDF9] p-1 no-scrollbar">
+            {ranges.map(({ key, label }) => <button key={key} onClick={() => setRange(key)} className={cn("shrink-0 rounded-lg px-3 py-2 text-[10px] font-semibold transition-colors btn-smooth-press-sm", range === key ? "border border-[#ECD7A9] bg-[#FAF3E6] text-[#8E6314] shadow-2xs" : "text-[#766B61] hover:bg-[#F5EFE5]")}>{label}</button>)}
           </div>
           <div className="flex gap-2">
-            <button onClick={exportReport} disabled={!report} className="inline-flex h-9 shrink-0 items-center justify-center gap-1.5 rounded-lg border border-[rgba(20,18,16,0.12)] bg-white px-3 text-xs font-medium text-[#141210] hover:border-[rgba(20,18,16,0.26)] disabled:opacity-50 btn-smooth-press-sm"><Download className="h-3.5 w-3.5 text-[#5C554E]" strokeWidth={1.5} />Export CSV</button>
-            <button onClick={() => void loadReport(range, true)} disabled={refreshing} className="inline-flex h-9 shrink-0 items-center justify-center gap-1.5 rounded-lg border border-[rgba(20,18,16,0.12)] bg-white px-3 text-xs font-medium text-[#141210] hover:border-[rgba(20,18,16,0.26)] disabled:opacity-60 btn-smooth-press-sm"><RefreshCw className={cn("h-3.5 w-3.5 text-[#5C554E]", refreshing && "animate-spin")} strokeWidth={1.5} />Refresh</button>
+            <button onClick={exportReport} disabled={!report} className="inline-flex h-10 shrink-0 items-center justify-center gap-2 rounded-xl border border-[#E5DDD1] bg-[#FFFDF9] px-3 text-xs font-semibold text-[#51473F] hover:bg-[#F5EFE5] disabled:opacity-50 btn-smooth-press-sm"><Download className="h-3.5 w-3.5 text-[#8E6314]" />Export CSV</button>
+            <button onClick={() => void loadReport(range, true)} disabled={refreshing} className="inline-flex h-10 shrink-0 items-center justify-center gap-2 rounded-xl border border-[#E5DDD1] bg-[#FFFDF9] px-3 text-xs font-semibold text-[#51473F] hover:bg-[#F5EFE5] disabled:opacity-60 btn-smooth-press-sm"><RefreshCw className={cn("h-3.5 w-3.5 text-[#8E6314]", refreshing && "animate-spin")} />Refresh</button>
           </div>
         </div>
       </div>
@@ -300,7 +302,7 @@ export function AdminAnalytics() {
           </section>
 
           <Panel title="High-value orders" subtitle="Largest order totals in the selected range.">
-            {report.highValueOrders.length ? <div className="overflow-x-auto"><table className="w-full min-w-[600px] text-left text-xs"><thead><tr className="border-b border-[rgba(20,18,16,0.09)] text-[11px] font-medium text-[#5C554E]"><th className="py-3 pr-3 font-medium">Order</th><th className="py-3 pr-3 font-medium">Suite & Guest</th><th className="py-3 pr-3 font-medium">Placed</th><th className="py-3 pr-3 font-medium">Status</th><th className="py-3 text-right font-medium">Total</th></tr></thead><tbody className="tabular-nums">{report.highValueOrders.map((order) => <tr key={order.id} className="border-b border-[rgba(20,18,16,0.07)] last:border-0"><td className="py-3 pr-3 font-mono font-medium text-[#966F29]">{order.orderNumber}</td><td className="py-3 pr-3"><span className="font-medium text-[#141210]">Suite {order.room}</span><span className="ml-2 text-[#847C73]">{order.guestName}</span></td><td className="py-3 pr-3 text-[#5C554E]">{new Date(order.createdAt).toLocaleString("en-IN", { day: "numeric", month: "short", hour: "numeric", minute: "2-digit" })}</td><td className="py-3 pr-3"><span className="rounded-md border px-2 py-0.5 text-[11px] font-medium" style={{ color: statusColors[order.status] || "#5C554E", borderColor: `${statusColors[order.status] || "#5C554E"}44`, backgroundColor: `${statusColors[order.status] || "#5C554E"}10` }}>{statusLabels[order.status] || order.status}</span></td><td className="py-3 text-right font-sans font-semibold text-[#141210]">{formatINR(order.total)}</td></tr>)}</tbody></table></div> : <p className="py-5 text-center text-xs text-[#847C73]">No orders in this date range.</p>}
+            {report.highValueOrders.length ? <div className="overflow-x-auto"><table className="w-full min-w-[600px] text-left text-xs"><thead><tr className="border-b border-[#E5DDD1] text-[9px] uppercase tracking-[0.14em] text-[#8A7E73]"><th className="py-3 pr-3">Order</th><th className="py-3 pr-3">Suite / Guest</th><th className="py-3 pr-3">Placed</th><th className="py-3 pr-3">Status</th><th className="py-3 text-right">Total</th></tr></thead><tbody className="tabular-nums">{report.highValueOrders.map((order) => <tr key={order.id} className="border-b border-[#E5DDD1]/70 last:border-0"><td className="py-3 pr-3 font-mono font-semibold text-[#8E6314]">{order.orderNumber}</td><td className="py-3 pr-3"><span className="font-semibold text-[#3E352E]">Suite {order.room}</span><span className="ml-2 text-[#8A7E73]">{order.guestName}</span></td><td className="py-3 pr-3 text-[#766B61]">{new Date(order.createdAt).toLocaleString("en-IN", { day: "numeric", month: "short", hour: "numeric", minute: "2-digit" })}</td><td className="py-3 pr-3"><span className="rounded-full border px-2 py-1 text-[10px] font-semibold" style={{ color: statusColors[order.status] || "#766B61", borderColor: `${statusColors[order.status] || "#766B61"}55`, backgroundColor: `${statusColors[order.status] || "#766B61"}10` }}>{statusLabels[order.status] || order.status}</span></td><td className="py-3 text-right font-sans font-extrabold text-[#29231F]">{formatINR(order.total)}</td></tr>)}</tbody></table></div> : <p className="py-5 text-center text-xs text-[#8A7E73]">No orders in this date range.</p>}
           </Panel>
         </>
       )}
@@ -309,7 +311,7 @@ export function AdminAnalytics() {
 }
 
 function Insight({ icon, label, value, detail }: { icon: React.ReactNode; label: string; value: string; detail: string }) {
-  return <article className="flex min-w-0 items-start gap-3 rounded-xl border border-[rgba(20,18,16,0.09)] bg-white p-4"><span className="mt-0.5 shrink-0 text-[#966F29]">{icon}</span><div className="min-w-0"><p className="text-xs font-medium text-[#5C554E]">{label}</p><p className="mt-1 truncate font-sans text-base font-semibold text-[#141210] tabular-nums">{value}</p><p className="mt-0.5 truncate text-[11px] text-[#847C73] tabular-nums">{detail}</p></div></article>;
+  return <article className="flex min-w-0 items-start gap-3 rounded-2xl border border-[#E5DDD1] bg-[#FFFDF9] p-4 shadow-[0_3px_14px_rgba(41,35,31,0.035)]"><span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-[#FAF3E6] text-[#8E6314]">{icon}</span><div className="min-w-0"><p className="text-[9px] font-bold uppercase tracking-[0.15em] text-[#8A7E73]">{label}</p><p className="mt-1 truncate font-serif text-base font-bold text-[#29231F] tabular-nums">{value}</p><p className="mt-0.5 truncate text-[10px] text-[#766B61] tabular-nums">{detail}</p></div></article>;
 }
 
 export default AdminAnalytics;

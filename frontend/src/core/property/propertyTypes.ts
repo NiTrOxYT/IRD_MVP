@@ -10,6 +10,8 @@ export interface PropertySettings {
   closingTime: string;
   logoUrl: string | null;
   contactNumber: string | null;
+  whatsappNumber?: string | null;
+  attractionBookingTemplate?: string | null;
   welcomeMode?: "every_time" | "once_per_stay" | "disabled";
   welcomeMessage?: string | null;
   welcomeBgUrl?: string | null;

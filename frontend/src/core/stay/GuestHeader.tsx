@@ -21,28 +21,27 @@ export function GuestHeader({
   rightActions,
 }: GuestHeaderProps) {
   return (
-    <header className="sticky top-0 z-30 border-b border-[rgba(20,18,16,0.09)] bg-[#F6F4EF]/92 backdrop-blur-md">
-      <div className="mx-auto flex h-14 max-w-5xl items-center justify-between gap-3 px-4 sm:px-6">
-        <div className="flex min-w-0 items-center gap-3">
+    <header className="sticky top-0 z-30 border-b border-white/14 bg-[#22231B]/84 backdrop-blur-md transform-gpu shadow-[0_8px_24px_-10px_rgba(0,0,0,0.45)]">
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 py-2.5 flex items-center justify-between gap-2">
+        <div className="flex items-center gap-3 min-w-0">
           <img
             src={property?.logoUrl || "/kusum-kunja-cafe-logo.png"}
-            alt={`${property?.name || "Property"} emblem`}
-            className="h-8 w-8 shrink-0 rounded-md border border-[rgba(20,18,16,0.12)] bg-white p-0.5 object-contain"
+            alt={`${property?.name || "Property"} logo`}
+            className="w-8 h-8 shrink-0 rounded-full border border-white/25 bg-white p-0.5 object-contain shadow-xs"
           />
           <div className="min-w-0">
-            <span className="block truncate font-serif text-[18px] font-semibold leading-none tracking-[-0.01em] text-[#141210] sm:text-[20px]">
-              {property?.name || "Resort Concierge"}
-            </span>
-            <div className="mt-1 flex items-center gap-2 text-[11px] text-[#5C554E]">
-              <span className="font-medium text-[#141210] tabular-nums">
-                Suite {stay.room?.roomNumber}
+            <div className="flex items-center gap-2">
+              <span className="truncate font-sans text-[15px] font-bold leading-tight tracking-tight text-white sm:text-[17px]">
+                {property?.name || "Suite Concierge"}
               </span>
-              {stay.guestName && (
-                <>
-                  <span className="h-2.5 w-px bg-[rgba(20,18,16,0.16)]" aria-hidden="true" />
-                  <span className="truncate max-w-[130px]">{stay.guestName}</span>
-                </>
-              )}
+              <span className="hidden rounded-full frost-pill-chip px-2 py-0.5 text-[9px] font-semibold sm:inline-flex">
+                In-Suite
+              </span>
+            </div>
+            <div className="flex items-center gap-1.5 text-[11px] text-white/70 tabular-nums">
+              <span className="font-semibold text-white">Suite {stay.room?.roomNumber}</span>
+              <span>·</span>
+              <span className="truncate max-w-[120px]">{stay.guestName}</span>
             </div>
           </div>
         </div>
@@ -52,18 +51,24 @@ export function GuestHeader({
             <button
               type="button"
               onClick={onBackToHub}
-              className="inline-flex h-8 items-center gap-1 rounded-lg border border-[rgba(20,18,16,0.12)] bg-white px-2.5 text-xs font-medium text-[#141210] transition-colors hover:border-[rgba(20,18,16,0.26)] btn-smooth-press-sm"
+              className="inline-flex items-center gap-1 rounded-full frost-cta-white px-3 py-1 text-xs font-bold btn-smooth-press-sm"
             >
-              <ChevronLeft className="h-3.5 w-3.5 text-[#5C554E]" strokeWidth={1.5} />
-              <span>Services</span>
+              <ChevronLeft size={14} /> Guide
             </button>
           )}
-          <span
-            className="hidden items-center gap-1.5 rounded-lg border border-[rgba(20,18,16,0.09)] bg-white px-2.5 py-1 text-[11px] font-medium text-[#5C554E] sm:inline-flex"
-            title={connStatus === "connected" ? "Realtime connection active" : "Reconnecting"}
-          >
-            {connStatus === "connected" ? "Connected" : "Syncing"}
-          </span>
+          <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-semibold frost-pill-chip">
+            {connStatus === "connected" ? (
+              <>
+                <span className="w-2 h-2 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.75)]" />
+                <span className="text-white">Live</span>
+              </>
+            ) : (
+              <>
+                <span className="w-2 h-2 rounded-full bg-amber-300 animate-pulse" />
+                <span className="text-amber-100">Syncing</span>
+              </>
+            )}
+          </div>
           {rightActions}
         </div>
       </div>

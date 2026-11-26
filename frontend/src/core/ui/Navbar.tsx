@@ -13,6 +13,7 @@ import {
   HelpCircle,
   LayoutDashboard,
   LogOut,
+  Mail,
   QrCode,
   Settings,
   Sparkles,
@@ -91,6 +92,9 @@ export function Navbar() {
       if (isSuperAdmin || hasPermission(perms, "faq:view")) {
         items.push({ href: "/admin/faq", label: "FAQ", icon: <HelpCircle size={16} /> });
       }
+      if (isSuperAdmin || hasPermission(perms, "inbox:view")) {
+        items.push({ href: "/admin/inbox", label: "Inbox", icon: <Mail size={16} /> });
+      }
       if (isSuperAdmin || hasPermission(perms, "menu:view")) {
         items.push({ href: "/admin/menu", label: "Menu", icon: <UtensilsCrossed size={16} /> });
       }
@@ -138,22 +142,24 @@ export function Navbar() {
     : "Admin Management";
 
   return (
-    <header className="sticky top-0 z-40 border-b border-[rgba(20,18,16,0.09)] bg-white/95 backdrop-blur-md">
-      <div className="mx-auto flex h-14 max-w-7xl items-center justify-between gap-3 px-4 sm:gap-4 sm:px-6">
+    <header className="sticky top-0 z-40 border-b border-[#E5DDD1] bg-[#F8F5EF]/95 shadow-xs backdrop-blur-md">
+      <div className="mx-auto flex h-16 max-w-7xl items-center justify-between gap-3 px-4 sm:gap-4 sm:px-6">
         <div className="flex min-w-0 items-center gap-3 xl:shrink-0">
           <img
             src={propertyLogo || "/kusum-kunja-cafe-logo.png"}
             alt={`${propertyName || "Property"} logo`}
-            className="h-8 w-8 shrink-0 rounded-md border border-[rgba(20,18,16,0.1)] bg-white p-0.5 object-contain"
+            className="h-9 w-9 shrink-0 rounded-xl border border-[#ECD7A9] bg-[#FFFDF9] p-0.5 object-contain shadow-2xs"
           />
           <div className="min-w-0">
-            <h1 className="whitespace-nowrap font-serif text-[17px] font-semibold leading-none tracking-[-0.01em] text-[#141210] sm:text-[19px]">
-              {propertyName || "Property Operations"}
+            <h1 className="whitespace-nowrap font-serif text-base font-bold tracking-tight text-[#29231F] sm:text-lg">
+              {propertyName || "In-Room Dining"}
             </h1>
-            <div className="mt-1 flex items-center gap-2 text-[11px] text-[#5C554E]">
-              <span className="xl:whitespace-nowrap">{sectionLabel}</span>
-              <span className="hidden items-center gap-1 rounded-md border border-[rgba(20,18,16,0.09)] bg-[#F6F4EF] px-1.5 py-px text-[10px] font-medium text-[#5C554E] sm:inline-flex">
-                <span className={`h-1.5 w-1.5 rounded-full ${connStatus === "connected" ? "bg-emerald-600" : "bg-amber-500"}`} />
+            <div className="flex items-center gap-2">
+              <span className="text-[9px] font-semibold uppercase tracking-[0.2em] text-[#766B61] xl:whitespace-nowrap">
+                {sectionLabel}
+              </span>
+              <span className="hidden items-center gap-1.5 rounded-full border border-[#E5DDD1] bg-[#FFFDF9] px-2 py-0.5 text-[9px] font-semibold text-[#766B61] sm:inline-flex">
+                <span className={`h-1.5 w-1.5 rounded-full ${connStatus === "connected" ? "bg-emerald-500" : "animate-pulse bg-amber-500"}`} />
                 {connStatus === "connected" ? "Live" : "Syncing"}
               </span>
             </div>
@@ -168,10 +174,10 @@ export function Navbar() {
                 <Link
                   key={item.href}
                   href={item.href}
-                  className={`inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-lg border px-2.5 py-1.5 text-xs font-medium transition-[transform,background-color,border-color,color] duration-150 btn-smooth-press-sm ${
+                  className={`inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-xl border px-2.5 py-2 text-xs font-semibold transition-[transform,background-color,border-color,color,box-shadow] duration-150 btn-smooth-press ${
                     active
-                      ? "border-[rgba(20,18,16,0.16)] bg-[#F6F4EF] text-[#141210]"
-                      : "border-transparent text-[#5C554E] hover:bg-[#F6F4EF]/70 hover:text-[#141210]"
+                      ? "border-[#D4A84D] bg-[#FAF3E6] text-[#8E6314] shadow-[0_2px_10px_-2px_rgba(184,130,35,0.2)]"
+                      : "border-transparent text-[#766B61] hover:bg-[#EFE7DA] hover:text-[#29231F]"
                   }`}
                 >
                   {item.icon}
@@ -185,24 +191,24 @@ export function Navbar() {
         <div className="flex shrink-0 items-center gap-2">
           {staffUser ? (
             <>
-              <span className="hidden text-xs text-[#5C554E] 2xl:inline">
-                <strong className="font-medium text-[#141210]">{staffUser.fullName}</strong> · {staffUser.role}
+              <span className="hidden text-xs text-[#766B61] 2xl:inline">
+                <strong className="text-[#29231F]">{staffUser.fullName}</strong> · {staffUser.role}
               </span>
               <button
                 onClick={handleLogout}
-                className="rounded-lg p-1.5 text-[#5C554E] transition-[transform,background-color,color] duration-150 hover:bg-[#F6F4EF] hover:text-[#141210] btn-smooth-press-sm"
+                className="rounded-xl p-2 text-[#766B61] transition-[transform,background-color,color] duration-150 hover:bg-[#EFE7DA] hover:text-[#29231F] btn-smooth-press-sm"
                 title="Sign out"
                 aria-label="Sign out"
               >
-                <LogOut size={15} strokeWidth={1.6} />
+                <LogOut size={16} />
               </button>
             </>
           ) : (
             <Link
               href="/admin/login"
-              className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-[rgba(20,18,16,0.12)] bg-white px-3 text-xs font-medium text-[#141210] transition-[transform,background-color,border-color] duration-150 hover:border-[rgba(20,18,16,0.26)] btn-smooth-press-sm"
+              className="inline-flex items-center gap-1.5 rounded-xl border border-[#E5DDD1] bg-[#FFFDF9] px-3 py-2 text-xs font-semibold text-[#29231F] shadow-2xs transition-[transform,background-color,border-color] duration-150 hover:bg-[#EFE7DA] btn-smooth-press"
             >
-              <UserCheck size={14} strokeWidth={1.6} /> Staff sign in
+              <UserCheck size={14} /> Staff sign in
             </Link>
           )}
         </div>
@@ -216,10 +222,10 @@ export function Navbar() {
               <Link
                 key={item.href}
                 href={item.href}
-                className={`inline-flex shrink-0 items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs font-medium transition-[transform,background-color,border-color,color] duration-150 btn-smooth-press-sm ${
+                className={`inline-flex shrink-0 items-center gap-1.5 rounded-xl border px-3 py-1.5 text-xs font-semibold transition-[transform,background-color,border-color,color] duration-150 btn-smooth-press-sm ${
                   active
-                    ? "border-[rgba(20,18,16,0.14)] bg-[#F6F4EF] text-[#141210]"
-                    : "border-transparent text-[#5C554E] hover:text-[#141210]"
+                    ? "border-[#ECD7A9] bg-[#FAF3E6] text-[#8E6314] shadow-2xs"
+                    : "border-transparent text-[#766B61] hover:bg-[#EFE7DA]/70"
                 }`}
               >
                 {item.icon}

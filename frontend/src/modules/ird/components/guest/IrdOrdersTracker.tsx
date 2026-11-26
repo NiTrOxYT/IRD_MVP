@@ -1,7 +1,8 @@
-import React, { useMemo } from "react";
+import React, { useMemo, useRef } from "react";
 import { RotateCcw } from "lucide-react";
+import { SilverClocheTrayIcon } from "../../../../core/ui/CustomResortIcons";
+import { setupScrollBatchCards, useGSAP } from "../../../../core/ui/gsap";
 import { StatusBadge } from "../../../../core/ui/StatusBadge";
-import { ArchClocheIcon } from "../../../../core/ui/EnterpriseIcons";
 import { cn } from "../../../../core/ui/utils";
 import { useIrdAdapter } from "../../adapter";
 import type { IrdPropertyConfig, Order } from "../../types";
@@ -35,6 +36,7 @@ export function IrdOrdersTracker({
   onExploreMenu,
 }: IrdOrdersTrackerProps) {
   const { formatPrice } = useIrdAdapter();
+  const trackerRef = useRef<HTMLDivElement>(null);
   const taxEnabled = Number(property?.taxRatePercent || 0) > 0;
   const serviceChargeEnabled = Number(property?.serviceChargePercent || 0) > 0;
 
@@ -49,44 +51,55 @@ export function IrdOrdersTracker({
     return { activeOrders: active, pastOrders: past, billableOrdersTotal: total };
   }, [orders]);
 
+  useGSAP(
+    () => {
+      const el = trackerRef.current;
+      if (!el) return;
+      setupScrollBatchCards(el, ".gsap-order-card", { stagger: 0.08, y: 24, start: "top 94%" });
+    },
+    { scope: trackerRef, dependencies: [orders.length], revertOnUpdate: true }
+  );
+
   return (
-    <div className="mx-auto max-w-5xl space-y-5">
-      <div className="flex items-center justify-between border-b border-[rgba(20,18,16,0.09)] pb-3">
+    <div ref={trackerRef} className="mx-auto max-w-md sm:max-w-2xl lg:max-w-4xl space-y-6">
+      <div className="flex items-center justify-between pb-3 border-b border-white/15">
         <div>
-          <p className="text-xs text-[#847C73] tabular-nums">Suite {roomNumber}</p>
-          <h1 className="font-serif text-2xl font-semibold tracking-[-0.01em] text-[#141210]">
-            Order Status & Folio
-          </h1>
+          <span className="text-[10px] font-bold uppercase tracking-wider text-white/70 tabular-nums">
+            Suite {roomNumber}
+          </span>
+          <h2 className="font-sans text-xl font-bold text-white">Order History & Status</h2>
         </div>
         <button
           type="button"
           onClick={onRefresh}
-          className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-[rgba(20,18,16,0.12)] bg-white px-3 text-xs font-medium text-[#141210] hover:border-[rgba(20,18,16,0.26)] btn-smooth-press-sm"
+          className="text-xs text-white flex items-center gap-1.5 px-3 py-1.5 rounded-full frost-pill-chip btn-smooth-press"
         >
-          <RotateCcw className="h-3.5 w-3.5 text-[#5C554E]" strokeWidth={1.5} />
+          <RotateCcw className="w-3 h-3" />
           <span>Refresh</span>
         </button>
       </div>
 
       {activeOrders.length === 0 ? (
-        <div className="rounded-xl border border-[rgba(20,18,16,0.1)] bg-white p-8 text-center">
-          <ArchClocheIcon className="mx-auto mb-3 h-7 w-7 text-[#847C73]" strokeWidth={1.3} />
-          <h2 className="font-serif text-lg font-semibold text-[#141210]">No active dining orders</h2>
-          <p className="mt-1 mb-4 text-xs text-[#5C554E]">
-            Orders placed from the suite menu will appear here with live kitchen progress.
+        <div className="gsap-order-card p-8 frost-component-card rounded-[30px] text-center">
+          <div className="w-12 h-12 rounded-full frost-pill-chip text-white flex items-center justify-center mx-auto mb-3">
+            <SilverClocheTrayIcon className="w-6 h-6" />
+          </div>
+          <h3 className="font-sans text-base font-bold text-white">No Active Orders</h3>
+          <p className="text-xs text-white/70 mt-1 mb-4">
+            You have no pending culinary tickets in preparation.
           </p>
           <button
             type="button"
             onClick={onExploreMenu}
-            className="rounded-lg bg-[#141210] px-4 py-2 text-xs font-medium text-white hover:bg-[#2B2622] btn-smooth-press"
+            className="px-6 py-2.5 frost-cta-white text-xs font-bold rounded-full btn-smooth-press"
           >
-            Open Dining Menu
+            Explore In-Room Menu
           </button>
         </div>
       ) : (
         <div className="space-y-4">
-          <span className="block text-xs font-medium text-[#5C554E] tabular-nums">
-            Active tickets ({activeOrders.length})
+          <span className="text-[10px] font-bold uppercase tracking-wider text-white/75 block tabular-nums px-1">
+            Active in Kitchen ({activeOrders.length})
           </span>
 
           {activeOrders.map((ord) => {
@@ -96,14 +109,14 @@ export function IrdOrdersTracker({
             return (
               <div
                 key={ord.id}
-                className="space-y-4 rounded-xl border border-[rgba(20,18,16,0.1)] bg-white p-5"
+                className="gsap-order-card frost-component-card rounded-[30px] p-5 space-y-4"
               >
                 <div className="flex items-start justify-between">
                   <div>
-                    <span className="font-mono text-xs font-bold text-[#B88223]">
+                    <span className="font-mono text-xs font-bold text-white">
                       {ord.order_number}
                     </span>
-                    <span className="block text-[11px] text-[#73685C] mt-0.5">
+                    <span className="block text-[11px] text-white/65 mt-0.5">
                       Placed{" "}
                       {new Date(ord.created_at).toLocaleTimeString([], {
                         hour: "2-digit",
@@ -111,14 +124,14 @@ export function IrdOrdersTracker({
                       })}
                     </span>
                   </div>
-                  <StatusBadge status={ord.status} />
+                  <StatusBadge status={ord.status} variant="glass" />
                 </div>
 
                 <div className="py-2">
                   <div className="relative flex items-center justify-between">
-                    <div className="absolute top-3.5 left-3 right-3 h-0.5 bg-[#EAE2D5] -z-0 overflow-hidden">
+                    <div className="absolute top-3.5 left-3 right-3 h-0.5 bg-white/15 -z-0 overflow-hidden">
                       <div
-                        className="h-full w-full origin-left bg-[#B88223] transition-transform duration-500 ease-out"
+                        className="h-full w-full origin-left bg-white transition-transform duration-500 ease-out"
                         style={{
                           transform: `scaleX(${Math.max(0, currentStageIdx) / (ORDER_STAGES.length - 1)})`,
                         }}
@@ -131,22 +144,26 @@ export function IrdOrdersTracker({
 
                       return (
                         <div key={stg.key} className="flex flex-col items-center relative z-10">
-                          <div
-                            className={cn(
-                              "w-7 h-7 rounded-full flex items-center justify-center text-[11px] font-bold transition-[transform,background-color,border-color,color,box-shadow] duration-200 shadow-2xs",
-                              isDone
-                                ? "bg-[#B88223] text-white"
-                                : isCurr
-                                ? "bg-[#1E150F] text-[#B88223] ring-3 ring-[#B88223]/25"
-                                : "bg-[#FAF8F5] text-[#73685C] border border-[#E5DDD1]"
+                          <div className="relative flex items-center justify-center">
+                            {isCurr && (
+                              <span
+                                className="absolute inset-0 rounded-full bg-white/45 zomato-beacon-ring"
+                                aria-hidden="true"
+                              />
                             )}
-                          >
-                            {isDone ? "✓" : i + 1}
+                            <div
+                              className={cn(
+                                "relative w-7 h-7 rounded-full flex items-center justify-center text-[11px] font-bold transition-colors duration-200",
+                                isDone || isCurr ? "frost-cta-white" : "frost-pill-chip text-white/70"
+                              )}
+                            >
+                              {isDone ? "✓" : i + 1}
+                            </div>
                           </div>
                           <span
                             className={cn(
                               "text-[9px] font-semibold mt-1 text-center max-w-[50px] truncate",
-                              isCurr ? "text-[#1E150F]" : "text-[#73685C]"
+                              isCurr ? "text-white" : "text-white/65"
                             )}
                           >
                             {stg.label}
@@ -157,37 +174,37 @@ export function IrdOrdersTracker({
                   </div>
                 </div>
 
-                <div className="p-3 bg-[#FAF8F5] rounded-2xl border border-[#E5DDD1]/70 text-xs text-[#1E150F] flex items-center gap-2.5">
-                  <span className="w-2 h-2 rounded-full bg-[#B88223] animate-ping shrink-0" />
+                <div className="p-3 rounded-2xl bg-white/14 border border-white/18 text-xs text-white flex items-center gap-2.5">
+                  <span className="w-2 h-2 rounded-full bg-white animate-ping shrink-0" />
                   <span className="font-medium text-[11px]">
                     {ORDER_STAGES[currentStageIdx]?.desc || "Preparing your culinary order."}
                   </span>
                 </div>
 
-                <div className="divide-y divide-[#E5DDD1]/70 text-xs">
+                <div className="divide-y divide-white/14 text-xs">
                   {ord.items?.map((it: any, idx: number) => (
                     <div key={idx} className="py-2.5 flex justify-between">
                       <div>
                         <div className="flex items-center gap-1.5 flex-wrap">
-                          <span className="font-semibold text-[#1E150F]">
+                          <span className="font-semibold text-white">
                             {it.quantity}× {it.itemName}
                           </span>
                           {it.variantName && (
-                            <span className="px-1.5 py-0.2 rounded-md text-[10px] font-bold bg-[#FAF3E6] text-[#8E6314] border border-[#ECD7A9]">
+                            <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold frost-pill-chip">
                               {it.variantName}
                             </span>
                           )}
                         </div>
                         {it.selectedModifiers && it.selectedModifiers.length > 0 && (
-                          <p className="text-[10px] text-[#73685C]">
+                          <p className="text-[10px] text-white/65">
                             {it.selectedModifiers.map((m: any) => m.name).join(", ")}
                           </p>
                         )}
                         {it.notes && (
-                          <p className="text-[10px] text-[#825C15] italic">Note: {it.notes}</p>
+                          <p className="text-[10px] text-white/80 italic">Note: {it.notes}</p>
                         )}
                       </div>
-                      <span className="font-sans text-[11px] font-extrabold text-[#29231F]">
+                      <span className="font-sans text-[11px] font-extrabold text-white">
                         {formatPrice(it.lineTotal)}
                       </span>
                     </div>
@@ -195,14 +212,14 @@ export function IrdOrdersTracker({
                 </div>
 
                 {ord.special_instructions && (
-                  <div className="text-[11px] text-[#73685C] bg-[#FAF8F5] p-3 rounded-2xl border border-[#E5DDD1]/60">
-                    <span className="font-bold text-[#1E150F]">Delivery Note: </span>
+                  <div className="text-[11px] text-white/80 bg-black/25 border border-white/12 p-3 rounded-2xl">
+                    <span className="font-bold text-white">Delivery Note: </span>
                     {ord.special_instructions}
                   </div>
                 )}
 
                 {(taxEnabled || serviceChargeEnabled) && (
-                  <div className="rounded-xl border border-[#E5DDD1]/70 bg-[#FAF8F5] px-3 py-2 text-[10px] text-[#73685C] space-y-1">
+                  <div className="rounded-2xl bg-black/25 border border-white/12 px-3 py-2 text-[10px] text-white/75 space-y-1">
                     <div className="flex justify-between">
                       <span>Subtotal</span>
                       <span>{formatPrice(ord.subtotal)}</span>
@@ -222,19 +239,20 @@ export function IrdOrdersTracker({
                   </div>
                 )}
 
-                <div className="pt-3 border-t border-[#E5DDD1] flex items-center justify-between text-xs">
+                <div className="pt-3 border-t border-white/15 flex items-center justify-between text-xs">
                   <div>
-                    <span className="text-[10px] text-[#73685C] block">Folio Charge</span>
-                    <span className="font-sans text-[14px] font-extrabold text-[#29231F] sm:text-[15px]">
+                    <span className="text-[10px] text-white/65 block">Folio Charge</span>
+                    <span className="font-sans text-[14px] font-extrabold text-white sm:text-[15px]">
                       {formatPrice(ord.total_amount)}
                     </span>
                   </div>
 
                   {isPending && (
                     <button
+                      type="button"
                       onClick={() => onCancelOrder(ord.id)}
                       disabled={cancellingOrderId === ord.id}
-                      className="px-3.5 py-1.5 bg-red-50 hover:bg-red-100 text-red-700 text-xs font-semibold rounded-xl border border-red-200 btn-smooth-press cursor-pointer"
+                      className="px-3.5 py-1.5 bg-rose-500/20 hover:bg-rose-500/30 text-rose-100 text-xs font-semibold rounded-full border border-rose-300/35 btn-smooth-press cursor-pointer"
                     >
                       {cancellingOrderId === ord.id ? "Cancelling..." : "Cancel Order"}
                     </button>
@@ -247,8 +265,8 @@ export function IrdOrdersTracker({
       )}
 
       {pastOrders.length > 0 && (
-        <div className="space-y-3 pt-4 border-t border-[#E5DDD1]">
-          <span className="text-[10px] font-bold uppercase tracking-wider text-[#73685C] block">
+        <div className="space-y-3 pt-4 border-t border-white/15">
+          <span className="text-[10px] font-bold uppercase tracking-wider text-white/70 block px-1">
             Delivered & Completed ({pastOrders.length})
           </span>
 
@@ -256,16 +274,16 @@ export function IrdOrdersTracker({
             {pastOrders.map((ord) => (
               <div
                 key={ord.id}
-                className="p-4 bg-[#FFFDF9] border border-[#E5DDD1] rounded-2xl text-xs space-y-2 opacity-90 shadow-2xs"
+                className="gsap-order-card p-4 frost-component-card rounded-[26px] text-xs space-y-2"
               >
                 <div className="flex justify-between items-center">
-                  <span className="font-mono font-semibold text-[#73685C]">
+                  <span className="font-mono font-semibold text-white/85">
                     {ord.order_number}
                   </span>
-                  <StatusBadge status={ord.status} />
+                  <StatusBadge status={ord.status} variant="glass" />
                 </div>
 
-                <p className="text-[11px] text-[#73685C]">
+                <p className="text-[11px] text-white/75">
                   {ord.items
                     ?.map(
                       (it: any) =>
@@ -275,7 +293,7 @@ export function IrdOrdersTracker({
                 </p>
 
                 {(taxEnabled || serviceChargeEnabled) && (
-                  <div className="rounded-xl bg-[#FAF8F5] px-3 py-2 text-[10px] text-[#73685C] space-y-1">
+                  <div className="rounded-xl bg-black/25 border border-white/12 px-3 py-2 text-[10px] text-white/70 space-y-1">
                     <div className="flex justify-between">
                       <span>Subtotal</span>
                       <span>{formatPrice(ord.subtotal)}</span>
@@ -295,14 +313,14 @@ export function IrdOrdersTracker({
                   </div>
                 )}
 
-                <div className="flex justify-between items-center pt-2 border-t border-[#E5DDD1]/60 text-[11px]">
-                  <span className="text-[#73685C]">
+                <div className="flex justify-between items-center pt-2 border-t border-white/12 text-[11px]">
+                  <span className="text-white/65">
                     {new Date(ord.created_at).toLocaleDateString([], {
                       month: "short",
                       day: "numeric",
                     })}
                   </span>
-                  <span className="font-sans text-[14px] font-extrabold text-[#29231F] sm:text-[15px]">
+                  <span className="font-sans text-[14px] font-extrabold text-white sm:text-[15px]">
                     {formatPrice(ord.total_amount)}
                   </span>
                 </div>
@@ -313,9 +331,9 @@ export function IrdOrdersTracker({
       )}
 
       {orders.length > 0 && (
-        <div className="flex items-center justify-between rounded-2xl border border-[#E5DDD1] bg-[#FAF3E6] px-4 py-3.5">
-          <span className="text-sm font-semibold text-[#51473F]">Total for this stay</span>
-          <span className="font-sans text-[14px] font-extrabold text-[#29231F] sm:text-[15px]">
+        <div className="gsap-order-card flex items-center justify-between rounded-[26px] frost-component-card px-5 py-3.5">
+          <span className="text-sm font-semibold text-white/85">Total for this stay</span>
+          <span className="font-sans text-[14px] font-extrabold text-white sm:text-[15px]">
             {formatPrice(billableOrdersTotal)}
           </span>
         </div>

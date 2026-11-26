@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { Clock, Minus, Plus } from "lucide-react";
+import { Check, Clock, Minus, Plus } from "lucide-react";
 import { Modal } from "../../../../core/ui/Modal";
 import { cn } from "../../../../core/ui/utils";
 import { useIrdAdapter } from "../../adapter";
@@ -46,7 +46,7 @@ export function IrdItemDetailsModal({ item, onClose, onAddToCart }: IrdItemDetai
 
   if (!item) {
     return (
-      <Modal isOpen={false} onClose={onClose} title="">
+      <Modal variant="glass" isOpen={false} onClose={onClose} title="">
         {null}
       </Modal>
     );
@@ -66,14 +66,15 @@ export function IrdItemDetailsModal({ item, onClose, onAddToCart }: IrdItemDetai
   }
 
   return (
-    <Modal isOpen={Boolean(item)} onClose={onClose} title="">
-      <div className="space-y-4 text-xs">
+    <Modal variant="glass" isOpen={Boolean(item)} onClose={onClose} title="">
+      <div className="space-y-4 text-xs text-white">
         {item.imageUrl && (
-          <div className="relative aspect-[16/10] rounded-2xl overflow-hidden bg-[#EAE2D5] -mt-2 shadow-xs">
+          <div className="relative -mx-6 -mt-6 h-[200px] overflow-hidden">
             <img src={item.imageUrl} alt={item.name} className="w-full h-full object-cover" />
-            <div className="absolute top-2.5 left-2.5 flex flex-wrap gap-1">
+            <div className="pointer-events-none absolute inset-0 frost-component-fade" />
+            <div className="absolute top-3 left-4 flex flex-wrap gap-1">
               {item.dietaryFlags?.map((f) => (
-                <DietaryBadge key={f} tag={f} className="bg-white/95 text-[10px] shadow-sm" />
+                <DietaryBadge key={f} tag={f} variant="glass" className="text-[10px]" />
               ))}
             </div>
           </div>
@@ -81,44 +82,39 @@ export function IrdItemDetailsModal({ item, onClose, onAddToCart }: IrdItemDetai
 
         <div>
           <div className="flex items-start justify-between gap-3">
-            <h2 className="font-serif text-xl sm:text-2xl font-bold leading-snug text-[#1E150F] break-words whitespace-normal">
+            <h2 className="font-sans text-xl sm:text-2xl font-bold leading-snug text-white break-words whitespace-normal">
               {item.name}
             </h2>
-            <div className="shrink-0 text-right">
-              <span className="font-serif text-lg sm:text-xl font-bold text-[#1E150F]">
-                {formatPrice(singleUnitPrice)}
-              </span>
-              {selectedVariant && (
-                <span className="block text-[10px] font-medium text-[#766B61]">
-                  {selectedVariant.name}
-                </span>
-              )}
-            </div>
+            <span className="shrink-0 rounded-full frost-pill-chip px-3 py-1 font-sans text-sm font-bold text-white tabular-nums">
+              {formatPrice(singleUnitPrice)}
+            </span>
           </div>
 
           <div className="flex flex-wrap items-center gap-2 mt-2">
-            <span className="inline-flex items-center gap-1 text-[11px] font-medium text-[#766B61] bg-[#FAF8F5] px-2.5 py-0.5 rounded-full border border-[#E5DDD1]">
-              <Clock className="w-3 h-3 text-[#B88223]" />~{item.prepTimeMinutes} mins prep
+            <span className="inline-flex items-center gap-1 text-[11px] font-medium text-white/85 frost-pill-chip px-2.5 py-0.5 rounded-full">
+              <Clock className="w-3 h-3 text-white/80" />~{item.prepTimeMinutes} mins prep
             </span>
-            {item.dietaryFlags?.map((f) => (
-              <DietaryBadge key={f} tag={f} />
-            ))}
+            {selectedVariant && (
+              <span className="inline-flex items-center text-[11px] font-medium text-white/85 frost-pill-chip px-2.5 py-0.5 rounded-full">
+                {selectedVariant.name}
+              </span>
+            )}
           </div>
 
           {item.description && (
-            <p className="mt-2.5 text-xs text-[#73685C] leading-relaxed break-words whitespace-normal">
+            <p className="mt-2.5 text-xs text-white/75 leading-relaxed break-words whitespace-normal">
               {item.description}
             </p>
           )}
         </div>
 
         {item.variants && item.variants.length > 0 && (
-          <div className="space-y-2 pt-3 border-t border-[#E5DDD1]">
+          <div className="space-y-2 pt-3 border-t border-white/15">
             <div className="flex items-center justify-between">
-              <label className="text-[11px] font-bold uppercase tracking-wider text-[#1E150F]">
+              <label className="text-[11px] font-bold uppercase tracking-wider text-white/90">
                 Select Portion / Size
               </label>
-              <span className="text-[10px] text-[#8E6314] font-semibold">Required</span>
+              <span className="text-[10px] text-white/70 font-semibold">Required</span>
             </div>
             <div className="grid grid-cols-2 gap-2">
               {item.variants.map((v) => {
@@ -131,21 +127,24 @@ export function IrdItemDetailsModal({ item, onClose, onAddToCart }: IrdItemDetai
                     disabled={!v.available}
                     onClick={() => setSelectedVariant(v)}
                     className={cn(
-                      "flex flex-col p-3 rounded-2xl border text-left transition-[transform,background-color,border-color,color,box-shadow] duration-150 btn-smooth-press cursor-pointer",
-                      !v.available && "opacity-50 cursor-not-allowed bg-stone-100 border-stone-200",
+                      "flex flex-col p-3 rounded-2xl text-left transition-colors btn-smooth-press cursor-pointer border",
+                      !v.available && "opacity-45 cursor-not-allowed bg-white/5 border-white/10",
                       isSelected
-                        ? "bg-[#FAF3E6] border-[#B88223] text-[#1E150F] shadow-2xs ring-1 ring-[#B88223]/40"
-                        : "bg-[#FAF8F5] border-[#E5DDD1] text-[#73685C] hover:bg-[#F2ECE1]"
+                        ? "bg-white/22 border-white/40 text-white"
+                        : "bg-black/22 border-white/15 text-white/80 hover:bg-white/12"
                     )}
                   >
-                    <div className="flex items-center justify-between w-full">
-                      <span className="font-serif font-bold text-xs text-[#1E150F]">{v.name}</span>
-                      <span className="font-mono text-xs font-bold text-[#8E6314]">
+                    <div className="flex items-center justify-between w-full gap-1.5">
+                      <span className="font-sans font-bold text-xs text-white flex items-center gap-1.5">
+                        {isSelected && <Check className="h-3.5 w-3.5 text-white shrink-0" />}
+                        {v.name}
+                      </span>
+                      <span className="font-mono text-xs font-bold text-white/90">
                         {formatPrice(v.price)}
                       </span>
                     </div>
                     {!v.available && (
-                      <span className="text-[9px] text-red-600 font-semibold mt-0.5">Sold Out</span>
+                      <span className="text-[9px] text-rose-300 font-semibold mt-0.5">Sold Out</span>
                     )}
                   </button>
                 );
@@ -155,11 +154,11 @@ export function IrdItemDetailsModal({ item, onClose, onAddToCart }: IrdItemDetai
         )}
 
         {Object.entries(modGroups).map(([groupName, mods]) => (
-          <div key={groupName} className="space-y-2 pt-3 border-t border-[#E5DDD1]">
-            <label className="block text-[11px] font-bold uppercase tracking-wider text-[#1E150F]">
+          <div key={groupName} className="space-y-2 pt-3 border-t border-white/15">
+            <label className="block text-[11px] font-bold uppercase tracking-wider text-white/90">
               {groupName}
             </label>
-            <div className="grid grid-cols-1 gap-2">
+            <div className="grid grid-cols-1 gap-1.5">
               {mods.map((mod) => {
                 const isSelected = selectedMods[groupName]?.id === mod.id;
                 return (
@@ -173,14 +172,17 @@ export function IrdItemDetailsModal({ item, onClose, onAddToCart }: IrdItemDetai
                       }))
                     }
                     className={cn(
-                      "flex items-center justify-between p-3 rounded-2xl border text-xs font-medium transition-[transform,background-color,border-color,color,box-shadow] duration-150 text-left btn-smooth-press min-h-[44px] cursor-pointer",
+                      "flex items-center justify-between px-3.5 py-2.5 rounded-full text-xs font-medium transition-colors text-left btn-smooth-press min-h-[42px] cursor-pointer border",
                       isSelected
-                        ? "bg-[#FAF3E6] border-[#ECD7A9] text-[#8E6314] shadow-2xs"
-                        : "bg-[#FAF8F5] border-[#E5DDD1] text-[#73685C] hover:bg-[#F0ECE1]"
+                        ? "bg-white/22 border-white/40 text-white"
+                        : "border-white/12 bg-black/20 hover:bg-white/12 text-white/80"
                     )}
                   >
-                    <span className="font-semibold text-[#1E150F]">{mod.name}</span>
-                    <span className="font-mono text-xs font-bold text-[#8E6314]">
+                    <span className="font-semibold text-white flex items-center gap-2">
+                      {isSelected && <Check className="h-3.5 w-3.5 text-white shrink-0" />}
+                      <span>{mod.name}</span>
+                    </span>
+                    <span className="font-mono text-xs font-bold text-white/85">
                       {Number(mod.priceDelta) > 0 ? `+${formatPrice(mod.priceDelta)}` : "Included"}
                     </span>
                   </button>
@@ -191,7 +193,7 @@ export function IrdItemDetailsModal({ item, onClose, onAddToCart }: IrdItemDetai
         ))}
 
         <div className="pt-2">
-          <label className="block text-[11px] font-bold uppercase tracking-wider text-[#1E150F] mb-1.5">
+          <label className="block text-[11px] font-bold uppercase tracking-wider text-white/85 mb-1.5">
             Special Requests / In-Suite Preparation Notes
           </label>
           <input
@@ -199,25 +201,25 @@ export function IrdItemDetailsModal({ item, onClose, onAddToCart }: IrdItemDetai
             placeholder="e.g. Extra hot, dressing on the side, no onions..."
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
-            className="w-full px-3.5 py-2.5 bg-[#FAF8F5] border border-[#E5DDD1] rounded-2xl text-xs text-[#1E150F] focus:outline-none focus:ring-2 focus:ring-[#B88223]/30"
+            className="w-full px-4 py-2.5 rounded-full border border-white/18 bg-black/25 text-xs text-white placeholder:text-white/50 focus:border-white/40 focus:outline-none"
           />
         </div>
 
-        <div className="pt-3 border-t border-[#E5DDD1] flex items-center justify-between gap-3">
-          <div className="flex items-center gap-2 bg-[#FAF8F5] p-1.5 rounded-2xl border border-[#E5DDD1]">
+        <div className="pt-3 border-t border-white/15 flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2 frost-pill-chip p-1.5 rounded-full">
             <button
               type="button"
               onClick={() => setQuantity((q) => Math.max(1, q - 1))}
-              className="w-8 h-8 rounded-xl bg-white border border-[#E5DDD1] flex items-center justify-center text-[#1E150F] active:scale-95 cursor-pointer shadow-2xs"
+              className="w-8 h-8 rounded-full bg-white/12 flex items-center justify-center text-white active:scale-95 cursor-pointer"
               aria-label="Decrease quantity"
             >
               <Minus className="w-3.5 h-3.5" />
             </button>
-            <span className="font-mono text-sm font-bold w-6 text-center">{quantity}</span>
+            <span className="font-mono text-sm font-bold w-6 text-center text-white">{quantity}</span>
             <button
               type="button"
               onClick={() => setQuantity((q) => q + 1)}
-              className="w-8 h-8 rounded-xl bg-white border border-[#E5DDD1] flex items-center justify-center text-[#1E150F] active:scale-95 cursor-pointer shadow-2xs"
+              className="w-8 h-8 rounded-full bg-white/12 flex items-center justify-center text-white active:scale-95 cursor-pointer"
               aria-label="Increase quantity"
             >
               <Plus className="w-3.5 h-3.5" />
@@ -229,10 +231,10 @@ export function IrdItemDetailsModal({ item, onClose, onAddToCart }: IrdItemDetai
             onClick={() =>
               onAddToCart(item, selectedVariant, Object.values(selectedMods), notes, quantity)
             }
-            className="flex-1 py-3 px-4 rounded-2xl font-bold text-xs text-white bg-[#1E150F] hover:bg-[#29231F] shadow-md flex items-center justify-between min-h-[46px] btn-smooth-press cursor-pointer"
+            className="flex-1 py-3 px-5 rounded-full font-bold text-xs frost-cta-white flex items-center justify-between min-h-[46px] btn-smooth-press cursor-pointer"
           >
             <span>Add to Order</span>
-            <span className="font-mono font-bold text-sm text-[#ECD7A9]">
+            <span className="font-mono font-bold text-sm">
               {formatPrice(currentLineTotal)}
             </span>
           </button>

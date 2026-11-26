@@ -16,6 +16,16 @@ export const settingsSchema = z.object({
   openingTime: z.string().regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/).optional(),
   closingTime: z.string().regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/).optional(),
   contactNumber: z.string().optional(),
+  whatsappNumber: z
+    .string()
+    .max(32)
+    .refine(
+      (v) => v.trim() === "" || /^\+?[0-9\s\-()]{7,25}$/.test(v.trim()),
+      "Enter a valid WhatsApp number with country code (e.g. +918100318327)"
+    )
+    .nullable()
+    .optional(),
+  attractionBookingTemplate: z.string().max(1000).nullable().optional(),
   logoUrl: z.string().max(70_000).nullable().optional(),
   welcomeMode: z.enum(["every_time", "once_per_stay", "disabled"]).optional(),
   welcomeMessage: z.string().max(4000).nullable().optional(),

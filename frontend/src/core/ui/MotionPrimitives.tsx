@@ -1,26 +1,20 @@
 import React, { useRef } from "react";
+import { gsap, useGSAP } from "./gsap";
 import { cn } from "./utils";
 
 export type TransitionDirection = "depth" | "forward" | "back" | "fade";
 
 interface PageTransitionProps {
-  /** Changing this key triggers a GPU-composited 3D screen entrance */
+  /** Changing this key triggers a GPU-composited GSAP screen entrance */
   viewKey: string | number;
   direction?: TransitionDirection;
   className?: string;
   children: React.ReactNode;
 }
 
-const DIRECTION_CLASSES: Record<TransitionDirection, string> = {
-  depth: "screen-stage-enter",
-  forward: "screen-stage-slide-right",
-  back: "screen-stage-slide-left",
-  fade: "screen-stage-fade",
-};
-
 /**
- * Wraps route/tab/mode screens with a GPU-only 3D perspective entrance.
- * Uses pure CSS keyframes keyed by viewKey so React renders stay lean (60fps).
+ * Wraps route/tab/mode screens with a GPU-composited GSAP stage entrance.
+ * Automatically respects prefers-reduced-motion and cleans up on unmount.
  */
 export function PageTransition({
   viewKey,
@@ -28,8 +22,42 @@ export function PageTransition({
   className,
   children,
 }: PageTransitionProps) {
+  const stageRef = useRef<HTMLDivElement>(null);
+
+  useGSAP(
+    () => {
+      const el = stageRef.current;
+      if (!el) return;
+
+      const mm = gsap.matchMedia();
+      mm.add("(prefers-reduced-motion: no-preference)", () => {
+        const fromVars: gsap.TweenVars =
+          direction === "forward"
+            ? { autoAlpha: 0, x: 14 }
+            : direction === "back"
+            ? { autoAlpha: 0, x: -14 }
+            : { autoAlpha: 0, y: 10 };
+
+        gsap.fromTo(el, fromVars, {
+          autoAlpha: 1,
+          x: 0,
+          y: 0,
+          duration: 0.28,
+          ease: "power2.out",
+          force3D: true,
+          clearProps: "transform",
+        });
+      });
+
+      mm.add("(prefers-reduced-motion: reduce)", () => {
+        gsap.fromTo(el, { autoAlpha: 0 }, { autoAlpha: 1, duration: 0.16 });
+      });
+    },
+    { scope: stageRef, dependencies: [viewKey], revertOnUpdate: true }
+  );
+
   return (
-    <div key={viewKey} className={cn(DIRECTION_CLASSES[direction], className)}>
+    <div ref={stageRef} key={viewKey} className={cn(className)}>
       {children}
     </div>
   );
@@ -99,8 +127,6 @@ export function Tilt3DCard({
     }
     el.style.setProperty("--rx", "0deg");
     el.style.setProperty("--ry", "0deg");
-    el.style.setProperty("--mx", "50%");
-    el.style.setProperty("--my", "50%");
   };
 
   return (
@@ -111,7 +137,8 @@ export function Tilt3DCard({
       className={cn("card-3d-wrap", className)}
       {...rest}
     >
-      <div className={cn("card-3d-surface", glare && "card-3d-glare", surfaceClassName)}>
+      <div className={cn("card-3d-surface", surfaceClassName)}>
+        {glare && <div className="card-3d-glare" aria-hidden="true" />}
         {children}
       </div>
     </div>

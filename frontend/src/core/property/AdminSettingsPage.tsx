@@ -13,9 +13,16 @@ import {
   Sparkles,
   Upload,
   Trash2,
+  MessageCircle,
+  ExternalLink,
 } from "lucide-react";
 import { cn } from "../ui/utils";
 import { DEFAULT_WELCOME_MESSAGE } from "../stay/GuestWelcomeLetter";
+import {
+  buildAttractionWhatsappMessage,
+  buildAttractionWhatsappUrl,
+  DEFAULT_ATTRACTION_WHATSAPP_TEMPLATE,
+} from "../../modules/attractions/whatsapp";
 
 async function compressImage(
   file: File,
@@ -69,6 +76,13 @@ export function AdminSettings() {
   const [welcomeSaved, setWelcomeSaved] = useState(false);
   const [welcomeError, setWelcomeError] = useState("");
 
+  // Attractions WhatsApp booking settings
+  const [whatsappNumber, setWhatsappNumber] = useState("");
+  const [attractionTemplate, setAttractionTemplate] = useState(DEFAULT_ATTRACTION_WHATSAPP_TEMPLATE);
+  const [whatsappSaving, setWhatsappSaving] = useState(false);
+  const [whatsappSaved, setWhatsappSaved] = useState(false);
+  const [whatsappError, setWhatsappError] = useState("");
+
   // Form
   const [name, setName] = useState("");
   const [currency, setCurrency] = useState("INR");
@@ -99,6 +113,8 @@ export function AdminSettings() {
       setWelcomeMode(prop.welcomeMode || "every_time");
       setWelcomeMessage(prop.welcomeMessage ?? DEFAULT_WELCOME_MESSAGE);
       setWelcomeBgDraft(undefined);
+      setWhatsappNumber(prop.whatsappNumber || "");
+      setAttractionTemplate(prop.attractionBookingTemplate ?? DEFAULT_ATTRACTION_WHATSAPP_TEMPLATE);
 
       setAuditLogs(logsRes.logs);
       setLoading(false);
@@ -195,6 +211,27 @@ export function AdminSettings() {
       setWelcomeError(err.message || "Failed to save welcome page settings.");
     } finally {
       setWelcomeSaving(false);
+    }
+  };
+
+  const handleSaveWhatsapp = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setWhatsappSaving(true);
+    setWhatsappError("");
+    setWhatsappSaved(false);
+    try {
+      const res = await updatePropertySettings({
+        whatsappNumber: whatsappNumber.trim() || null,
+        attractionBookingTemplate: attractionTemplate.trim() || null,
+      });
+      setSettings(res.property);
+      setWhatsappNumber(res.property.whatsappNumber || "");
+      setWhatsappSaved(true);
+      setTimeout(() => setWhatsappSaved(false), 3000);
+    } catch (err: any) {
+      setWhatsappError(err.message || "Failed to save WhatsApp booking settings.");
+    } finally {
+      setWhatsappSaving(false);
     }
   };
 
@@ -550,6 +587,144 @@ export function AdminSettings() {
                 className="px-5 py-2.5 rounded-xl font-bold text-xs text-white bg-[#1E150F] hover:bg-[#29231F] transition-colors shadow-sm disabled:opacity-50"
               >
                 {welcomeSaving ? "Saving Welcome Letter..." : "Save Welcome Letter"}
+              </button>
+            </form>
+          </section>
+
+          {/* Local Attractions WhatsApp Booking Configuration */}
+          <section className="bg-[#FFFDF9] border border-[#E5DDD1] rounded-3xl p-6 shadow-xs space-y-5">
+            <div className="flex items-start justify-between gap-3 pb-3 border-b border-[#E5DDD1]">
+              <div>
+                <h2 className="font-serif text-xl font-bold text-[#1E150F] flex items-center gap-2">
+                  <MessageCircle className="w-5 h-5 text-emerald-700" />
+                  <span>Attractions WhatsApp Booking</span>
+                </h2>
+                <p className="text-xs text-[#73685C] mt-0.5">
+                  Configure the resort WhatsApp concierge number and dynamic booking message opened by every Local Attractions package button.
+                </p>
+              </div>
+            </div>
+
+            {whatsappSaved && (
+              <div className="p-3 bg-emerald-50 border border-emerald-300 text-emerald-900 text-xs rounded-2xl flex items-center gap-2 font-medium">
+                <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                <span>WhatsApp booking settings updated successfully.</span>
+              </div>
+            )}
+            {whatsappError && (
+              <p role="alert" className="text-xs text-red-700 font-medium">
+                {whatsappError}
+              </p>
+            )}
+
+            <form onSubmit={handleSaveWhatsapp} className="space-y-4 text-xs">
+              <div>
+                <label className="block text-[11px] font-bold uppercase tracking-wider text-[#1E150F] mb-1.5">
+                  Resort Concierge WhatsApp Number (with country code)
+                </label>
+                <input
+                  type="tel"
+                  placeholder="+918100318327"
+                  value={whatsappNumber}
+                  onChange={(e) => setWhatsappNumber(e.target.value)}
+                  className="w-full px-3.5 py-2.5 bg-[#FAF8F5] border border-[#E5DDD1] rounded-2xl font-mono text-xs text-[#1E150F] focus:outline-none focus:ring-2 focus:ring-[#B88223]/30"
+                />
+                <p className="mt-1 text-[11px] text-[#73685C]">
+                  Opens <code className="text-[#8E6314]">https://wa.me/&lt;number&gt;?text=...</code> directly in the guest's WhatsApp app.
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <label className="block text-[11px] font-bold uppercase tracking-wider text-[#1E150F]">
+                    Dynamic WhatsApp Message Template
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => setAttractionTemplate(DEFAULT_ATTRACTION_WHATSAPP_TEMPLATE)}
+                    className="text-[11px] font-semibold text-[#8E6314] hover:underline"
+                  >
+                    Reset default template
+                  </button>
+                </div>
+
+                <textarea
+                  rows={3}
+                  value={attractionTemplate}
+                  onChange={(e) => setAttractionTemplate(e.target.value)}
+                  placeholder={DEFAULT_ATTRACTION_WHATSAPP_TEMPLATE}
+                  className="w-full px-3.5 py-2.5 bg-[#FAF8F5] border border-[#E5DDD1] rounded-2xl text-xs leading-relaxed text-[#1E150F] focus:outline-none focus:ring-2 focus:ring-[#B88223]/30"
+                />
+
+                <div className="flex flex-wrap items-center gap-1.5">
+                  <span className="text-[10px] font-semibold text-[#73685C] mr-1">Insert variable:</span>
+                  {[
+                    "{{attraction}}",
+                    "{{package}}",
+                    "{{price}}",
+                    "{{room}}",
+                    "{{guest}}",
+                    "{{location}}",
+                  ].map((token) => (
+                    <button
+                      key={token}
+                      type="button"
+                      onClick={() =>
+                        setAttractionTemplate((prev) =>
+                          prev.endsWith(" ") || prev === "" ? `${prev}${token}` : `${prev} ${token}`
+                        )
+                      }
+                      className="rounded-lg border border-[#ECD7A9] bg-[#FAF3E6] px-2 py-0.5 font-mono text-[10px] font-semibold text-[#8E6314] hover:bg-[#F2E5CA] btn-smooth-press-sm"
+                    >
+                      {token}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Live Message & Link Preview */}
+              <div className="rounded-2xl border border-[#E5DDD1] bg-[#FAF8F5] p-3.5 space-y-1.5">
+                <span className="block text-[10px] font-bold uppercase tracking-wider text-[#73685C]">
+                  Live Guest Message Preview
+                </span>
+                <p className="text-xs text-[#1E150F] leading-relaxed">
+                  {buildAttractionWhatsappMessage(attractionTemplate, {
+                    attraction: "Tiger Hill Sunrise Point",
+                    category: "Viewpoints",
+                    packageName: "Direct Package",
+                    price: "₹2,500",
+                    room: "302",
+                    guest: "Sourik",
+                    location: "Darjeeling Ridge",
+                  })}
+                </p>
+                {whatsappNumber.trim() && (
+                  <a
+                    href={
+                      buildAttractionWhatsappUrl(whatsappNumber, attractionTemplate, {
+                        attraction: "Tiger Hill Sunrise Point",
+                        packageName: "Direct Package",
+                        price: "₹2,500",
+                        room: "302",
+                        guest: "Sourik",
+                      }) || "#"
+                    }
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1 pt-1 text-[11px] font-semibold text-emerald-700 hover:underline"
+                  >
+                    <span>Test wa.me link</span>
+                    <ExternalLink className="h-3 w-3" />
+                  </a>
+                )}
+              </div>
+
+              <button
+                type="submit"
+                disabled={whatsappSaving}
+                className="px-5 py-2.5 rounded-xl font-bold text-xs text-white bg-[#1E150F] hover:bg-[#29231F] transition-colors shadow-sm disabled:opacity-50 btn-smooth-press"
+              >
+                {whatsappSaving ? "Saving WhatsApp Settings..." : "Save WhatsApp Settings"}
               </button>
             </form>
           </section>

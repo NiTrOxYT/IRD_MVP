@@ -19,6 +19,8 @@ export async function runMigrations() {
         closing_time TEXT DEFAULT '23:30',
         logo_url TEXT,
         contact_number TEXT,
+        whatsapp_number TEXT,
+        attraction_booking_template TEXT,
         welcome_mode TEXT NOT NULL DEFAULT 'every_time',
         welcome_message TEXT,
         welcome_bg_url TEXT,
@@ -28,6 +30,8 @@ export async function runMigrations() {
       ALTER TABLE properties ADD COLUMN IF NOT EXISTS welcome_mode TEXT NOT NULL DEFAULT 'every_time';
       ALTER TABLE properties ADD COLUMN IF NOT EXISTS welcome_message TEXT;
       ALTER TABLE properties ADD COLUMN IF NOT EXISTS welcome_bg_url TEXT;
+      ALTER TABLE properties ADD COLUMN IF NOT EXISTS whatsapp_number TEXT;
+      ALTER TABLE properties ADD COLUMN IF NOT EXISTS attraction_booking_template TEXT;
 
       -- 2. Rooms
       CREATE TABLE IF NOT EXISTS rooms (
@@ -344,6 +348,7 @@ export async function runMigrations() {
         entry_fee NUMERIC(10, 2),
         package_price NUMERIC(10, 2),
         package_details TEXT,
+        pricing_options JSONB NOT NULL DEFAULT '[]'::jsonb,
         media JSONB NOT NULL DEFAULT '[]'::jsonb,
         is_featured BOOLEAN NOT NULL DEFAULT FALSE,
         is_active BOOLEAN NOT NULL DEFAULT TRUE,
@@ -351,6 +356,7 @@ export async function runMigrations() {
         created_at TIMESTAMP WITHOUT TIME ZONE NOT NULL DEFAULT NOW(),
         updated_at TIMESTAMP WITHOUT TIME ZONE NOT NULL DEFAULT NOW()
       );
+      ALTER TABLE local_attractions ADD COLUMN IF NOT EXISTS pricing_options JSONB NOT NULL DEFAULT '[]'::jsonb;
       CREATE INDEX IF NOT EXISTS idx_attractions_property ON local_attractions(property_id);
       CREATE INDEX IF NOT EXISTS idx_attractions_active ON local_attractions(is_active);
 
@@ -368,6 +374,30 @@ export async function runMigrations() {
       );
       CREATE INDEX IF NOT EXISTS idx_faqs_property ON faqs(property_id);
       CREATE INDEX IF NOT EXISTS idx_faqs_active ON faqs(is_active);
+
+      -- 21. Guest Inbox Notifications & Broadcasts
+      CREATE TABLE IF NOT EXISTS guest_messages (
+        id SERIAL PRIMARY KEY,
+        property_id INT NOT NULL DEFAULT 1 REFERENCES properties(id) ON DELETE CASCADE,
+        title TEXT NOT NULL,
+        body TEXT NOT NULL,
+        category TEXT NOT NULL DEFAULT 'Notice',
+        target_type TEXT NOT NULL DEFAULT 'all', -- all | rooms
+        target_room_ids JSONB NOT NULL DEFAULT '[]'::jsonb,
+        created_by_staff_id INT REFERENCES staff_users(id) ON DELETE SET NULL,
+        created_by_name TEXT,
+        is_active BOOLEAN NOT NULL DEFAULT TRUE,
+        created_at TIMESTAMP WITHOUT TIME ZONE NOT NULL DEFAULT NOW()
+      );
+      CREATE INDEX IF NOT EXISTS idx_guest_messages_property ON guest_messages(property_id);
+      CREATE INDEX IF NOT EXISTS idx_guest_messages_created ON guest_messages(created_at DESC);
+
+      CREATE TABLE IF NOT EXISTS guest_message_reads (
+        message_id INT NOT NULL REFERENCES guest_messages(id) ON DELETE CASCADE,
+        stay_id INT NOT NULL REFERENCES stays(id) ON DELETE CASCADE,
+        read_at TIMESTAMP WITHOUT TIME ZONE NOT NULL DEFAULT NOW(),
+        PRIMARY KEY (message_id, stay_id)
+      );
     `);
         // Seed default property
         await client.query(`
@@ -622,6 +652,7 @@ export async function runMigrations() {
             'housekeeping_requests',
             'local_attractions',
             'faqs',
+            'guest_messages',
         ];
         for (const t of tables) {
             await client.query(`

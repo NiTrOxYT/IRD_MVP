@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { ArrowRight, ChevronLeft } from "lucide-react";
+import { SuiteCareBellIcon } from "../../../../core/ui/CustomResortIcons";
 import { useIrdAdapter } from "../../adapter";
-import { ArchSuiteCareIcon } from "../../../../core/ui/EnterpriseIcons";
 import { PageTransition } from "../../../../core/ui/MotionPrimitives";
 import type {
   CartLineItem,
@@ -236,15 +236,14 @@ export function IrdGuestPortal({
   return (
     <>
       {(onBackToHub || onSwitchToRoomService) && (
-        <div className="mx-auto flex max-w-5xl items-center justify-between gap-2">
+        <div className="mx-auto max-w-md sm:max-w-2xl lg:max-w-4xl flex items-center justify-between gap-2">
           {onBackToHub ? (
             <button
               type="button"
               onClick={onBackToHub}
-              className="inline-flex h-8 items-center gap-1 rounded-lg border border-[rgba(20,18,16,0.12)] bg-white px-2.5 text-xs font-medium text-[#141210] transition-colors hover:border-[rgba(20,18,16,0.26)] btn-smooth-press-sm"
+              className="inline-flex items-center gap-1 text-xs font-bold px-3.5 py-1.5 rounded-full frost-cta-white btn-smooth-press-sm"
             >
-              <ChevronLeft className="h-3.5 w-3.5 text-[#5C554E]" strokeWidth={1.5} />
-              <span>All Services</span>
+              <ChevronLeft size={16} /> All Services
             </button>
           ) : (
             <span />
@@ -253,10 +252,9 @@ export function IrdGuestPortal({
             <button
               type="button"
               onClick={onSwitchToRoomService}
-              className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-[rgba(20,18,16,0.12)] bg-white px-2.5 text-xs font-medium text-[#5C554E] transition-colors hover:text-[#141210] btn-smooth-press-sm"
+              className="inline-flex items-center gap-1.5 text-xs font-semibold px-3.5 py-1.5 rounded-full frost-pill-chip text-white btn-smooth-press-sm"
             >
-              <ArchSuiteCareIcon className="h-3.5 w-3.5 text-[#966F29]" strokeWidth={1.5} />
-              <span>Suite Care</span>
+              <SuiteCareBellIcon className="w-3.5 h-3.5 text-white" /> Room Service
             </button>
           )}
         </div>
@@ -291,27 +289,30 @@ export function IrdGuestPortal({
       </PageTransition>
 
       {cart.length > 0 && activeTab === "menu" && (
-        <div className="fixed inset-x-0 bottom-[5rem] z-30 mx-auto max-w-md px-4">
+        <div className="fixed bottom-[calc(4.65rem+env(safe-area-inset-bottom))] inset-x-0 z-30 px-3.5 max-w-md mx-auto zomato-cart-enter">
           <button
             type="button"
             onClick={() => setIsCartOpen(true)}
-            className="flex w-full items-center justify-between rounded-xl border border-[rgba(255,255,255,0.14)] bg-[#141210] px-4 py-3 text-white shadow-[0_16px_36px_-10px_rgba(12,10,8,0.45)] transition-[transform,background-color] hover:bg-[#231F1C] btn-smooth-press"
+            className="w-full frost-component-card text-white px-4 py-3 rounded-[26px] flex items-center justify-between cursor-pointer btn-smooth-press"
           >
             <div className="flex items-center gap-3">
-              <div className="flex h-7 min-w-7 items-center justify-center rounded-md bg-[#966F29] px-1.5 text-xs font-semibold text-white tabular-nums">
-                {totalCartCount}
+              <div
+                key={totalCartCount}
+                className="h-9 min-w-9 px-2.5 rounded-full frost-pill-chip text-white flex items-center justify-center font-bold text-xs font-mono tabular-nums zomato-qty-pop"
+              >
+                {totalCartCount} {totalCartCount === 1 ? "item" : "items"}
               </div>
               <div className="text-left">
-                <span className="block text-[11px] text-[#B8AFA4] tabular-nums">
-                  Suite {roomNumber} Tray
+                <span className="block text-[10px] uppercase tracking-wider text-white/75 font-bold tabular-nums">
+                  Suite {roomNumber} · {formatPrice(subtotal)}
                 </span>
-                <span className="text-xs font-semibold">Review Order</span>
+                <span className="font-sans text-xs font-semibold text-white">Extra charges may apply</span>
               </div>
             </div>
 
-            <div className="flex items-center gap-2">
-              <span className="text-sm font-semibold tabular-nums">{formatPrice(subtotal)}</span>
-              <ArrowRight className="h-4 w-4 text-[#D9C7A3]" strokeWidth={1.5} />
+            <div className="flex items-center gap-1.5 rounded-full frost-cta-white px-3.5 py-1.5 font-bold text-xs">
+              <span>View Cart</span>
+              <ArrowRight className="w-3.5 h-3.5" />
             </div>
           </button>
         </div>

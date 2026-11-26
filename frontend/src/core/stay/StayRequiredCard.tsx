@@ -1,7 +1,7 @@
 import React from "react";
 import { AlertCircle, QrCode } from "lucide-react";
+import { SilverClocheTrayIcon } from "../ui/CustomResortIcons";
 import type { PropertySettings } from "../property/propertyTypes";
-import { ArchClocheIcon } from "../ui/EnterpriseIcons";
 
 interface StayRequiredCardProps {
   property?: PropertySettings | null;
@@ -13,46 +13,44 @@ export function StayRequiredCard({ property, fallbackLogo, authError }: StayRequ
   const logoSrc = property?.logoUrl || fallbackLogo || "";
 
   return (
-    <div className="flex min-h-[100dvh] flex-col items-center justify-center bg-[#F6F4EF] px-4 py-8">
-      <div className="w-full max-w-sm rounded-xl border border-[rgba(20,18,16,0.1)] bg-white p-7 text-center shadow-[0_12px_36px_-16px_rgba(20,18,16,0.12)] modal-3d-enter sm:p-8">
+    <div className="min-h-[100dvh] bg-[#FAF8F5] flex flex-col justify-center items-center px-4 py-8">
+      <div className="w-full max-w-sm bg-[#FFFDF9] border border-[#E5DDD1] rounded-3xl p-6 sm:p-8 shadow-xl text-center modal-3d-enter">
         {logoSrc ? (
           <img
             src={logoSrc}
-            alt={`${property?.name || "Property"} emblem`}
-            className="mx-auto mb-4 h-14 w-14 rounded-lg border border-[rgba(20,18,16,0.1)] bg-white p-1 object-contain"
+            alt={`${property?.name || "Property"} logo`}
+            className="mx-auto mb-4 h-16 w-16 rounded-2xl border border-[#ECD7A9] bg-[#FFFDF9] p-1 object-contain shadow-xs"
           />
         ) : (
           <div
             aria-hidden="true"
-            className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-lg border border-[rgba(20,18,16,0.1)] bg-[#F6F4EF] text-[#141210]"
+            className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl border border-[#ECD7A9] bg-[#FFFDF9] text-[#A88C5B] shadow-xs"
           >
-            <ArchClocheIcon className="h-5 w-5" />
+            <SilverClocheTrayIcon className="h-8 w-8" />
           </div>
         )}
 
-        <h1 className="font-serif text-2xl font-semibold tracking-[-0.01em] text-[#141210]">
-          {property?.name || "Suite Concierge"}
-        </h1>
-        <p className="mt-1 mb-6 text-xs text-[#5C554E]">
-          Private in-room dining & hospitality directory
+        <h1 className="font-serif text-2xl font-bold text-[#1E150F] mb-1">In-Room Dining</h1>
+        <p className="font-script text-base text-[#73685C] mb-6">
+          Curated culinary experiences delivered to your suite
         </p>
 
-        <div className="mb-5 flex items-start gap-3 rounded-lg border border-[rgba(20,18,16,0.09)] bg-[#F6F4EF] p-3.5 text-left">
-          <QrCode className="mt-0.5 h-4 w-4 shrink-0 text-[#966F29]" strokeWidth={1.5} />
-          <p className="text-xs leading-relaxed text-[#5C554E]">
-            Scan the desk or bedside suite QR card to activate ordering for your stay.
+        <div className="mb-6 rounded-2xl border border-[#E5DDD1] bg-[#FAF8F5] p-4 text-left flex items-start gap-3">
+          <QrCode className="w-5 h-5 text-[#B88223] shrink-0 mt-0.5" />
+          <p className="text-xs text-[#73685C] leading-relaxed">
+            Please scan the permanent QR code placed on your suite desk or bedside table. Ordering is activated upon guest check-in.
           </p>
         </div>
 
         {authError && (
-          <div className="mb-5 flex items-start gap-2.5 rounded-lg border border-amber-200 bg-amber-50 p-3 text-left text-xs text-amber-900">
-            <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" strokeWidth={1.5} />
+          <div className="mb-6 p-3.5 bg-amber-50 border border-amber-200 text-amber-900 text-xs rounded-2xl text-left flex items-start gap-2.5">
+            <AlertCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
             <span>{authError}</span>
           </div>
         )}
 
-        <div className="border-t border-[rgba(20,18,16,0.08)] pt-4 text-xs text-[#5C554E]">
-          Assistance available 24 hours · <span className="font-medium text-[#141210]">Extension 0</span>
+        <div className="pt-4 border-t border-[#E5DDD1] text-[11px] text-[#73685C]">
+          Need assistance? Dial <span className="font-bold text-[#1E150F]">Extension 0</span> from your in-suite phone for Reception.
         </div>
       </div>
     </div>

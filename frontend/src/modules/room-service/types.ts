@@ -1,4 +1,4 @@
-import type { LucideIcon } from "lucide-react";
+import type React from "react";
 
 export type HousekeepingStatus = "pending" | "accepted" | "in_progress" | "completed" | "declined";
 
@@ -33,7 +33,7 @@ export interface RoomServiceCatalogItem {
   type: string;
   title: string;
   desc: string;
-  icon: LucideIcon;
+  icon: React.ComponentType<{ className?: string }>;
   badge: string;
 }
 

@@ -23,7 +23,59 @@ import { Modal } from "../../../core/ui/Modal";
 import { formatINR } from "../../../core/ui/currency";
 import { cn } from "../../../core/ui/utils";
 import { attractionsApi } from "../api";
-import type { AttractionMediaItem, LocalAttraction, LocalAttractionPayload } from "../types";
+import type {
+  AttractionMediaItem,
+  AttractionPricingOption,
+  LocalAttraction,
+  LocalAttractionPayload,
+} from "../types";
+
+interface PricingOptionDraft {
+  id: string;
+  label: string;
+  priceStr: string;
+  details: string;
+}
+
+function makeOptionId() {
+  return `opt-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+}
+
+const DEFAULT_OPTION_PRESETS: Array<{ label: string; priceStr: string; details: string }> = [
+  { label: "Cab Fare", priceStr: "", details: "" },
+  { label: "Entry Fee", priceStr: "", details: "" },
+  { label: "Direct Package", priceStr: "", details: "" },
+];
+
+function hydrateOptionDrafts(item?: LocalAttraction | null): PricingOptionDraft[] {
+  if (!item) {
+    return DEFAULT_OPTION_PRESETS.map((p, i) => ({ id: `preset-${i}-${makeOptionId()}`, ...p }));
+  }
+  if (Array.isArray(item.pricingOptions) && item.pricingOptions.length > 0) {
+    return item.pricingOptions.map((opt) => ({
+      id: opt.id || makeOptionId(),
+      label: opt.label,
+      priceStr: opt.price !== null && opt.price !== undefined ? String(opt.price) : "",
+      details: opt.details || "",
+    }));
+  }
+  const legacy: PricingOptionDraft[] = [];
+  if (item.cabPrice !== null && item.cabPrice !== undefined) {
+    legacy.push({ id: "cab", label: "Cab Fare", priceStr: String(item.cabPrice), details: "" });
+  }
+  if (item.entryFee !== null && item.entryFee !== undefined) {
+    legacy.push({ id: "entry", label: "Entry Fee", priceStr: String(item.entryFee), details: "" });
+  }
+  if (item.packagePrice !== null && item.packagePrice !== undefined) {
+    legacy.push({
+      id: "package",
+      label: "Direct Package",
+      priceStr: String(item.packagePrice),
+      details: item.packageDetails || "",
+    });
+  }
+  return legacy;
+}
 
 async function compressAttractionImage(file: File): Promise<string> {
   if (!["image/png", "image/jpeg", "image/webp"].includes(file.type)) {
@@ -95,9 +147,7 @@ export function AdminAttractions() {
   const [modalOpen, setModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [form, setForm] = useState<LocalAttractionPayload>(DEFAULT_FORM);
-  const [cabPriceStr, setCabPriceStr] = useState("");
-  const [entryFeeStr, setEntryFeeStr] = useState("");
-  const [packagePriceStr, setPackagePriceStr] = useState("");
+  const [optionDrafts, setOptionDrafts] = useState<PricingOptionDraft[]>(() => hydrateOptionDrafts(null));
   const [mediaUrlInput, setMediaUrlInput] = useState("");
   const [mediaTypeInput, setMediaTypeInput] = useState<"image" | "video">("image");
   const [mediaError, setMediaError] = useState("");
@@ -127,9 +177,7 @@ export function AdminAttractions() {
   const openCreateModal = () => {
     setEditingId(null);
     setForm({ ...DEFAULT_FORM, sortOrder: attractions.length + 1 });
-    setCabPriceStr("");
-    setEntryFeeStr("");
-    setPackagePriceStr("");
+    setOptionDrafts(hydrateOptionDrafts(null));
     setMediaUrlInput("");
     setMediaError("");
     setModalOpen(true);
@@ -150,17 +198,36 @@ export function AdminAttractions() {
       entryFee: item.entryFee,
       packagePrice: item.packagePrice,
       packageDetails: item.packageDetails || "",
+      pricingOptions: item.pricingOptions || [],
       media: item.media || [],
       isFeatured: item.isFeatured,
       isActive: item.isActive,
       sortOrder: item.sortOrder,
     });
-    setCabPriceStr(item.cabPrice !== null ? String(item.cabPrice) : "");
-    setEntryFeeStr(item.entryFee !== null ? String(item.entryFee) : "");
-    setPackagePriceStr(item.packagePrice !== null ? String(item.packagePrice) : "");
+    setOptionDrafts(hydrateOptionDrafts(item));
     setMediaUrlInput("");
     setMediaError("");
     setModalOpen(true);
+  };
+
+  const handleAddOptionDraft = (label = "", priceStr = "", details = "") => {
+    setOptionDrafts((prev) => [
+      ...prev,
+      { id: makeOptionId(), label, priceStr, details },
+    ]);
+  };
+
+  const handleUpdateOptionDraft = (
+    id: string,
+    patch: Partial<Omit<PricingOptionDraft, "id">>
+  ) => {
+    setOptionDrafts((prev) =>
+      prev.map((opt) => (opt.id === id ? { ...opt, ...patch } : opt))
+    );
+  };
+
+  const handleRemoveOptionDraft = (id: string) => {
+    setOptionDrafts((prev) => prev.filter((opt) => opt.id !== id));
   };
 
   const handleAddMediaUrl = () => {
@@ -200,6 +267,15 @@ export function AdminAttractions() {
     setSaving(true);
     setMediaError("");
     try {
+      const normalizedOptions: AttractionPricingOption[] = optionDrafts
+        .filter((opt) => opt.label.trim().length > 0)
+        .map((opt) => ({
+          id: opt.id,
+          label: opt.label.trim(),
+          price: opt.priceStr.trim() !== "" ? Number(opt.priceStr) : null,
+          details: opt.details.trim() || null,
+        }));
+
       const payload: LocalAttractionPayload = {
         ...form,
         title: form.title.trim(),
@@ -210,9 +286,10 @@ export function AdminAttractions() {
         timings: form.timings?.trim() || null,
         packageDetails: form.packageDetails?.trim() || null,
         rating: Math.max(0, Math.min(5, Number(form.rating) || 0)),
-        cabPrice: cabPriceStr.trim() !== "" ? Number(cabPriceStr) : null,
-        entryFee: entryFeeStr.trim() !== "" ? Number(entryFeeStr) : null,
-        packagePrice: packagePriceStr.trim() !== "" ? Number(packagePriceStr) : null,
+        pricingOptions: normalizedOptions,
+        cabPrice: normalizedOptions.find((o) => /cab|taxi|transfer/i.test(o.label))?.price ?? null,
+        entryFee: normalizedOptions.find((o) => /entry|ticket|pass|fee/i.test(o.label))?.price ?? null,
+        packagePrice: normalizedOptions.find((o) => /package|combo|tour/i.test(o.label))?.price ?? null,
       };
 
       if (editingId) {
@@ -419,31 +496,26 @@ export function AdminAttractions() {
                       )}
                     </div>
 
-                    <div className="grid grid-cols-3 gap-2 pt-2 border-t border-[#E5DDD1]/70 text-[11px]">
-                      <div>
-                        <span className="text-[#73685C] flex items-center gap-1">
-                          <Car className="w-3 h-3" /> Cab
-                        </span>
-                        <strong className="font-mono text-[#1E150F]">
-                          {item.cabPrice !== null ? formatINR(item.cabPrice) : "—"}
-                        </strong>
-                      </div>
-                      <div>
-                        <span className="text-[#73685C] flex items-center gap-1">
-                          <Ticket className="w-3 h-3" /> Entry
-                        </span>
-                        <strong className="font-mono text-[#1E150F]">
-                          {item.entryFee !== null ? (item.entryFee === 0 ? "Free" : formatINR(item.entryFee)) : "—"}
-                        </strong>
-                      </div>
-                      <div>
-                        <span className="text-[#73685C] flex items-center gap-1">
-                          <Package className="w-3 h-3" /> Package
-                        </span>
-                        <strong className="font-mono text-[#8E6314]">
-                          {item.packagePrice !== null ? formatINR(item.packagePrice) : "—"}
-                        </strong>
-                      </div>
+                    <div className="flex flex-wrap gap-2 pt-2 border-t border-[#E5DDD1]/70 text-[11px]">
+                      {hydrateOptionDrafts(item).length === 0 ? (
+                        <span className="text-[#73685C]">No packages configured</span>
+                      ) : (
+                        hydrateOptionDrafts(item).map((opt) => (
+                          <div
+                            key={opt.id}
+                            className="rounded-lg border border-[#E5DDD1] bg-[#FAF8F5] px-2.5 py-1"
+                          >
+                            <span className="text-[#73685C] block text-[10px]">{opt.label}</span>
+                            <strong className="font-mono text-[#1E150F]">
+                              {opt.priceStr === ""
+                                ? "On call"
+                                : Number(opt.priceStr) === 0
+                                ? "Free"
+                                : formatINR(Number(opt.priceStr))}
+                            </strong>
+                          </div>
+                        ))
+                      )}
                     </div>
                   </div>
                 </div>
@@ -621,56 +693,103 @@ export function AdminAttractions() {
             />
           </div>
 
-          {/* Pricing Fields */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 p-3.5 rounded-2xl border border-[#E5DDD1] bg-[#FAF8F5]">
-            <div>
-              <label className="block text-[11px] font-bold text-[#1E150F] mb-1">Cab Fare (₹)</label>
-              <input
-                type="number"
-                min={0}
-                step="1"
-                value={cabPriceStr}
-                onChange={(e) => setCabPriceStr(e.target.value)}
-                placeholder="e.g. 1200"
-                className="w-full px-3 py-2 rounded-xl border border-[#E5DDD1] bg-white font-mono"
-              />
+          {/* Configurable Packages, Fares & Booking Options */}
+          <div className="space-y-3 p-3.5 rounded-2xl border border-[#E5DDD1] bg-[#FAF8F5]">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div>
+                <label className="block text-[11px] font-bold uppercase tracking-wider text-[#1E150F]">
+                  Packages, Fares & Selectable Options ({optionDrafts.length})
+                </label>
+                <p className="text-[11px] text-[#73685C]">
+                  Add, rename, price, or delete any option. Guests select an option before clicking Request Booking.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => handleAddOptionDraft("", "", "")}
+                className="inline-flex items-center gap-1 rounded-xl bg-[#1E150F] px-3 py-1.5 text-[11px] font-bold text-white hover:bg-[#33241A] btn-smooth-press-sm"
+              >
+                <Plus className="w-3.5 h-3.5 text-[#ECD7A9]" />
+                <span>Add Option</span>
+              </button>
             </div>
-            <div>
-              <label className="block text-[11px] font-bold text-[#1E150F] mb-1">Entry Fee (₹)</label>
-              <input
-                type="number"
-                min={0}
-                step="1"
-                value={entryFeeStr}
-                onChange={(e) => setEntryFeeStr(e.target.value)}
-                placeholder="0 = Free"
-                className="w-full px-3 py-2 rounded-xl border border-[#E5DDD1] bg-white font-mono"
-              />
+
+            <div className="flex flex-wrap items-center gap-1.5">
+              <span className="text-[10px] font-semibold text-[#73685C]">Quick presets:</span>
+              {["Cab Fare", "Entry Fee", "Direct Package", "Private Guide"].map((preset) => (
+                <button
+                  key={preset}
+                  type="button"
+                  onClick={() => handleAddOptionDraft(preset, "", "")}
+                  className="rounded-lg border border-[#ECD7A9] bg-[#FAF3E6] px-2 py-0.5 text-[10px] font-semibold text-[#8E6314] hover:bg-[#F2E5CA] btn-smooth-press-sm"
+                >
+                  + {preset}
+                </button>
+              ))}
             </div>
-            <div>
-              <label className="block text-[11px] font-bold text-[#1E150F] mb-1">Direct Package (₹)</label>
-              <input
-                type="number"
-                min={0}
-                step="1"
-                value={packagePriceStr}
-                onChange={(e) => setPackagePriceStr(e.target.value)}
-                placeholder="e.g. 2800"
-                className="w-full px-3 py-2 rounded-xl border border-[#E5DDD1] bg-white font-mono"
-              />
-            </div>
-            <div className="sm:col-span-3">
-              <label className="block text-[11px] font-bold text-[#1E150F] mb-1">
-                Direct Package Includes (Optional)
-              </label>
-              <input
-                type="text"
-                value={form.packageDetails || ""}
-                onChange={(e) => setForm({ ...form, packageDetails: e.target.value })}
-                placeholder="e.g. Private SUV + Entry Tickets + Guided Sunset Tour"
-                className="w-full px-3 py-2 rounded-xl border border-[#E5DDD1] bg-white"
-              />
-            </div>
+
+            {optionDrafts.length === 0 ? (
+              <div className="rounded-xl border border-dashed border-[#D4C3A3] bg-white/70 p-4 text-center text-[11px] text-[#73685C]">
+                No pricing options configured. Add an option above or leave empty for custom inquiry.
+              </div>
+            ) : (
+              <div className="space-y-2.5">
+                {optionDrafts.map((opt, idx) => (
+                  <div
+                    key={opt.id}
+                    className="grid grid-cols-1 sm:grid-cols-[1.2fr_0.8fr_1.4fr_auto] gap-2 items-end rounded-xl border border-[#E5DDD1] bg-white p-2.5"
+                  >
+                    <div>
+                      <label className="block text-[10px] font-bold text-[#73685C] mb-1">
+                        Option #{idx + 1} Name *
+                      </label>
+                      <input
+                        type="text"
+                        value={opt.label}
+                        onChange={(e) => handleUpdateOptionDraft(opt.id, { label: e.target.value })}
+                        placeholder="e.g. Cab Fare, Direct Package"
+                        className="w-full px-2.5 py-1.5 rounded-lg border border-[#E5DDD1] bg-[#FAF8F5] text-xs font-semibold text-[#1E150F]"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-bold text-[#73685C] mb-1">
+                        Price (₹) · 0 = Free
+                      </label>
+                      <input
+                        type="number"
+                        min={0}
+                        step="1"
+                        value={opt.priceStr}
+                        onChange={(e) => handleUpdateOptionDraft(opt.id, { priceStr: e.target.value })}
+                        placeholder="On request"
+                        className="w-full px-2.5 py-1.5 rounded-lg border border-[#E5DDD1] bg-[#FAF8F5] font-mono text-xs text-[#1E150F]"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-bold text-[#73685C] mb-1">
+                        Includes / Notes (Optional)
+                      </label>
+                      <input
+                        type="text"
+                        value={opt.details}
+                        onChange={(e) => handleUpdateOptionDraft(opt.id, { details: e.target.value })}
+                        placeholder="e.g. Private SUV + Entry Tickets"
+                        className="w-full px-2.5 py-1.5 rounded-lg border border-[#E5DDD1] bg-[#FAF8F5] text-xs text-[#1E150F]"
+                      />
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveOptionDraft(opt.id)}
+                      aria-label={`Remove ${opt.label || "option"}`}
+                      title="Delete option"
+                      className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-rose-200 bg-rose-50 text-rose-700 hover:bg-rose-100 btn-smooth-press-sm"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Media Uploader (Pictures & Videos) */}

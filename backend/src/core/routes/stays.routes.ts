@@ -21,6 +21,7 @@ export function createStaysRouter(): Router {
                 s.check_in_at, s.check_out_at, s.status, s.notes,
                 r.id as room_id, r.room_number, r.floor, r.wing,
                 p.name as property_name, p.currency, p.tax_rate_percent, p.service_charge_percent, p.ird_enabled, p.logo_url,
+                p.contact_number, p.whatsapp_number, p.attraction_booking_template,
                 p.welcome_mode, p.welcome_message, p.welcome_bg_url
          FROM stays s
          JOIN rooms r ON s.room_id = r.id
@@ -66,6 +67,9 @@ export function createStaysRouter(): Router {
           serviceChargePercent: Number(row.service_charge_percent),
           irdEnabled: row.ird_enabled,
           logoUrl: row.logo_url,
+          contactNumber: row.contact_number ?? null,
+          whatsappNumber: row.whatsapp_number ?? null,
+          attractionBookingTemplate: row.attraction_booking_template ?? null,
           welcomeMode: row.welcome_mode || "every_time",
           welcomeMessage: row.welcome_message ?? null,
           welcomeBgUrl: row.welcome_bg_url ?? null,

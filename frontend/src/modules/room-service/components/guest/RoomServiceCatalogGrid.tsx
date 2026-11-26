@@ -1,5 +1,6 @@
-import React from "react";
-import { ArrowRight } from "lucide-react";
+import React, { useRef } from "react";
+import { SuiteCareBellIcon } from "../../../../core/ui/CustomResortIcons";
+import { setupScrollBatchCards, useGSAP } from "../../../../core/ui/gsap";
 import { Tilt3DCard } from "../../../../core/ui/MotionPrimitives";
 import type { RoomServiceCatalogItem } from "../../types";
 
@@ -9,45 +10,52 @@ interface RoomServiceCatalogGridProps {
 }
 
 export function RoomServiceCatalogGrid({ services, onSelectService }: RoomServiceCatalogGridProps) {
+  const gridRef = useRef<HTMLDivElement>(null);
+
+  useGSAP(
+    () => {
+      if (!gridRef.current) return;
+      setupScrollBatchCards(gridRef.current, ".gsap-rs-card", { stagger: 0.06, y: 22, start: "top 92%" });
+    },
+    { scope: gridRef, dependencies: [services.length] }
+  );
+
   return (
-    <div className="space-y-3">
-      <h2 className="font-serif text-xl font-semibold tracking-[-0.01em] text-[#141210]">
-        Available Services
-      </h2>
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+    <div ref={gridRef}>
+      <h3 className="font-sans text-lg font-bold text-white mb-3.5 flex items-center gap-2 px-1">
+        <SuiteCareBellIcon className="w-4 h-4 text-white/85" /> Request a Service
+      </h3>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
         {services.map((srv) => {
           const Icon = srv.icon;
           return (
             <Tilt3DCard
               key={srv.type}
               onClick={() => onSelectService(srv)}
-              maxTilt={3.5}
-              className="cursor-pointer"
-              surfaceClassName="group flex h-full flex-col justify-between rounded-xl border border-[rgba(20,18,16,0.1)] bg-white p-4 text-left hover:border-[rgba(20,18,16,0.28)]"
+              maxTilt={4.5}
+              className="gsap-rs-card cursor-pointer"
+              surfaceClassName="group h-full frost-component-card rounded-[28px] p-4.5 flex flex-col justify-between text-left"
             >
               <div>
-                <div className="mb-3 flex items-center justify-between gap-2">
-                  <Icon
-                    className="h-[18px] w-[18px] text-[#5C554E] transition-colors group-hover:text-[#141210]"
-                    strokeWidth={1.4}
-                  />
-                  <span className="rounded-md border border-[rgba(20,18,16,0.09)] bg-[#F6F4EF] px-2 py-0.5 text-[10px] font-medium text-[#5C554E]">
+                <div className="flex items-center justify-between mb-3.5">
+                  <div className="w-10 h-10 rounded-full frost-pill-chip text-white flex items-center justify-center group-hover:scale-105 transition-transform duration-200">
+                    <Icon className="w-4.5 h-4.5" />
+                  </div>
+                  <span className="text-[10px] font-bold text-white/90 frost-pill-chip px-2.5 py-0.5 rounded-full">
                     {srv.badge}
                   </span>
                 </div>
-                <h3 className="font-serif text-[17px] font-semibold leading-snug text-[#141210] transition-colors group-hover:text-[#966F29]">
+                <h4 className="font-sans text-[15px] font-bold text-white leading-snug">
                   {srv.title}
-                </h3>
-                <p className="mt-1 line-clamp-2 text-xs leading-relaxed text-[#5C554E]">
+                </h4>
+                <p className="text-[11.5px] text-white/75 mt-1.5 line-clamp-2 leading-relaxed">
                   {srv.desc}
                 </p>
               </div>
-              <div className="mt-4 flex items-center justify-between border-t border-[rgba(20,18,16,0.07)] pt-2.5 text-xs font-medium text-[#141210]">
-                <span>Request</span>
-                <ArrowRight
-                  className="h-3.5 w-3.5 text-[#847C73] transition-transform duration-200 group-hover:translate-x-1 group-hover:text-[#141210]"
-                  strokeWidth={1.5}
-                />
+              <div className="mt-4 pt-1">
+                <div className="flex w-full items-center justify-center rounded-full frost-cta-white py-2.5 text-[11.5px] font-bold">
+                  Request Service
+                </div>
               </div>
             </Tilt3DCard>
           );

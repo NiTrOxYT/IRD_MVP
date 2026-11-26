@@ -123,27 +123,27 @@ export function AdminRoomQR() {
                 <div className="w-8 h-8 rounded-full bg-[#1E150F] text-[#B88223] flex items-center justify-center font-serif text-sm font-bold mx-auto mb-2 border border-[#ECD7A9]">
                   A
                 </div>
-                <p className="text-xs font-medium text-[#966F29]">{propertyName || "Property"}</p>
-                <h2 className="mt-1 font-serif text-2xl font-semibold text-[#141210] tabular-nums">Suite {room.room_number}</h2>
-                <p className="text-xs text-[#5C554E]">{room.wing || "Deluxe Suite"}</p>
+                <p className="text-[10px] font-bold uppercase tracking-widest text-[#8E6314]">{propertyName || "Property"}</p>
+                <h2 className="mt-1 font-serif text-2xl font-bold text-[#1E150F] tabular-nums">Suite {room.room_number}</h2>
+                <p className="text-xs text-[#73685C]">{room.wing || "Deluxe Suite"}</p>
 
-                <div className="my-4 inline-block rounded-lg border border-[rgba(20,18,16,0.1)] bg-white p-3">
+                <div className="p-3 bg-white rounded-2xl border border-[#EEE8DF] shadow-inner inline-block my-4">
                   <img
-                    className="mx-auto h-48 w-48"
+                    className="w-48 h-48 mx-auto"
                     src={dataUrl}
                     alt={`In-room dining QR code for suite ${room.room_number}`}
                   />
                 </div>
 
-                <p className="text-xs text-[#5C554E]">
-                  Scan with smartphone camera to open suite services
+                <p className="font-script text-sm text-[#73685C]">
+                  Scan with smartphone camera to order in-room dining
                 </p>
 
                 <button
                   onClick={() => downloadCode({ room, dataUrl })}
-                  className="room-qr-actions mt-4 inline-flex w-full items-center justify-center gap-2 rounded-lg bg-[#141210] px-4 py-2.5 text-xs font-medium text-white hover:bg-[#2B2622] btn-smooth-press-sm"
+                  className="room-qr-actions mt-4 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-[#1E150F] px-4 py-2.5 text-xs font-bold text-white hover:bg-[#29231F] btn-smooth-press shadow-xs"
                 >
-                  <Download className="h-3.5 w-3.5 text-[#D9C7A3]" strokeWidth={1.5} />
+                  <Download className="h-3.5 w-3.5 text-[#B88223]" />
                   <span>Download Placard (PNG)</span>
                 </button>
               </article>

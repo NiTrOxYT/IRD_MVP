@@ -134,32 +134,35 @@ export function AdminOrders() {
   const pendingCount = orders.filter((o) => o.status === "pending").length;
 
   return (
-    <div className="min-h-[100dvh] bg-[#F6F4EF] py-7 px-4 sm:px-6 max-w-7xl mx-auto space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-5 border-b border-[rgba(20,18,16,0.09)]">
+    <div className="min-h-[100dvh] bg-[#FAF8F5] py-8 px-4 sm:px-6 max-w-7xl mx-auto space-y-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-[#E5DDD1]">
         <div>
-          <h1 className="font-serif text-3xl font-semibold text-[#141210] tracking-[-0.015em]">
-            In-Room Dining Queue
+          <span className="text-[10px] font-bold uppercase tracking-widest text-[#8E6314]">
+            Command Center · Butler & Reception
+          </span>
+          <h1 className="font-serif text-3xl font-bold text-[#1E150F] tracking-tight mt-0.5">
+            In-Room Dining Order Queue
           </h1>
-          <p className="text-xs text-[#5C554E] mt-1">
-            Live reception triage, kitchen coordination, and suite delivery dispatch.
+          <p className="text-xs text-[#73685C] mt-1">
+            Realtime ticket reception, kitchen progress coordination, and suite butler delivery.
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2.5">
           <button
             onClick={() => void fetchOrders()}
             disabled={loading}
-            className="inline-flex h-9 items-center gap-1.5 px-3 rounded-lg text-xs font-medium bg-white border border-[rgba(20,18,16,0.12)] text-[#141210] hover:border-[rgba(20,18,16,0.26)] btn-smooth-press-sm"
+            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold bg-[#FFFDF9] border border-[#E5DDD1] text-[#1E150F] hover:bg-[#FAF8F5] shadow-2xs btn-smooth-press"
           >
-            <RotateCcw className={cn("w-3.5 h-3.5 text-[#5C554E]", loading && "animate-spin")} strokeWidth={1.5} />
+            <RotateCcw className={cn("w-3.5 h-3.5", loading && "animate-spin")} />
             <span>Refresh</span>
           </button>
           <Link
             href="/kitchen"
-            className="inline-flex h-9 items-center gap-1.5 px-3.5 rounded-lg text-xs font-medium bg-[#141210] text-white hover:bg-[#2B2622] btn-smooth-press-sm"
+            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold bg-[#1E150F] text-white hover:bg-[#29231F] shadow-xs btn-smooth-press"
           >
-            <ChefHat className="w-3.5 h-3.5 text-[#D9C7A3]" strokeWidth={1.5} />
-            <span>Kitchen Display</span>
+            <ChefHat className="w-3.5 h-3.5 text-[#B88223]" />
+            <span>Kitchen KOT Display</span>
           </Link>
         </div>
       </div>

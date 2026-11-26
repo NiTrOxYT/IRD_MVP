@@ -18,4 +18,17 @@ describe("Welcome Letter Settings Validation", () => {
         });
         assert.equal(parsed.success, false);
     });
+    it("accepts valid whatsappNumber and attractionBookingTemplate values", () => {
+        const parsed = settingsSchema.safeParse({
+            whatsappNumber: "+918100318327",
+            attractionBookingTemplate: "Hello Concierge, book {{attraction}} ({{package}}) for Suite {{room}}.",
+        });
+        assert.equal(parsed.success, true);
+    });
+    it("rejects malformed whatsappNumber values", () => {
+        const parsed = settingsSchema.safeParse({
+            whatsappNumber: "invalid-phone!!",
+        });
+        assert.equal(parsed.success, false);
+    });
 });

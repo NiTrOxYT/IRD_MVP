@@ -1,11 +1,13 @@
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Car,
+  Check,
   Clock,
   Compass,
   Film,
   Image as ImageIcon,
   MapPin,
+  MessageCircle,
   Package,
   PhoneCall,
   Play,
@@ -15,13 +17,18 @@ import {
   VolumeX,
   X,
 } from "lucide-react";
+import { gsap, useGSAP } from "../../../../core/ui/gsap";
 import { cn } from "../../../../core/ui/utils";
 import { useAttractionsAdapter } from "../../adapter";
 import type { AttractionMediaItem, LocalAttraction } from "../../types";
+import { buildAttractionWhatsappUrl } from "../../whatsapp";
 
 export interface AttractionsGuestPortalProps {
   roomNumber?: string;
+  guestName?: string | null;
   contactNumber?: string | null;
+  whatsappNumber?: string | null;
+  attractionBookingTemplate?: string | null;
 }
 
 function getYouTubeVideoId(url: string): string | null {
@@ -190,14 +197,22 @@ function MediaStage({
   );
 }
 
-export function AttractionsGuestPortal({ roomNumber, contactNumber }: AttractionsGuestPortalProps) {
+export function AttractionsGuestPortal({
+  roomNumber,
+  guestName,
+  contactNumber,
+  whatsappNumber,
+  attractionBookingTemplate,
+}: AttractionsGuestPortalProps) {
   const { api, formatPrice } = useAttractionsAdapter();
+  const stageContainerRef = useRef<HTMLDivElement>(null);
   const [attractions, setAttractions] = useState<LocalAttraction[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<string>("All");
   const [activeId, setActiveId] = useState<number | null>(null);
   const [activeMediaIdx, setActiveMediaIdx] = useState(0);
+  const [selectedOptionId, setSelectedOptionId] = useState<string | null>(null);
   const [muted, setMuted] = useState(true);
   const [galleryOpen, setGalleryOpen] = useState(false);
 
@@ -236,9 +251,105 @@ export function AttractionsGuestPortal({ roomNumber, contactNumber }: Attraction
     [filtered, activeId]
   );
 
+  useGSAP(
+    () => {
+      if (!activeAttraction) return;
+      const mm = gsap.matchMedia();
+      mm.add("(prefers-reduced-motion: no-preference)", () => {
+        gsap.fromTo(
+          ".gsap-attr-hud",
+          { autoAlpha: 0, y: 18 },
+          { autoAlpha: 1, y: 0, duration: 0.45, ease: "power3.out", clearProps: "transform" }
+        );
+      });
+    },
+    { scope: stageContainerRef, dependencies: [activeAttraction?.id], revertOnUpdate: true }
+  );
+
+  const resolvedOptions = useMemo(() => {
+    if (!activeAttraction) return [];
+    const formatOptPrice = (price: number | null | undefined, label: string) => {
+      if (price === null || price === undefined) {
+        return /entry|ticket|pass/i.test(label) ? "Varies" : "On request";
+      }
+      if (Number(price) === 0) return "Free";
+      return formatPrice(Number(price));
+    };
+    const pickIcon = (label: string) => {
+      if (/cab|taxi|transfer|pickup/i.test(label)) return <Car className="h-3 w-3 text-[#F2B749] shrink-0" />;
+      if (/entry|ticket|pass|fee/i.test(label)) return <Ticket className="h-3 w-3 text-[#F2B749] shrink-0" />;
+      return <Package className="h-3 w-3 text-[#FCE2A6] shrink-0" />;
+    };
+
+    if (Array.isArray(activeAttraction.pricingOptions) && activeAttraction.pricingOptions.length > 0) {
+      return activeAttraction.pricingOptions.map((opt) => ({
+        id: opt.id || opt.label,
+        label: opt.label,
+        priceLabel: formatOptPrice(opt.price, opt.label),
+        details: opt.details || null,
+        icon: pickIcon(opt.label),
+      }));
+    }
+
+    const legacy: Array<{
+      id: string;
+      label: string;
+      priceLabel: string;
+      details: string | null;
+      icon: React.ReactNode;
+    }> = [];
+    if (activeAttraction.cabPrice !== null) {
+      legacy.push({
+        id: "cab",
+        label: "Cab Fare",
+        priceLabel: formatPrice(activeAttraction.cabPrice),
+        details: null,
+        icon: <Car className="h-3 w-3 text-[#F2B749] shrink-0" />,
+      });
+    }
+    if (activeAttraction.entryFee !== null) {
+      legacy.push({
+        id: "entry",
+        label: "Entry Fee",
+        priceLabel: activeAttraction.entryFee === 0 ? "Free" : formatPrice(activeAttraction.entryFee),
+        details: null,
+        icon: <Ticket className="h-3 w-3 text-[#F2B749] shrink-0" />,
+      });
+    }
+    if (activeAttraction.packagePrice !== null) {
+      legacy.push({
+        id: "package",
+        label: "Direct Package",
+        priceLabel: formatPrice(activeAttraction.packagePrice),
+        details: activeAttraction.packageDetails || null,
+        icon: <Package className="h-3 w-3 text-[#FCE2A6] shrink-0" />,
+      });
+    }
+    return legacy;
+  }, [activeAttraction, formatPrice]);
+
   useEffect(() => {
     setActiveMediaIdx(0);
+    setSelectedOptionId(resolvedOptions[0]?.id ?? null);
   }, [activeAttraction?.id]);
+
+  const selectedOption = useMemo(
+    () => resolvedOptions.find((o) => o.id === selectedOptionId) || resolvedOptions[0] || null,
+    [resolvedOptions, selectedOptionId]
+  );
+
+  const selectedBookingWaUrl = useMemo(() => {
+    if (!activeAttraction) return null;
+    return buildAttractionWhatsappUrl(whatsappNumber, attractionBookingTemplate, {
+      attraction: activeAttraction.title,
+      category: activeAttraction.category,
+      packageName: selectedOption?.label || "Custom Package",
+      price: selectedOption?.priceLabel || "Custom Quote",
+      room: roomNumber,
+      guest: guestName,
+      location: activeAttraction.location,
+    });
+  }, [activeAttraction, attractionBookingTemplate, guestName, roomNumber, selectedOption, whatsappNumber]);
 
   const currentMedia = activeAttraction?.media?.[activeMediaIdx] || activeAttraction?.media?.[0];
   const fallbackPoster =
@@ -286,7 +397,7 @@ export function AttractionsGuestPortal({ roomNumber, contactNumber }: Attraction
   }
 
   return (
-    <div className="flex flex-1 min-h-0 w-full flex-col gap-2 overflow-hidden">
+    <div ref={stageContainerRef} className="flex flex-1 min-h-0 w-full flex-col gap-2 overflow-hidden">
       {/* Compact Category Strip */}
       {categories.length > 1 && (
         <div className="flex shrink-0 items-center gap-1.5 overflow-x-auto no-scrollbar">
@@ -324,7 +435,7 @@ export function AttractionsGuestPortal({ roomNumber, contactNumber }: Attraction
 
         {/* Top Bar Inside Stage */}
         <div className="relative z-10 flex shrink-0 items-center justify-between gap-2 px-3.5 pt-3 sm:px-7 sm:pt-5">
-          <div className="inline-flex min-w-0 items-center gap-1.5 rounded-full border border-white/15 bg-black/45 px-2.5 py-1 text-[10px] sm:text-[11px] font-medium text-white/90 backdrop-blur-md">
+          <div className="inline-flex min-w-0 items-center gap-1.5 rounded-full border border-white/15 bg-black/62 px-2.5 py-1 text-[10px] sm:text-[11px] font-medium text-white/90">
             <Compass className="h-3 w-3 shrink-0 text-[#F2B749]" />
             <span className="truncate">{activeAttraction.category}</span>
             {activeAttraction.distanceText && (
@@ -338,13 +449,13 @@ export function AttractionsGuestPortal({ roomNumber, contactNumber }: Attraction
                 type="button"
                 onClick={() => setMuted((m) => !m)}
                 aria-label={muted ? "Unmute video" : "Mute video"}
-                className="flex h-7 w-7 sm:h-8 sm:w-8 items-center justify-center rounded-full border border-white/25 bg-black/50 text-white backdrop-blur-md hover:bg-white/20"
+                className="flex h-7 w-7 sm:h-8 sm:w-8 items-center justify-center rounded-full border border-white/25 bg-black/65 text-white hover:bg-white/20"
               >
                 {muted ? <VolumeX className="h-3.5 w-3.5" /> : <Volume2 className="h-3.5 w-3.5" />}
               </button>
             )}
             {activeAttraction.media.length > 1 && (
-              <span className="inline-flex items-center gap-1 rounded-full border border-white/20 bg-black/50 px-2 py-1 text-[10px] text-white/90 backdrop-blur-md">
+              <span className="inline-flex items-center gap-1 rounded-full border border-white/20 bg-black/65 px-2 py-1 text-[10px] text-white/90">
                 {activeAttraction.media.some((m) => m.type === "video") ? (
                   <Film className="h-3 w-3 text-[#F2B749]" />
                 ) : (
@@ -357,7 +468,7 @@ export function AttractionsGuestPortal({ roomNumber, contactNumber }: Attraction
         </div>
 
         {/* Middle/Lower Editorial HUD (Compact, never overflows vertically) */}
-        <div className="relative z-10 flex flex-1 min-h-0 flex-col justify-end px-3.5 pb-2.5 sm:px-7 sm:pb-4">
+        <div className="gsap-attr-hud relative z-10 flex flex-1 min-h-0 flex-col justify-end px-3.5 pb-2.5 sm:px-7 sm:pb-4">
           <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-2.5 sm:gap-4">
             <div className="max-w-lg space-y-1.5 sm:space-y-2.5">
               <div className="space-y-0.5">
@@ -381,48 +492,52 @@ export function AttractionsGuestPortal({ roomNumber, contactNumber }: Attraction
                 </p>
               )}
 
-              {/* Compact 3-Column Pricing Strip */}
-              <div className="grid grid-cols-3 gap-1.5 max-w-md">
-                <div className="rounded-xl border border-white/15 bg-black/45 px-2.5 py-1.5 backdrop-blur-md">
-                  <span className="flex items-center gap-1 text-[9.5px] font-medium text-white/60">
-                    <Car className="h-2.5 w-2.5 text-[#F2B749] shrink-0" /> Cab
-                  </span>
-                  <span className="block truncate font-mono text-[11px] sm:text-xs font-bold text-white tabular-nums">
-                    {activeAttraction.cabPrice !== null
-                      ? formatPrice(activeAttraction.cabPrice)
-                      : "On call"}
-                  </span>
+              {/* Selectable Packages / Fares Strip */}
+              {resolvedOptions.length > 0 && (
+                <div className="flex flex-wrap gap-1.5 max-w-lg" role="radiogroup" aria-label="Booking options">
+                  {resolvedOptions.map((opt) => {
+                    const isSelected = selectedOption?.id === opt.id;
+                    return (
+                      <button
+                        key={opt.id}
+                        type="button"
+                        role="radio"
+                        aria-checked={isSelected}
+                        onClick={() => setSelectedOptionId(opt.id)}
+                        className={cn(
+                          "min-w-[92px] flex-1 rounded-xl border px-2.5 py-1.5 text-left transition-[transform,background-color,border-color,box-shadow] duration-150 btn-smooth-press-sm",
+                          isSelected
+                            ? "border-[#F2B749] bg-[#F2B749]/25 ring-1 ring-[#F2B749]/70 shadow-sm"
+                            : "border-white/15 bg-black/62 hover:border-white/35"
+                        )}
+                      >
+                        <div className="flex items-center justify-between gap-1">
+                          <span
+                            className={cn(
+                              "flex items-center gap-1 text-[9.5px] font-medium truncate",
+                              isSelected ? "text-[#FCE2A6]" : "text-white/65"
+                            )}
+                          >
+                            {opt.icon}
+                            <span className="truncate">{opt.label}</span>
+                          </span>
+                          {isSelected && <Check className="h-2.5 w-2.5 shrink-0 text-[#F2B749]" />}
+                        </div>
+                        <span className="mt-0.5 block truncate font-mono text-[11px] sm:text-xs font-bold text-white tabular-nums">
+                          {opt.priceLabel}
+                        </span>
+                      </button>
+                    );
+                  })}
                 </div>
-                <div className="rounded-xl border border-white/15 bg-black/45 px-2.5 py-1.5 backdrop-blur-md">
-                  <span className="flex items-center gap-1 text-[9.5px] font-medium text-white/60">
-                    <Ticket className="h-2.5 w-2.5 text-[#F2B749] shrink-0" /> Entry
-                  </span>
-                  <span className="block truncate font-mono text-[11px] sm:text-xs font-bold text-white tabular-nums">
-                    {activeAttraction.entryFee === null
-                      ? "Varies"
-                      : activeAttraction.entryFee === 0
-                      ? "Free"
-                      : formatPrice(activeAttraction.entryFee)}
-                  </span>
-                </div>
-                <div className="rounded-xl border border-[#F2B749]/45 bg-[#F2B749]/15 px-2.5 py-1.5 backdrop-blur-md">
-                  <span className="flex items-center gap-1 text-[9.5px] font-medium text-[#FCE2A6]">
-                    <Package className="h-2.5 w-2.5 shrink-0" /> Package
-                  </span>
-                  <span className="block truncate font-mono text-[11px] sm:text-xs font-bold text-white tabular-nums">
-                    {activeAttraction.packagePrice !== null
-                      ? formatPrice(activeAttraction.packagePrice)
-                      : "Custom"}
-                  </span>
-                </div>
-              </div>
+              )}
 
-              {/* Glass Pill CTA */}
-              <div>
+              {/* Glass Pill CTAs */}
+              <div className="flex flex-wrap items-center gap-2">
                 <button
                   type="button"
                   onClick={() => setGalleryOpen(true)}
-                  className="inline-flex w-full sm:w-auto items-center justify-center gap-1.5 rounded-full border border-white/40 bg-white/12 px-4 py-1.5 sm:py-2 text-[11px] sm:text-xs font-semibold text-white backdrop-blur-md transition-colors hover:bg-white/22 cursor-pointer"
+                  className="inline-flex flex-1 sm:flex-none items-center justify-center gap-1.5 rounded-full border border-white/40 bg-black/55 px-3.5 py-1.5 sm:py-2 text-[11px] sm:text-xs font-semibold text-white transition-colors hover:bg-white/22 cursor-pointer"
                 >
                   {currentMedia?.type === "video" ? (
                     <Play className="h-3 w-3 fill-white" />
@@ -431,6 +546,20 @@ export function AttractionsGuestPortal({ roomNumber, contactNumber }: Attraction
                   )}
                   <span>Photos, Videos & Packages</span>
                 </button>
+
+                {selectedBookingWaUrl && (
+                  <a
+                    href={selectedBookingWaUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex flex-1 sm:flex-none items-center justify-center gap-1.5 rounded-full border border-emerald-300/60 bg-emerald-600 px-3.5 py-1.5 sm:py-2 text-[11px] sm:text-xs font-bold text-white shadow-md transition-colors hover:bg-emerald-500 btn-smooth-press"
+                  >
+                    <MessageCircle className="h-3.5 w-3.5 shrink-0" />
+                    <span className="truncate">
+                      {selectedOption ? `Request Booking · ${selectedOption.label}` : "Request Booking"}
+                    </span>
+                  </a>
+                )}
               </div>
             </div>
 
@@ -523,11 +652,11 @@ export function AttractionsGuestPortal({ roomNumber, contactNumber }: Attraction
       {/* Full Media Gallery & Package Details Lightbox */}
       {galleryOpen && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 p-3 sm:p-6 backdrop-blur-md"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 p-3 sm:p-6"
           onClick={() => setGalleryOpen(false)}
         >
           <div
-            className="relative max-h-[92dvh] w-full max-w-3xl overflow-y-auto rounded-2xl sm:rounded-3xl border border-white/15 bg-[#10141F] text-white shadow-2xl"
+            className="relative max-h-[92dvh] w-full max-w-3xl overflow-y-auto rounded-[28px] sm:rounded-[32px] frost-component-card text-white"
             onClick={(e) => e.stopPropagation()}
           >
             <button
@@ -596,53 +725,79 @@ export function AttractionsGuestPortal({ roomNumber, contactNumber }: Attraction
                 </p>
               )}
 
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
-                <div className="rounded-xl border border-white/15 bg-white/5 p-3">
-                  <span className="text-[11px] text-white/60 flex items-center gap-1.5">
-                    <Car className="h-3.5 w-3.5 text-[#F2B749]" /> Cab Transfer
-                  </span>
-                  <span className="mt-1 block font-mono text-sm sm:text-base font-bold">
-                    {activeAttraction.cabPrice !== null
-                      ? formatPrice(activeAttraction.cabPrice)
-                      : "On request"}
-                  </span>
+              {resolvedOptions.length > 0 && (
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5" role="radiogroup" aria-label="Select package option">
+                  {resolvedOptions.map((pkg) => {
+                    const isSelected = selectedOption?.id === pkg.id;
+                    return (
+                      <button
+                        key={pkg.id}
+                        type="button"
+                        role="radio"
+                        aria-checked={isSelected}
+                        onClick={() => setSelectedOptionId(pkg.id)}
+                        className={cn(
+                          "flex flex-col justify-between gap-2 rounded-xl border p-3 text-left transition-[transform,background-color,border-color,box-shadow] duration-150 btn-smooth-press-sm",
+                          isSelected
+                            ? "border-[#F2B749] bg-[#F2B749]/20 ring-1 ring-[#F2B749]"
+                            : "border-white/15 bg-white/5 hover:border-white/35"
+                        )}
+                      >
+                        <div className="w-full">
+                          <div className="flex items-center justify-between gap-1">
+                            <span
+                              className={cn(
+                                "flex items-center gap-1.5 text-[11px] font-medium",
+                                isSelected ? "text-[#FCE2A6]" : "text-white/70"
+                              )}
+                            >
+                              {pkg.icon} {pkg.label}
+                            </span>
+                            {isSelected && (
+                              <span className="inline-flex items-center gap-0.5 rounded-full bg-[#F2B749] px-1.5 py-0.5 text-[9.5px] font-bold text-[#10141F]">
+                                <Check className="h-2.5 w-2.5" /> Selected
+                              </span>
+                            )}
+                          </div>
+                          <span className="mt-1 block font-mono text-sm sm:text-base font-bold text-white tabular-nums">
+                            {pkg.priceLabel}
+                          </span>
+                          {pkg.details && (
+                            <span className="mt-1 block text-[11px] text-white/75">
+                              {pkg.details}
+                            </span>
+                          )}
+                        </div>
+                      </button>
+                    );
+                  })}
                 </div>
-                <div className="rounded-xl border border-white/15 bg-white/5 p-3">
-                  <span className="text-[11px] text-white/60 flex items-center gap-1.5">
-                    <Ticket className="h-3.5 w-3.5 text-[#F2B749]" /> Entry Fee
-                  </span>
-                  <span className="mt-1 block font-mono text-sm sm:text-base font-bold">
-                    {activeAttraction.entryFee === null
-                      ? "Varies"
-                      : activeAttraction.entryFee === 0
-                      ? "Free Entry"
-                      : formatPrice(activeAttraction.entryFee)}
-                  </span>
-                </div>
-                <div className="rounded-xl border border-[#F2B749]/40 bg-[#F2B749]/10 p-3">
-                  <span className="text-[11px] text-[#FCE2A6] flex items-center gap-1.5">
-                    <Package className="h-3.5 w-3.5" /> Direct Package
-                  </span>
-                  <span className="mt-1 block font-mono text-sm sm:text-base font-bold">
-                    {activeAttraction.packagePrice !== null
-                      ? formatPrice(activeAttraction.packagePrice)
-                      : "Custom Quote"}
-                  </span>
-                  {activeAttraction.packageDetails && (
-                    <span className="mt-1 block text-[11px] text-white/75">
-                      {activeAttraction.packageDetails}
-                    </span>
-                  )}
-                </div>
-              </div>
+              )}
 
-              <div className="flex items-center gap-2.5 rounded-xl border border-white/15 bg-white/5 p-3.5 text-xs text-white/80">
-                <PhoneCall className="h-4 w-4 text-[#F2B749] shrink-0" />
-                <span>
-                  To book a cab or direct sightseeing package for{" "}
-                  <strong className="text-white">Suite {roomNumber || "Guest"}</strong>, dial{" "}
-                  <strong className="text-white">{contactNumber || "Extension 0"}</strong>.
-                </span>
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-xl border border-white/15 bg-white/5 p-3.5 text-xs text-white/80">
+                <div className="flex items-center gap-2.5">
+                  <PhoneCall className="h-4 w-4 text-[#F2B749] shrink-0" />
+                  <span>
+                    Booking for <strong className="text-white">Suite {roomNumber || "Guest"}</strong> · Dial{" "}
+                    <strong className="text-white">{contactNumber || "Extension 0"}</strong>
+                  </span>
+                </div>
+
+                {selectedBookingWaUrl && (
+                  <a
+                    href={selectedBookingWaUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-500 px-4 py-2 text-xs font-bold text-white shadow-md transition-colors hover:bg-emerald-400 btn-smooth-press shrink-0"
+                  >
+                    <MessageCircle className="h-4 w-4 shrink-0" />
+                    <span>
+                      {selectedOption
+                        ? `Request Booking · ${selectedOption.label} (${selectedOption.priceLabel})`
+                        : "Request Booking"}
+                    </span>
+                  </a>
+                )}
               </div>
             </div>
           </div>

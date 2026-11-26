@@ -47,79 +47,73 @@ export function AdminLogin() {
   };
 
   return (
-    <div className="flex min-h-[calc(100vh-3.5rem)] flex-col items-center justify-center bg-[#F6F4EF] px-4 py-12">
-      <div className="w-full max-w-sm rounded-xl border border-[rgba(20,18,16,0.1)] bg-white p-7 shadow-[0_12px_36px_-16px_rgba(20,18,16,0.14)] modal-3d-enter sm:p-8">
-        <div className="mb-7 text-center">
+    <div className="min-h-[calc(100vh-4rem)] bg-[radial-gradient(circle_at_top,#FFFDF9_0%,#FAF8F5_55%,#F3ECE1_100%)] flex flex-col justify-center items-center px-4 py-12">
+      <div className="max-w-md w-full bg-[#FFFDF9] border border-[#E5DDD1] rounded-3xl p-8 shadow-[0_24px_56px_-16px_rgba(30,21,15,0.16)] modal-3d-enter">
+        <div className="text-center mb-8">
           <img
             src={propertyLogo || "/kusum-kunja-cafe-logo.png"}
             alt={`${propertyName || "Property"} logo`}
-            className="mx-auto mb-3.5 h-12 w-12 rounded-lg border border-[rgba(20,18,16,0.1)] bg-white p-1 object-contain"
+            className="mx-auto mb-4 h-16 w-16 rounded-2xl border border-[#ECD7A9] bg-[#FFFDF9] p-1 object-contain shadow-xs"
           />
           {propertyName && (
-            <p className="text-xs font-medium text-[#966F29]">{propertyName}</p>
+            <span className="text-[10px] font-bold uppercase tracking-widest text-[#8E6314] block mb-1">
+              {propertyName}
+            </span>
           )}
-          <h1 className="mt-1 font-serif text-2xl font-semibold tracking-[-0.01em] text-[#141210]">
-            Operations Sign In
+          <h1 className="font-serif text-2xl font-bold text-[#1E150F]">
+            Staff Operations Portal
           </h1>
-          <p className="mt-1 text-xs text-[#5C554E]">
-            Reception, housekeeping, kitchen, and property administration
+          <p className="font-script text-base text-[#73685C] mt-0.5">
+            Reception, Butler Coordination & Kitchen KOT Console
           </p>
         </div>
 
         {error && (
-          <div className="mb-5 rounded-lg border border-rose-200 bg-rose-50 px-3.5 py-2.5 text-xs font-medium text-rose-800">
+          <div className="mb-6 p-3.5 bg-red-50 border border-red-200 text-red-700 text-xs rounded-2xl font-medium shadow-2xs">
             {error}
           </div>
         )}
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label
-              htmlFor="staff-username"
-              className="mb-1.5 block text-xs font-medium text-[#141210]"
-            >
-              Username
+            <label className="block text-[11px] font-bold uppercase tracking-wider text-[#1E150F] mb-1.5">
+              Staff Username
             </label>
             <div className="relative">
               <input
-                id="staff-username"
                 type="text"
-                placeholder="Enter staff username"
+                placeholder="Username"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
-                className="h-10 w-full rounded-lg border border-[rgba(20,18,16,0.14)] bg-[#F6F4EF]/50 pl-9 pr-3 text-xs text-[#141210] placeholder:text-[#847C73] focus:border-[#141210] focus:bg-white focus:outline-none"
+                className="w-full pl-10 pr-4 py-2.5 bg-[#FAF8F5] border border-[#E5DDD1] rounded-2xl text-xs text-[#1E150F] focus:outline-none focus:ring-2 focus:ring-[#B88223]/30"
               />
-              <User className="pointer-events-none absolute left-3 top-3 h-4 w-4 text-[#847C73]" strokeWidth={1.5} />
+              <User className="w-4 h-4 text-[#73685C] absolute left-3.5 top-3 pointer-events-none" />
             </div>
           </div>
 
           <div>
-            <label
-              htmlFor="staff-password"
-              className="mb-1.5 block text-xs font-medium text-[#141210]"
-            >
+            <label className="block text-[11px] font-bold uppercase tracking-wider text-[#1E150F] mb-1.5">
               Password
             </label>
             <div className="relative">
               <input
-                id="staff-password"
                 type="password"
-                placeholder="Enter password"
+                placeholder="••••••••"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="h-10 w-full rounded-lg border border-[rgba(20,18,16,0.14)] bg-[#F6F4EF]/50 pl-9 pr-3 text-xs text-[#141210] placeholder:text-[#847C73] focus:border-[#141210] focus:bg-white focus:outline-none"
+                className="w-full pl-10 pr-4 py-2.5 bg-[#FAF8F5] border border-[#E5DDD1] rounded-2xl text-xs text-[#1E150F] focus:outline-none focus:ring-2 focus:ring-[#B88223]/30"
               />
-              <Lock className="pointer-events-none absolute left-3 top-3 h-4 w-4 text-[#847C73]" strokeWidth={1.5} />
+              <Lock className="w-4 h-4 text-[#73685C] absolute left-3.5 top-3 pointer-events-none" />
             </div>
           </div>
 
           <button
             type="submit"
             disabled={loading}
-            className="mt-2 flex h-10 w-full items-center justify-center gap-2 rounded-lg bg-[#141210] px-4 text-xs font-medium text-white transition-[transform,background-color] hover:bg-[#2B2622] btn-smooth-press disabled:opacity-50"
+            className="w-full py-3.5 px-4 rounded-2xl font-bold text-xs text-white bg-[#1E150F] hover:bg-[#29231F] transition-[transform,background-color,box-shadow] shadow-md flex items-center justify-center gap-2 cursor-pointer btn-smooth-press disabled:opacity-50 mt-2"
           >
-            <span>{loading ? "Authenticating..." : "Sign in to console"}</span>
-            <ArrowRight className="h-3.5 w-3.5 text-[#D9C7A3]" strokeWidth={1.5} />
+            <span>{loading ? "Authenticating..." : "Sign In to Console"}</span>
+            <ArrowRight className="w-4 h-4 text-[#B88223]" />
           </button>
         </form>
       </div>
