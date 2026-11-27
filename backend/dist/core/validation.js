@@ -29,4 +29,14 @@ export const settingsSchema = z.object({
     roomServiceHeroUrl: z.string().max(750_000).nullable().optional(),
     attractionsHeroUrl: z.string().max(750_000).nullable().optional(),
     suiteLoaderBgUrl: z.string().max(750_000).nullable().optional(),
+    landingVideoUrl: z
+        .string()
+        .max(9_000_000, "Video upload exceeds 5.5 MB limit (use an MP4/WebM file or paste a URL)")
+        .refine((v) => v === "" ||
+        v.startsWith("/") ||
+        v.startsWith("https://") ||
+        v.startsWith("http://") ||
+        v.startsWith("data:video/"), "Upload an MP4/WebM/MOV video or enter a valid https:// video URL")
+        .nullable()
+        .optional(),
 });

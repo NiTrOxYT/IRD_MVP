@@ -37,7 +37,12 @@ describe("Welcome Letter Settings Validation", () => {
             roomServiceHeroUrl: "data:image/webp;base64,UklGRh4AAABXRUJQVlA4",
             attractionsHeroUrl: null,
             suiteLoaderBgUrl: "data:image/webp;base64,UklGRh4AAABXRUJQVlA4",
+            landingVideoUrl: "/landing-welcome.mp4",
         });
         assert.equal(parsed.success, true);
+        const badVideo = settingsSchema.safeParse({
+            landingVideoUrl: "javascript:alert(1)",
+        });
+        assert.equal(badVideo.success, false);
     });
 });

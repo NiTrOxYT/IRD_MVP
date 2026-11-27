@@ -127,27 +127,27 @@ export function RoomServiceGuestPortal({
   };
 
   return (
-    <div ref={rsRootRef} className="mx-auto max-w-md sm:max-w-2xl lg:max-w-4xl space-y-6">
+    <div ref={rsRootRef} className="mx-auto max-w-md sm:max-w-2xl lg:max-w-4xl space-y-6 font-sans">
       {onBackToHub && (
         <div className="flex items-center justify-between gap-2">
           <button
             type="button"
             onClick={onBackToHub}
-            className="inline-flex items-center gap-1.5 rounded-full border border-[#C8A262]/30 bg-[#1F1C18] px-3.5 py-1.5 text-xs font-semibold text-[#F6F1E9] hover:border-[#C8A262]/60 btn-smooth-press-sm cursor-pointer"
+            className="inline-flex items-center gap-1 rounded-full frost-cta-white px-3.5 py-1.5 text-xs font-bold btn-smooth-press-sm cursor-pointer"
           >
-            <ChevronLeft className="h-3.5 w-3.5 text-[#D8B472]" />
+            <ChevronLeft className="h-3.5 w-3.5" />
             <span>All Services</span>
           </button>
-          <span className="rounded-full border border-white/12 bg-[#1D1A16] px-3 py-1 text-[11px] font-medium text-[#D6CEC2] tabular-nums">
-            Suite <strong className="text-[#F8F4EC]">{roomNumber}</strong>
+          <span className="rounded-full frost-pill-chip px-3 py-1 text-[11px] font-semibold text-white/90 tabular-nums">
+            Suite <strong className="text-white">{roomNumber}</strong>
           </span>
         </div>
       )}
 
-      {/* Editorial Sanctuary Hero Card */}
+      {/* Olive-Charcoal Sanctuary Hero Card matching app palette & typography */}
       <section
         ref={heroRef}
-        className="relative overflow-hidden rounded-[28px] border border-[#C8A262]/24 bg-[#181613] shadow-[0_24px_48px_-18px_rgba(0,0,0,0.65)]"
+        className="relative overflow-hidden rounded-[28px] border border-white/16 bg-[#1C1E16] shadow-[0_24px_48px_-18px_rgba(0,0,0,0.65)]"
       >
         <div className="relative h-[200px] sm:h-[238px] w-full overflow-hidden">
           <img
@@ -157,31 +157,31 @@ export function RoomServiceGuestPortal({
           />
           <div
             aria-hidden="true"
-            className="pointer-events-none absolute inset-0 bg-[linear-gradient(180deg,rgba(24,22,19,0.12)_0%,rgba(24,22,19,0.68)_65%,rgba(24,22,19,1)_100%)]"
+            className="pointer-events-none absolute inset-0 bg-[linear-gradient(180deg,rgba(24,26,18,0.12)_0%,rgba(26,28,20,0.7)_65%,#1C1E16_100%)]"
           />
         </div>
 
         <div className="relative z-10 -mt-8 px-5 pb-6 sm:px-7 sm:pb-7 space-y-3.5">
           <div className="flex flex-wrap items-end justify-between gap-3">
-            <h1 className="font-serif text-[26px] sm:text-[34px] font-semibold tracking-[-0.02em] leading-[1.08] text-[#FAF6EE]">
-              Suite Care & Concierge
+            <h1 className="font-sans text-[26px] sm:text-[34px] font-bold tracking-tight leading-[1.08] text-[#FAF8F2]">
+              Suite Care &amp; Concierge
             </h1>
-            <span className="inline-flex items-center gap-1.5 rounded-full border border-[#C8A262]/35 bg-[#26211A] px-3 py-1 text-[11px] font-medium text-[#E5C58B]">
-              <Sparkles className="h-3 w-3" />
+            <span className="inline-flex items-center gap-1.5 rounded-full frost-pill-chip px-3 py-1 text-[11px] font-semibold text-[#E8ECDA]">
+              <Sparkles className="h-3 w-3 text-[#C5CE9F]" />
               Complimentary
             </span>
           </div>
 
-          <p className="text-[13px] sm:text-[14px] leading-relaxed text-[#BEB6AA] max-w-[54ch]">
+          <p className="text-[13px] sm:text-[14px] leading-relaxed text-[#D2CEBE] max-w-[54ch]">
             Select any housekeeping ritual or in-suite amenity below. Requests dispatch directly to our butler desk for Suite {roomNumber}.
           </p>
 
-          <div className="flex flex-wrap items-center gap-2 pt-0.5 text-[11px] text-[#D8CEC0]">
-            <span className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.04] px-3 py-1">
-              <Clock className="h-3 w-3 text-[#D8B472]" />
+          <div className="flex flex-wrap items-center gap-2 pt-0.5 text-[11px] text-[#E6E2D4]">
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-white/14 bg-white/[0.06] px-3 py-1">
+              <Clock className="h-3 w-3 text-[#C5CE9F]" />
               24/7 Butler Dispatch
             </span>
-            <span className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1">
+            <span className="rounded-full border border-white/14 bg-white/[0.06] px-3 py-1">
               10–15 min arrival
             </span>
           </div>

@@ -16,10 +16,12 @@ import {
   MessageCircle,
   ExternalLink,
   Image as ImageIcon,
+  Film,
 } from "lucide-react";
 import { cn } from "../ui/utils";
-import { compressImage } from "../ui/imageUtils";
+import { compressImage, readVideoAsDataUrl } from "../ui/imageUtils";
 import { DEFAULT_WELCOME_MESSAGE } from "../stay/GuestWelcomeLetter";
+import { DEFAULT_LANDING_VIDEO_URL } from "../stay/GuestServiceHub";
 import {
   buildAttractionWhatsappMessage,
   buildAttractionWhatsappUrl,
@@ -98,6 +100,12 @@ export function AdminSettings() {
   const [portalImagesSaved, setPortalImagesSaved] = useState(false);
   const [portalImagesError, setPortalImagesError] = useState("");
 
+  // Landing Welcome Loop Video
+  const [landingVideoDraft, setLandingVideoDraft] = useState<string | null | undefined>(undefined);
+  const [landingVideoSaving, setLandingVideoSaving] = useState(false);
+  const [landingVideoSaved, setLandingVideoSaved] = useState(false);
+  const [landingVideoError, setLandingVideoError] = useState("");
+
   // Form
   const [name, setName] = useState("");
   const [currency, setCurrency] = useState("INR");
@@ -129,6 +137,7 @@ export function AdminSettings() {
       setWelcomeMessage(prop.welcomeMessage ?? DEFAULT_WELCOME_MESSAGE);
       setWelcomeBgDraft(undefined);
       setPortalImagesDraft({});
+      setLandingVideoDraft(undefined);
       setWhatsappNumber(prop.whatsappNumber || "");
       setAttractionTemplate(prop.attractionBookingTemplate ?? DEFAULT_ATTRACTION_WHATSAPP_TEMPLATE);
 
@@ -308,6 +317,37 @@ export function AdminSettings() {
       setPortalImagesError(err.message || "Failed to save portal images.");
     } finally {
       setPortalImagesSaving(false);
+    }
+  };
+
+  const handleLandingVideoFile = async (file?: File) => {
+    if (!file) return;
+    setLandingVideoError("");
+    setLandingVideoSaved(false);
+    try {
+      const dataUrl = await readVideoAsDataUrl(file, 5.5);
+      setLandingVideoDraft(dataUrl);
+    } catch (err: any) {
+      setLandingVideoError(err.message || "Could not process this video file.");
+    }
+  };
+
+  const handleSaveLandingVideo = async () => {
+    if (landingVideoDraft === undefined) return;
+    setLandingVideoSaving(true);
+    setLandingVideoError("");
+    setLandingVideoSaved(false);
+    try {
+      const cleanVal = landingVideoDraft ? landingVideoDraft.trim() || null : null;
+      const res = await updatePropertySettings({ landingVideoUrl: cleanVal });
+      setSettings(res.property);
+      setLandingVideoDraft(undefined);
+      setLandingVideoSaved(true);
+      setTimeout(() => setLandingVideoSaved(false), 3000);
+    } catch (err: any) {
+      setLandingVideoError(err.message || "Failed to save landing welcome video.");
+    } finally {
+      setLandingVideoSaving(false);
     }
   };
 
@@ -907,6 +947,127 @@ export function AdminSettings() {
                 </button>
               </div>
             )}
+          </section>
+
+          {/* Landing Welcome Video Configuration */}
+          <section className="bg-[#FFFDF9] border border-[#E5DDD1] rounded-3xl p-6 shadow-xs space-y-5">
+            <div className="flex flex-wrap items-start justify-between gap-3 pb-3 border-b border-[#E5DDD1]">
+              <div>
+                <h2 className="font-serif text-xl font-bold text-[#1E150F] flex items-center gap-2">
+                  <Film className="w-5 h-5 text-[#B88223]" />
+                  <span>Home Page Loop Video</span>
+                </h2>
+                <p className="text-xs text-[#73685C] mt-0.5">
+                  Plays silently in a continuous loop at the top of the main Guest Home &amp; Services landing page.
+                </p>
+              </div>
+              {landingVideoDraft !== undefined && (
+                <button
+                  type="button"
+                  onClick={handleSaveLandingVideo}
+                  disabled={landingVideoSaving}
+                  className="shrink-0 px-5 py-2.5 rounded-xl font-bold text-xs text-white bg-[#1E150F] hover:bg-[#29231F] transition-colors shadow-sm disabled:opacity-50 btn-smooth-press cursor-pointer"
+                >
+                  {landingVideoSaving ? "Saving Video..." : "Save Landing Video"}
+                </button>
+              )}
+            </div>
+
+            {landingVideoSaved && (
+              <div className="p-3 bg-emerald-50 border border-emerald-300 text-emerald-900 text-xs rounded-2xl flex items-center gap-2 font-medium">
+                <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                <span>Landing welcome video updated successfully.</span>
+              </div>
+            )}
+            {landingVideoError && (
+              <p role="alert" className="text-xs text-red-700 font-medium">
+                {landingVideoError}
+              </p>
+            )}
+
+            <div className="grid grid-cols-1 md:grid-cols-12 gap-5 items-center">
+              <div className="md:col-span-5 aspect-video w-full overflow-hidden rounded-2xl border border-[#E5DDD1] bg-[#180E09]">
+                <video
+                  key={
+                    landingVideoDraft !== undefined
+                      ? landingVideoDraft || DEFAULT_LANDING_VIDEO_URL
+                      : settings?.landingVideoUrl || DEFAULT_LANDING_VIDEO_URL
+                  }
+                  src={
+                    landingVideoDraft !== undefined
+                      ? landingVideoDraft || DEFAULT_LANDING_VIDEO_URL
+                      : settings?.landingVideoUrl || DEFAULT_LANDING_VIDEO_URL
+                  }
+                  autoPlay
+                  loop
+                  muted
+                  playsInline
+                  className="h-full w-full object-cover"
+                />
+              </div>
+
+              <div className="md:col-span-7 space-y-3 text-xs">
+                <div className="flex flex-wrap gap-2">
+                  <label className="inline-flex cursor-pointer items-center gap-1.5 rounded-xl border border-[#E5DDD1] bg-[#FAF8F5] px-3.5 py-2 text-xs font-semibold text-[#1E150F] hover:bg-[#F2EBE1]">
+                    <Upload className="h-3.5 w-3.5 text-[#8E6314]" /> Upload Video
+                    <input
+                      type="file"
+                      accept="video/mp4,video/webm,video/quicktime"
+                      className="sr-only"
+                      onChange={(e) => {
+                        void handleLandingVideoFile(e.target.files?.[0]);
+                        e.currentTarget.value = "";
+                      }}
+                    />
+                  </label>
+
+                  {(landingVideoDraft !== undefined
+                    ? landingVideoDraft !== null
+                    : Boolean(settings?.landingVideoUrl)) && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setLandingVideoDraft(null);
+                        setLandingVideoError("");
+                        setLandingVideoSaved(false);
+                      }}
+                      className="inline-flex items-center gap-1.5 rounded-xl border border-[#E5DDD1] bg-white px-3.5 py-2 text-xs font-semibold text-[#73685C] hover:bg-[#FAF8F5] cursor-pointer"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" /> Reset Default
+                    </button>
+                  )}
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-bold uppercase tracking-wider text-[#1E150F] mb-1">
+                    Or Video URL (MP4 / WebM)
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="https://... or /landing-welcome.mp4"
+                    value={
+                      landingVideoDraft !== undefined
+                        ? landingVideoDraft?.startsWith("data:")
+                          ? ""
+                          : landingVideoDraft || ""
+                        : settings?.landingVideoUrl?.startsWith("data:")
+                        ? ""
+                        : settings?.landingVideoUrl || ""
+                    }
+                    onChange={(e) => {
+                      setLandingVideoDraft(e.target.value || null);
+                      setLandingVideoError("");
+                      setLandingVideoSaved(false);
+                    }}
+                    className="w-full px-3.5 py-2 bg-[#FAF8F5] border border-[#E5DDD1] rounded-xl text-xs text-[#1E150F] focus:outline-none focus:ring-2 focus:ring-[#B88223]/30"
+                  />
+                </div>
+
+                <p className="text-[11px] text-[#73685C]">
+                  Supports MP4, WebM, or MOV up to 5.5 MB upload (or paste any HTTPS MP4 URL for larger clips).
+                </p>
+              </div>
+            </div>
           </section>
 
           {/* Audit Log Table */}

@@ -28,6 +28,7 @@ export async function runMigrations() {
         room_service_hero_url TEXT,
         attractions_hero_url TEXT,
         suite_loader_bg_url TEXT,
+        landing_video_url TEXT,
         created_at TIMESTAMP WITHOUT TIME ZONE DEFAULT NOW()
       );
 
@@ -38,6 +39,7 @@ export async function runMigrations() {
       ALTER TABLE properties ADD COLUMN IF NOT EXISTS room_service_hero_url TEXT;
       ALTER TABLE properties ADD COLUMN IF NOT EXISTS attractions_hero_url TEXT;
       ALTER TABLE properties ADD COLUMN IF NOT EXISTS suite_loader_bg_url TEXT;
+      ALTER TABLE properties ADD COLUMN IF NOT EXISTS landing_video_url TEXT;
       ALTER TABLE properties ADD COLUMN IF NOT EXISTS whatsapp_number TEXT;
       ALTER TABLE properties ADD COLUMN IF NOT EXISTS attraction_booking_template TEXT;
 

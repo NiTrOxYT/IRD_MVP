@@ -22,6 +22,7 @@ export interface PropertySettings {
   roomServiceHeroUrl?: string | null;
   attractionsHeroUrl?: string | null;
   suiteLoaderBgUrl?: string | null;
+  landingVideoUrl?: string | null;
 }
 
 export interface Room {

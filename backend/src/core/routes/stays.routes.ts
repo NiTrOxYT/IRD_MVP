@@ -23,7 +23,8 @@ export function createStaysRouter(): Router {
                 p.name as property_name, p.currency, p.tax_rate_percent, p.service_charge_percent, p.ird_enabled, p.logo_url,
                 p.contact_number, p.whatsapp_number, p.attraction_booking_template,
                 p.welcome_mode, p.welcome_message, p.welcome_bg_url,
-                p.dining_hero_url, p.room_service_hero_url, p.attractions_hero_url, p.suite_loader_bg_url
+                p.dining_hero_url, p.room_service_hero_url, p.attractions_hero_url, p.suite_loader_bg_url,
+                p.landing_video_url
          FROM stays s
          JOIN rooms r ON s.room_id = r.id
          JOIN properties p ON s.property_id = p.id
@@ -86,6 +87,7 @@ export function createStaysRouter(): Router {
           roomServiceHeroUrl: row.room_service_hero_url ?? null,
           attractionsHeroUrl: row.attractions_hero_url ?? null,
           suiteLoaderBgUrl: row.suite_loader_bg_url ?? null,
+          landingVideoUrl: row.landing_video_url ?? null,
           diningHeroCards: heroRes.rows.map((card) => ({
             id: card.id,
             propertyId: card.property_id,

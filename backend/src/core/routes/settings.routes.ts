@@ -25,6 +25,7 @@ function serializeProperty(row: any) {
     roomServiceHeroUrl: row.room_service_hero_url ?? null,
     attractionsHeroUrl: row.attractions_hero_url ?? null,
     suiteLoaderBgUrl: row.suite_loader_bg_url ?? null,
+    landingVideoUrl: row.landing_video_url ?? null,
   };
 }
 
@@ -70,12 +71,15 @@ export function createSettingsRouter(): Router {
       roomServiceHeroUrl,
       attractionsHeroUrl,
       suiteLoaderBgUrl,
+      landingVideoUrl,
     } = parse.data;
     const staff = req.staff!;
     const cleanWhatsappNumber =
       whatsappNumber === undefined ? undefined : whatsappNumber?.trim() || null;
     const cleanBookingTemplate =
       attractionBookingTemplate === undefined ? undefined : attractionBookingTemplate?.trim() || null;
+    const cleanLandingVideoUrl =
+      landingVideoUrl === undefined ? undefined : landingVideoUrl?.trim() || null;
 
     try {
       const result = await query(
@@ -97,7 +101,8 @@ export function createSettingsRouter(): Router {
              dining_hero_url = CASE WHEN $20 THEN $21 ELSE dining_hero_url END,
              room_service_hero_url = CASE WHEN $22 THEN $23 ELSE room_service_hero_url END,
              attractions_hero_url = CASE WHEN $24 THEN $25 ELSE attractions_hero_url END,
-             suite_loader_bg_url = CASE WHEN $26 THEN $27 ELSE suite_loader_bg_url END
+             suite_loader_bg_url = CASE WHEN $26 THEN $27 ELSE suite_loader_bg_url END,
+             landing_video_url = CASE WHEN $28 THEN $29 ELSE landing_video_url END
          WHERE id = 1
          RETURNING *`,
         [
@@ -128,6 +133,8 @@ export function createSettingsRouter(): Router {
           attractionsHeroUrl,
           suiteLoaderBgUrl !== undefined,
           suiteLoaderBgUrl,
+          cleanLandingVideoUrl !== undefined,
+          cleanLandingVideoUrl ?? null,
         ]
       );
 
@@ -163,6 +170,8 @@ export function createSettingsRouter(): Router {
             attractionsHeroUpdated: attractionsHeroUrl !== undefined,
             suiteLoaderBgUrl: undefined,
             suiteLoaderBgUpdated: suiteLoaderBgUrl !== undefined,
+            landingVideoUrl: undefined,
+            landingVideoUpdated: landingVideoUrl !== undefined,
           }),
         ]
       );

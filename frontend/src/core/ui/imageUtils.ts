@@ -1,3 +1,18 @@
+export function readVideoAsDataUrl(file: File, maxMb = 5.5): Promise<string> {
+  if (!file.type.startsWith("video/")) {
+    throw new Error("Choose an MP4, WebM, or MOV video file.");
+  }
+  if (file.size > maxMb * 1024 * 1024) {
+    throw new Error(`Uploaded videos must be ${maxMb} MB or smaller (or paste a video URL).`);
+  }
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result || ""));
+    reader.onerror = () => reject(new Error("Could not read video file."));
+    reader.readAsDataURL(file);
+  });
+}
+
 export function readFileAsDataUrl(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();

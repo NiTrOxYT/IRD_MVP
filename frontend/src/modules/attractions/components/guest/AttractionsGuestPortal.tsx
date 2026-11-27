@@ -95,7 +95,7 @@ function MediaPreviewThumb({
   if (item.type === "video") {
     const ytId = getYouTubeVideoId(item.url);
     return (
-      <div className={cn("relative h-full w-full overflow-hidden bg-[#111520]", className)}>
+      <div className={cn("relative h-full w-full overflow-hidden bg-[#1D2016]", className)}>
         {ytId ? (
           <img
             src={`https://img.youtube.com/vi/${ytId}/hqdefault.jpg`}
@@ -357,9 +357,9 @@ export function AttractionsGuestPortal({
 
   if (loading) {
     return (
-      <div className="flex flex-1 items-center justify-center rounded-2xl bg-[#0D1017] text-center text-white">
+      <div className="flex flex-1 items-center justify-center rounded-2xl bg-[#1C1E16] text-center text-white">
         <div>
-          <div className="mx-auto mb-2.5 h-6 w-6 animate-spin rounded-full border-2 border-[#F2B749] border-t-transparent" />
+          <div className="mx-auto mb-2.5 h-6 w-6 animate-spin rounded-full border-2 border-[#C5CE9F] border-t-transparent" />
           <p className="text-xs tracking-wide text-white/75">Loading local attractions...</p>
         </div>
       </div>
@@ -368,7 +368,7 @@ export function AttractionsGuestPortal({
 
   if (error) {
     return (
-      <div className="flex flex-1 items-center justify-center rounded-2xl border border-white/10 bg-[#0D1017] p-6 text-center text-white">
+      <div className="flex flex-1 items-center justify-center rounded-2xl border border-white/14 bg-[#1C1E16] p-6 text-center text-white">
         <div>
           <p className="text-sm text-rose-300">{error}</p>
           <button
@@ -384,7 +384,7 @@ export function AttractionsGuestPortal({
 
   if (!activeAttraction) {
     return (
-      <div className="flex flex-1 items-center justify-center rounded-2xl bg-[#0D1017] p-8 text-center text-white">
+      <div className="flex flex-1 items-center justify-center rounded-2xl bg-[#1C1E16] p-8 text-center text-white">
         <div>
           <Compass className="mx-auto mb-2.5 h-7 w-7 text-[#F2B749]" />
           <h2 className="text-base font-semibold">No Local Attractions Published Yet</h2>
@@ -408,7 +408,7 @@ export function AttractionsGuestPortal({
               className={cn(
                 "whitespace-nowrap rounded-full px-3 py-1 text-[11px] font-semibold transition-colors",
                 selectedCategory === cat
-                  ? "bg-white text-[#0B0E16] shadow-xs"
+                  ? "bg-white text-[#161712] shadow-xs"
                   : "border border-white/15 bg-white/8 text-white/75 hover:bg-white/15"
               )}
             >
@@ -418,18 +418,18 @@ export function AttractionsGuestPortal({
         </div>
       )}
 
-      {/* Non-Scrollable Single-Screen GTA Cinema Showcase */}
-      <section className="relative flex flex-1 min-h-0 flex-col justify-between overflow-hidden rounded-2xl border border-white/10 bg-[#0B0E16] text-white shadow-2xl">
+      {/* Non-Scrollable Single-Screen Showcase matching Care Olive-Charcoal Surface */}
+      <section className="relative flex flex-1 min-h-0 flex-col justify-between overflow-hidden rounded-2xl border border-white/14 bg-[#1C1E16] text-white shadow-2xl">
         {/* Full-bleed Backdrop Image / Video */}
         <div className="absolute inset-0 z-0">
           <MediaStage item={currentMedia} fallbackImage={fallbackPoster} muted={muted} />
           <div
             aria-hidden="true"
-            className="pointer-events-none absolute inset-0 bg-[linear-gradient(90deg,rgba(8,11,18,0.92)_0%,rgba(10,14,24,0.72)_48%,rgba(12,16,28,0.2)_100%)]"
+            className="pointer-events-none absolute inset-0 bg-[linear-gradient(90deg,rgba(20,22,15,0.92)_0%,rgba(24,26,18,0.72)_48%,rgba(28,30,22,0.2)_100%)]"
           />
           <div
             aria-hidden="true"
-            className="pointer-events-none absolute inset-0 bg-[linear-gradient(0deg,rgba(8,10,16,0.97)_0%,rgba(8,10,16,0.58)_44%,rgba(8,10,16,0.2)_100%)]"
+            className="pointer-events-none absolute inset-0 bg-[linear-gradient(0deg,rgba(20,22,15,0.97)_0%,rgba(20,22,15,0.58)_44%,rgba(20,22,15,0.2)_100%)]"
           />
         </div>
 
@@ -588,7 +588,7 @@ export function AttractionsGuestPortal({
         </div>
 
         {/* Bottom Horizontal Spotlight Switcher (Fixed compact footer inside locked stage) */}
-        <div className="relative z-10 shrink-0 border-t border-white/10 bg-[#080A10]/90 px-3 py-2 sm:px-7 sm:py-3">
+        <div className="relative z-10 shrink-0 border-t border-white/12 bg-[#15170F]/92 px-3 py-2 sm:px-7 sm:py-3">
           <div className="mb-1.5 flex items-center justify-between text-[10px] text-white/65">
             <span className="font-semibold text-white/90">
               Nearby Sightseeing ({filtered.length})

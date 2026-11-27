@@ -5,7 +5,11 @@ import { SuiteLoader } from "../core/stay/SuiteLoader";
 import { StayRequiredCard } from "../core/stay/StayRequiredCard";
 import { GuestWelcomeLetter } from "../core/stay/GuestWelcomeLetter";
 import { GuestHeader } from "../core/stay/GuestHeader";
-import { GuestServiceHub, type GuestServiceTile } from "../core/stay/GuestServiceHub";
+import {
+  GuestServiceHub,
+  HubVideoBackdrop,
+  type GuestServiceTile,
+} from "../core/stay/GuestServiceHub";
 import { usePropertyBranding } from "../core/property/useProperty";
 import { playOrderChime } from "../core/ui/audio";
 import {
@@ -87,13 +91,23 @@ function GuestPortalContent() {
   }, [property?.name]);
 
   useEffect(() => {
+    const welcomeMode = property?.welcomeMode || "every_time";
+    const welcomeSeenKey = stay?.id ? `ird_welcome_seen_${stay.id}` : "";
+    const welcomePending =
+      Boolean(stay) &&
+      !welcomeDismissed &&
+      welcomeMode !== "disabled" &&
+      (welcomeMode === "every_time" || localStorage.getItem(welcomeSeenKey) !== "1");
+
     const bg =
       authLoading || !stay
         ? "#1E130C"
+        : welcomePending
+        ? "#2B0002"
         : serviceMode === "attractions"
-        ? "#0B0E16"
+        ? "#161712"
         : serviceMode === "hub"
-        ? "#1D0803"
+        ? "#23271A"
         : serviceMode === "room-service"
         ? "#FAF3EA"
         : "#161712";
@@ -103,7 +117,7 @@ function GuestPortalContent() {
       document.documentElement.style.backgroundColor = "";
       document.body.style.backgroundColor = "";
     };
-  }, [authLoading, stay, serviceMode]);
+  }, [authLoading, stay, property?.welcomeMode, welcomeDismissed, serviceMode]);
 
   const fetchOrders = useCallback(async () => {
     try {
@@ -343,14 +357,20 @@ function GuestPortalContent() {
       className={cn(
         "flex flex-col",
         isLockedViewport
-          ? "fixed inset-0 overflow-hidden bg-[#0B0E16] text-white pb-[calc(4.75rem+env(safe-area-inset-bottom))]"
+          ? "fixed inset-0 overflow-hidden bg-[#161712] bg-[radial-gradient(ellipse_at_top,#26281E_0%,#141510_68%)] text-white pb-[calc(4.75rem+env(safe-area-inset-bottom))]"
           : isHubView
-          ? "relative min-h-[100svh] bg-[#1D0803] text-white pb-[max(2rem,env(safe-area-inset-bottom))]"
+          ? "relative min-h-[100svh] bg-[#171A11] text-[#F4F1E6] pb-[max(2rem,env(safe-area-inset-bottom))]"
           : isIrdView
           ? "relative min-h-[100svh] bg-[#FAF3EA] text-[#3D1C11] pb-[max(7.25rem,calc(6.5rem+env(safe-area-inset-bottom)))]"
           : "relative min-h-[100svh] bg-[#161712] bg-[radial-gradient(ellipse_at_top,#26281E_0%,#141510_68%)] text-white pb-[max(6.5rem,calc(5.75rem+env(safe-area-inset-bottom)))]"
       )}
     >
+      {isHubView && (
+        <HubVideoBackdrop
+          videoUrl={property?.landingVideoUrl}
+          posterUrl={property?.suiteLoaderBgUrl}
+        />
+      )}
 
       {!isHubView && (
         <GuestHeader
@@ -462,6 +482,7 @@ function GuestPortalContent() {
                 property={property}
                 services={hubServices}
                 unreadInboxCount={unreadInboxCount}
+                activeOrdersCount={activeOrders.length}
                 onOpenMenu={() => {
                   setServiceMode("room-service");
                   setIrdTab("menu");
@@ -491,7 +512,7 @@ function GuestPortalContent() {
                 }}
                 onScrollToFaq={() => smoothScrollToTarget("#guest-faq-section")}
               />
-              <div className="mx-auto max-w-md sm:max-w-2xl lg:max-w-4xl px-3 sm:px-6">
+              <div className="mx-auto max-w-md sm:max-w-2xl lg:max-w-4xl px-5 sm:px-8">
                 <FaqGuestSection />
               </div>
             </div>

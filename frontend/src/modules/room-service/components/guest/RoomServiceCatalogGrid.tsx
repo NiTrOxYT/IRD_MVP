@@ -32,16 +32,16 @@ export function RoomServiceCatalogGrid({ services, onSelectService }: RoomServic
   );
 
   return (
-    <div ref={gridRef} className="space-y-6">
+    <div ref={gridRef} className="space-y-6 font-sans">
       {/* Tier 1: Signature Butler Rituals */}
       {signatureServices.length > 0 && (
         <section className="space-y-3">
           <div className="flex items-center justify-between px-1">
-            <h2 className="font-serif text-lg sm:text-xl font-semibold text-[#FAF6EE] flex items-center gap-2">
-              <SuiteCareBellIcon className="h-4 w-4 text-[#D8B472]" />
+            <h2 className="font-sans text-[17px] sm:text-xl font-bold tracking-tight text-[#FAF8F2] flex items-center gap-2">
+              <SuiteCareBellIcon className="h-4 w-4 text-[#C5CE9F]" />
               <span>Signature Suite Rituals</span>
             </h2>
-            <span className="text-[11px] font-medium text-[#A99F92]">Tap to schedule</span>
+            <span className="text-[11px] font-medium text-[#B9B5A5]">Tap to schedule</span>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
@@ -52,31 +52,31 @@ export function RoomServiceCatalogGrid({ services, onSelectService }: RoomServic
                   key={srv.type}
                   type="button"
                   onClick={() => onSelectService(srv)}
-                  className="gsap-rs-card group relative flex flex-col justify-between overflow-hidden rounded-[24px] border border-[#C8A262]/28 bg-[linear-gradient(155deg,#24201A_0%,#181512_100%)] p-5 text-left shadow-[0_16px_34px_-16px_rgba(0,0,0,0.65)] transition-colors hover:border-[#C8A262]/60 cursor-pointer"
+                  className="gsap-rs-card group relative flex flex-col justify-between overflow-hidden rounded-[24px] border border-white/16 bg-[linear-gradient(155deg,#25281D_0%,#1A1C14_100%)] p-5 text-left shadow-[0_16px_34px_-16px_rgba(0,0,0,0.65)] transition-colors hover:border-white/32 btn-smooth-press cursor-pointer"
                 >
                   <div className="space-y-3.5">
                     <div className="flex items-center justify-between gap-2">
-                      <div className="flex h-11 w-11 items-center justify-center rounded-2xl border border-[#C8A262]/30 bg-[#2C261F] text-[#E5C58B]">
+                      <div className="flex h-11 w-11 items-center justify-center rounded-2xl border border-white/18 bg-white/[0.09] text-[#EAEEDB]">
                         <Icon className="h-5 w-5" />
                       </div>
-                      <span className="rounded-full border border-white/12 bg-white/[0.04] px-3 py-1 text-[10.5px] font-medium text-[#D6CEC2]">
+                      <span className="rounded-full border border-white/14 bg-white/[0.06] px-3 py-1 text-[10.5px] font-medium text-[#E0DDD0]">
                         {srv.badge}
                       </span>
                     </div>
 
                     <div>
-                      <h3 className="font-serif text-[19px] font-semibold leading-snug text-[#FAF6EE]">
+                      <h3 className="font-sans text-[17px] sm:text-[18px] font-bold tracking-tight leading-snug text-[#FAF8F2]">
                         {srv.title}
                       </h3>
-                      <p className="mt-1.5 text-[12.5px] leading-relaxed text-[#B5ACA0]">
+                      <p className="mt-1.5 text-[12.5px] leading-relaxed text-[#C7C3B4]">
                         {srv.desc}
                       </p>
                     </div>
                   </div>
 
-                  <div className="mt-5 flex items-center justify-between border-t border-white/8 pt-3.5 text-xs font-semibold text-[#E5C58B]">
+                  <div className="mt-5 flex items-center justify-between border-t border-white/10 pt-3.5 text-xs font-semibold text-[#E8ECDA]">
                     <span>Request this ritual</span>
-                    <span className="flex h-7 w-7 items-center justify-center rounded-full bg-[#F6F1E9] text-[#181512] transition-transform duration-200 group-hover:translate-x-0.5">
+                    <span className="flex h-7 w-7 items-center justify-center rounded-full frost-cta-white transition-transform duration-200 group-hover:translate-x-0.5">
                       <ArrowRight className="h-3.5 w-3.5" />
                     </span>
                   </div>
@@ -91,13 +91,13 @@ export function RoomServiceCatalogGrid({ services, onSelectService }: RoomServic
       {amenityServices.length > 0 && (
         <section className="space-y-3">
           <div className="flex items-center justify-between px-1">
-            <h2 className="font-serif text-lg sm:text-xl font-semibold text-[#FAF6EE]">
-              Amenities & Essentials
+            <h2 className="font-sans text-[17px] sm:text-xl font-bold tracking-tight text-[#FAF8F2]">
+              Amenities &amp; Essentials
             </h2>
-            <span className="text-[11px] font-medium text-[#A99F92]">Direct to room</span>
+            <span className="text-[11px] font-medium text-[#B9B5A5]">Direct to room</span>
           </div>
 
-          <div className="gsap-rs-card overflow-hidden rounded-[24px] border border-white/10 bg-[#1B1815] divide-y divide-white/8 shadow-[0_14px_30px_-16px_rgba(0,0,0,0.55)]">
+          <div className="gsap-rs-card overflow-hidden rounded-[24px] border border-white/14 bg-[#1D2016] divide-y divide-white/10 shadow-[0_14px_30px_-16px_rgba(0,0,0,0.55)]">
             {amenityServices.map((srv) => {
               const Icon = srv.icon;
               return (
@@ -105,28 +105,28 @@ export function RoomServiceCatalogGrid({ services, onSelectService }: RoomServic
                   key={srv.type}
                   type="button"
                   onClick={() => onSelectService(srv)}
-                  className="group flex w-full items-center justify-between gap-3.5 px-4 py-4 sm:px-5 text-left transition-colors hover:bg-white/[0.035] active:bg-white/[0.05] cursor-pointer"
+                  className="group flex w-full items-center justify-between gap-3.5 px-4 py-4 sm:px-5 text-left transition-colors hover:bg-white/[0.045] active:bg-white/[0.07] cursor-pointer"
                 >
                   <div className="flex min-w-0 items-center gap-3.5">
-                    <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-[#C8A262]/25 bg-[#25211C] text-[#E5C58B]">
+                    <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-white/16 bg-white/[0.08] text-[#EAEEDB]">
                       <Icon className="h-5 w-5" />
                     </div>
                     <div className="min-w-0">
                       <div className="flex flex-wrap items-center gap-2">
-                        <h3 className="font-sans text-[14.5px] sm:text-[15px] font-semibold text-[#FAF6EE]">
+                        <h3 className="font-sans text-[14.5px] sm:text-[15px] font-semibold text-[#FAF8F2]">
                           {srv.title}
                         </h3>
-                        <span className="hidden sm:inline-flex rounded-full border border-white/10 bg-white/[0.04] px-2 py-0.5 text-[10px] font-medium text-[#B8AFA3]">
+                        <span className="hidden sm:inline-flex rounded-full border border-white/14 bg-white/[0.05] px-2 py-0.5 text-[10px] font-medium text-[#C8C4B6]">
                           {srv.badge}
                         </span>
                       </div>
-                      <p className="mt-0.5 text-[12px] leading-snug text-[#A79E92] line-clamp-2">
+                      <p className="mt-0.5 text-[12px] leading-snug text-[#BDB9AA] line-clamp-2">
                         {srv.desc}
                       </p>
                     </div>
                   </div>
 
-                  <span className="inline-flex shrink-0 items-center gap-1 rounded-full border border-[#C8A262]/30 bg-[#26211B] px-3 py-1.5 text-[11px] font-semibold text-[#E5C58B] transition-colors group-hover:bg-[#F6F1E9] group-hover:text-[#181512]">
+                  <span className="inline-flex shrink-0 items-center gap-1 rounded-full frost-pill-chip px-3 py-1.5 text-[11px] font-semibold text-[#FAF8F2] transition-colors group-hover:bg-white group-hover:text-[#171714]">
                     <span>Request</span>
                     <ChevronRight className="h-3.5 w-3.5" />
                   </span>

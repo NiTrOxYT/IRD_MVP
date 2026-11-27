@@ -24,6 +24,7 @@ function serializeProperty(row) {
         roomServiceHeroUrl: row.room_service_hero_url ?? null,
         attractionsHeroUrl: row.attractions_hero_url ?? null,
         suiteLoaderBgUrl: row.suite_loader_bg_url ?? null,
+        landingVideoUrl: row.landing_video_url ?? null,
     };
 }
 export function createSettingsRouter() {
@@ -47,10 +48,11 @@ export function createSettingsRouter() {
             res.status(400).json({ error: parse.error.errors[0].message });
             return;
         }
-        const { name, currency, taxRatePercent, serviceChargePercent, irdEnabled, openingTime, closingTime, contactNumber, whatsappNumber, attractionBookingTemplate, logoUrl, welcomeMode, welcomeMessage, welcomeBgUrl, diningHeroUrl, roomServiceHeroUrl, attractionsHeroUrl, suiteLoaderBgUrl, } = parse.data;
+        const { name, currency, taxRatePercent, serviceChargePercent, irdEnabled, openingTime, closingTime, contactNumber, whatsappNumber, attractionBookingTemplate, logoUrl, welcomeMode, welcomeMessage, welcomeBgUrl, diningHeroUrl, roomServiceHeroUrl, attractionsHeroUrl, suiteLoaderBgUrl, landingVideoUrl, } = parse.data;
         const staff = req.staff;
         const cleanWhatsappNumber = whatsappNumber === undefined ? undefined : whatsappNumber?.trim() || null;
         const cleanBookingTemplate = attractionBookingTemplate === undefined ? undefined : attractionBookingTemplate?.trim() || null;
+        const cleanLandingVideoUrl = landingVideoUrl === undefined ? undefined : landingVideoUrl?.trim() || null;
         try {
             const result = await query(`UPDATE properties
          SET name = COALESCE($1, name),
@@ -70,7 +72,8 @@ export function createSettingsRouter() {
              dining_hero_url = CASE WHEN $20 THEN $21 ELSE dining_hero_url END,
              room_service_hero_url = CASE WHEN $22 THEN $23 ELSE room_service_hero_url END,
              attractions_hero_url = CASE WHEN $24 THEN $25 ELSE attractions_hero_url END,
-             suite_loader_bg_url = CASE WHEN $26 THEN $27 ELSE suite_loader_bg_url END
+             suite_loader_bg_url = CASE WHEN $26 THEN $27 ELSE suite_loader_bg_url END,
+             landing_video_url = CASE WHEN $28 THEN $29 ELSE landing_video_url END
          WHERE id = 1
          RETURNING *`, [
                 name,
@@ -100,6 +103,8 @@ export function createSettingsRouter() {
                 attractionsHeroUrl,
                 suiteLoaderBgUrl !== undefined,
                 suiteLoaderBgUrl,
+                cleanLandingVideoUrl !== undefined,
+                cleanLandingVideoUrl ?? null,
             ]);
             if (diningHeroUrl !== undefined) {
                 await query(`UPDATE ird_hero_cards
@@ -127,6 +132,8 @@ export function createSettingsRouter() {
                     attractionsHeroUpdated: attractionsHeroUrl !== undefined,
                     suiteLoaderBgUrl: undefined,
                     suiteLoaderBgUpdated: suiteLoaderBgUrl !== undefined,
+                    landingVideoUrl: undefined,
+                    landingVideoUpdated: landingVideoUrl !== undefined,
                 }),
             ]);
             res.json({ success: true, property: serializeProperty(result.rows[0]) });
