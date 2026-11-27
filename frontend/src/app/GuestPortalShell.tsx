@@ -43,7 +43,6 @@ import {
 function GuestPortalContent() {
   const {
     propertyName: brandingName,
-    contactNumber: brandingContact,
     logoUrl: loadingLogo,
     suiteLoaderBgUrl: loadingBgUrl,
     brandingReady,
@@ -307,7 +306,6 @@ function GuestPortalContent() {
       <StayRequiredCard
         property={property}
         fallbackName={brandingName}
-        fallbackContactNumber={brandingContact}
         fallbackLogo={loadingLogo}
         fallbackBgUrl={loadingBgUrl}
         authError={authError}
@@ -380,6 +378,7 @@ function GuestPortalContent() {
                   </button>
                   <button
                     type="button"
+                    data-ird-cart-fallback-target="true"
                     onClick={() => setIsCartOpen(true)}
                     aria-label="Open order cart"
                     className="relative flex h-8 w-8 items-center justify-center rounded-full border border-[#E5D7C6] bg-[#FFFBF6] text-[#3D1C11] hover:bg-[#F3E7DA] btn-smooth-press-sm"

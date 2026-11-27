@@ -377,7 +377,7 @@ export function GuestWelcomeLetter({
           .to(
             ".gsap-flap-inner-shade",
             {
-              opacity: 0.85,
+              opacity: 0.55,
               duration: timing.flapOpenDuration * 0.65,
               ease: "power2.inOut",
             },
@@ -618,8 +618,14 @@ export function GuestWelcomeLetter({
               strokeOpacity="0.45"
               strokeWidth="1"
             />
+            {/* Inner shading clipped cleanly to exact triangular flap path (no rectangular box) */}
+            <path
+              d="M0,4 Q1,0 16,0 L444,0 Q459,0 460,4 L244,150 Q230,159 216,150 Z"
+              fill="#2C0508"
+              opacity="0"
+              className="gsap-flap-inner-shade"
+            />
           </svg>
-          <div className="gsap-flap-inner-shade absolute inset-0 bg-[#2C0508]/65 opacity-0 pointer-events-none" />
         </div>
 
         {/* Letter Rising Clip Track (bottom-flush with pocket bottom so card rises seamlessly out) */}

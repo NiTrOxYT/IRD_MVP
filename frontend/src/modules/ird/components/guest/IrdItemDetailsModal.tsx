@@ -14,7 +14,8 @@ interface IrdItemDetailsModalProps {
     variant: MenuItemVariant | null,
     modifiers: ItemModifier[],
     notes: string,
-    qty: number
+    qty: number,
+    sourceEl?: HTMLElement | null
   ) => void;
 }
 
@@ -65,8 +66,52 @@ export function IrdItemDetailsModal({ item, onClose, onAddToCart }: IrdItemDetai
     });
   }
 
+  const footerBar = (
+    <div className="flex items-center justify-between gap-3">
+      <div className="flex items-center gap-2 border border-[#EAE0D4] bg-[#FAF3EA] p-1.5 rounded-full">
+        <button
+          type="button"
+          onClick={() => setQuantity((q) => Math.max(1, q - 1))}
+          className="w-8 h-8 rounded-full bg-white border border-[#E5D7C6] flex items-center justify-center text-[#3D1C11] active:scale-95 cursor-pointer"
+          aria-label="Decrease quantity"
+        >
+          <Minus className="w-3.5 h-3.5" />
+        </button>
+        <span className="font-mono text-sm font-bold w-6 text-center text-[#3D1C11]">{quantity}</span>
+        <button
+          type="button"
+          onClick={() => setQuantity((q) => q + 1)}
+          className="w-8 h-8 rounded-full bg-[#C44D27] flex items-center justify-center text-white active:scale-95 cursor-pointer"
+          aria-label="Increase quantity"
+        >
+          <Plus className="w-3.5 h-3.5" />
+        </button>
+      </div>
+
+      <button
+        type="button"
+        onClick={(e) =>
+          onAddToCart(
+            item,
+            selectedVariant,
+            Object.values(selectedMods),
+            notes,
+            quantity,
+            e.currentTarget
+          )
+        }
+        className="flex-1 py-3 px-5 rounded-full font-bold text-xs bg-[#C44D27] hover:bg-[#B2411D] text-white flex items-center justify-between min-h-[46px] btn-smooth-press cursor-pointer shadow-[0_10px_24px_-8px_rgba(196,77,39,0.55)]"
+      >
+        <span>Add to Order</span>
+        <span className="font-mono font-bold text-sm">
+          {formatPrice(currentLineTotal)}
+        </span>
+      </button>
+    </div>
+  );
+
   return (
-    <Modal variant="light" isOpen={Boolean(item)} onClose={onClose} title="">
+    <Modal variant="light" isOpen={Boolean(item)} onClose={onClose} title="" footer={footerBar}>
       <div className="space-y-4 text-xs text-[#3D1C11]">
         {item.imageUrl && (
           <div className="relative -mx-6 -mt-6 h-[200px] overflow-hidden bg-[#F4E9DB]">
@@ -191,7 +236,7 @@ export function IrdItemDetailsModal({ item, onClose, onAddToCart }: IrdItemDetai
           </div>
         ))}
 
-        <div className="pt-2">
+        <div className="pt-2 pb-1">
           <label className="block text-[11px] font-bold uppercase tracking-wider text-[#5B4137] mb-1.5">
             Special Requests / In-Suite Preparation Notes
           </label>
@@ -202,41 +247,6 @@ export function IrdItemDetailsModal({ item, onClose, onAddToCart }: IrdItemDetai
             onChange={(e) => setNotes(e.target.value)}
             className="w-full px-4 py-2.5 rounded-full border border-[#E5D7C6] bg-[#FAF3EA] text-xs text-[#3D1C11] placeholder:text-[#9A7F74] focus:border-[#C44D27] focus:outline-none"
           />
-        </div>
-
-        <div className="pt-3 border-t border-[#EDE1D3] flex items-center justify-between gap-3">
-          <div className="flex items-center gap-2 border border-[#EAE0D4] bg-[#FAF3EA] p-1.5 rounded-full">
-            <button
-              type="button"
-              onClick={() => setQuantity((q) => Math.max(1, q - 1))}
-              className="w-8 h-8 rounded-full bg-white border border-[#E5D7C6] flex items-center justify-center text-[#3D1C11] active:scale-95 cursor-pointer"
-              aria-label="Decrease quantity"
-            >
-              <Minus className="w-3.5 h-3.5" />
-            </button>
-            <span className="font-mono text-sm font-bold w-6 text-center text-[#3D1C11]">{quantity}</span>
-            <button
-              type="button"
-              onClick={() => setQuantity((q) => q + 1)}
-              className="w-8 h-8 rounded-full bg-[#C44D27] flex items-center justify-center text-white active:scale-95 cursor-pointer"
-              aria-label="Increase quantity"
-            >
-              <Plus className="w-3.5 h-3.5" />
-            </button>
-          </div>
-
-          <button
-            type="button"
-            onClick={() =>
-              onAddToCart(item, selectedVariant, Object.values(selectedMods), notes, quantity)
-            }
-            className="flex-1 py-3 px-5 rounded-full font-bold text-xs bg-[#C44D27] hover:bg-[#B2411D] text-white flex items-center justify-between min-h-[46px] btn-smooth-press cursor-pointer shadow-[0_10px_24px_-8px_rgba(196,77,39,0.55)]"
-          >
-            <span>Add to Order</span>
-            <span className="font-mono font-bold text-sm">
-              {formatPrice(currentLineTotal)}
-            </span>
-          </button>
         </div>
       </div>
     </Modal>

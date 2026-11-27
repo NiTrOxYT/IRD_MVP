@@ -30,7 +30,7 @@ interface IrdMenuBrowserProps {
   property?: IrdPropertyConfig | null;
   cart: CartLineItem[];
   onOpenItemDetails: (item: MenuItem) => void;
-  onQuickAdd: (item: MenuItem) => void;
+  onQuickAdd: (item: MenuItem, sourceEl?: HTMLElement | null) => void;
   onUpdateCartQuantity: (cartItemId: string, delta: number) => void;
   onSwitchToRoomService?: () => void;
 }
@@ -372,7 +372,9 @@ export function IrdMenuBrowser({
                     ) : (
                       <button
                         type="button"
-                        onClick={() => (isCustomizable ? onOpenItemDetails(item) : onQuickAdd(item))}
+                        onClick={(e) =>
+                          isCustomizable ? onOpenItemDetails(item) : onQuickAdd(item, e.currentTarget)
+                        }
                         aria-label={`Add ${item.name}`}
                         className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#C44D27] text-white shadow-xs transition-transform hover:scale-105 active:scale-95 cursor-pointer"
                       >
@@ -522,7 +524,7 @@ export function IrdMenuBrowser({
                                 </span>
                                 <button
                                   type="button"
-                                  onClick={() => onQuickAdd(item)}
+                                  onClick={(e) => onQuickAdd(item, e.currentTarget)}
                                   className="flex h-6 w-6 items-center justify-center rounded-full hover:bg-black/15 cursor-pointer"
                                   aria-label="Increase quantity"
                                 >
@@ -532,7 +534,7 @@ export function IrdMenuBrowser({
                             ) : (
                               <button
                                 type="button"
-                                onClick={() => onQuickAdd(item)}
+                                onClick={(e) => onQuickAdd(item, e.currentTarget)}
                                 aria-label={`Add ${item.name} to tray`}
                                 className="flex h-8 w-8 items-center justify-center rounded-full bg-[#C44D27] text-white shadow-xs transition-transform hover:scale-105 btn-smooth-press cursor-pointer"
                               >

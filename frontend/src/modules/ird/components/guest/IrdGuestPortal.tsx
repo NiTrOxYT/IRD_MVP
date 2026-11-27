@@ -17,6 +17,8 @@ import { IrdMenuBrowser } from "./IrdMenuBrowser";
 import { IrdOrdersTracker } from "./IrdOrdersTracker";
 import { IrdItemDetailsModal } from "./IrdItemDetailsModal";
 import { IrdCartModal } from "./IrdCartModal";
+import { triggerCartDropAnimation } from "./cartDropAnimation";
+import { OrderConfirmedOverlay, type ConfirmedOrderSummary } from "./OrderConfirmedOverlay";
 
 export interface IrdGuestPortalProps {
   roomNumber?: string;
@@ -73,6 +75,7 @@ export function IrdGuestPortal({
   const [deliveryNotes, setDeliveryNotes] = useState("");
   const [isSubmittingOrder, setIsSubmittingOrder] = useState(false);
   const [cancellingOrderId, setCancellingOrderId] = useState<number | null>(null);
+  const [confirmedOrder, setConfirmedOrder] = useState<ConfirmedOrderSummary | null>(null);
 
   useEffect(() => {
     if (property?.diningHeroCards && property.diningHeroCards.length > 0 && heroCards.length === 0) {
@@ -138,8 +141,10 @@ export function IrdGuestPortal({
     variant: MenuItemVariant | null = null,
     modifiers: ItemModifier[] = [],
     notes = "",
-    qty = 1
+    qty = 1,
+    sourceEl?: HTMLElement | null
   ) => {
+    triggerCartDropAnimation(sourceEl, item.imageUrl);
     const basePrice = variant ? Number(variant.price) : Number(item.price);
     const modTotal = modifiers.reduce((acc, m) => acc + Number(m.priceDelta), 0);
     const unitPrice = basePrice + modTotal;
@@ -207,8 +212,14 @@ export function IrdGuestPortal({
   const handlePlaceOrder = async () => {
     if (cart.length === 0 || isSubmittingOrder) return;
     setIsSubmittingOrder(true);
+    const orderedCount = totalCartCount;
+    const orderedPrepMins = Math.max(
+      15,
+      ...cart.map((c) => Number(c.item.prepTimeMinutes) || 20)
+    );
+    const orderedTotal = totalAmount;
     try {
-      await api.placeOrder({
+      const res = await api.placeOrder({
         items: cart.map((c) => ({
           menuItemId: c.item.id,
           variantId: c.variantId || undefined,
@@ -223,6 +234,14 @@ export function IrdGuestPortal({
       setDeliveryNotes("");
       setIsCartOpen(false);
       setActiveTab("orders");
+      playChime();
+      setConfirmedOrder({
+        orderNumber: res.order?.order_number || "ORD-CONFIRMED",
+        roomNumber: res.order?.room_number || roomNumber || "Suite",
+        itemCount: orderedCount,
+        totalAmount: Number(res.order?.total_amount ?? orderedTotal),
+        prepMinutes: orderedPrepMins,
+      });
       await fetchOrdersData();
     } catch (err: any) {
       alert("Failed to submit in-room dining request: " + (err.message || "Unknown error"));
@@ -285,7 +304,7 @@ export function IrdGuestPortal({
             property={property}
             cart={cart}
             onOpenItemDetails={handleOpenItemDetails}
-            onQuickAdd={(item) => addToCart(item, null, [], "", 1)}
+            onQuickAdd={(item, sourceEl) => addToCart(item, null, [], "", 1, sourceEl)}
             onUpdateCartQuantity={updateCartQuantity}
             onSwitchToRoomService={onSwitchToRoomService}
           />
@@ -303,32 +322,38 @@ export function IrdGuestPortal({
       </PageTransition>
 
       {cart.length > 0 && activeTab === "menu" && (
-        <div className="fixed bottom-[calc(4.9rem+env(safe-area-inset-bottom))] inset-x-0 z-30 px-3.5 max-w-md mx-auto zomato-cart-enter">
-          <button
-            type="button"
-            onClick={() => setIsCartOpen(true)}
-            className="w-full border border-[#E2D4C4] bg-[#3D1C11] text-white px-4 py-3 rounded-[22px] shadow-[0_14px_30px_-8px_rgba(61,28,17,0.45)] flex items-center justify-between cursor-pointer btn-smooth-press"
-          >
-            <div className="flex items-center gap-3">
-              <div
-                key={totalCartCount}
-                className="h-9 min-w-9 px-2.5 rounded-full bg-[#C44D27] text-white flex items-center justify-center font-bold text-xs font-mono tabular-nums zomato-qty-pop"
-              >
-                {totalCartCount} {totalCartCount === 1 ? "item" : "items"}
+        <div
+          data-ird-cart-dock="true"
+          className="fixed bottom-[calc(4.9rem+env(safe-area-inset-bottom))] inset-x-0 z-30 px-3.5 max-w-md mx-auto zomato-cart-enter"
+        >
+          <div data-ird-cart-bar="true" className="w-full">
+            <button
+              type="button"
+              onClick={() => setIsCartOpen(true)}
+              className="w-full border border-[#E2D4C4] bg-[#3D1C11] text-white px-4 py-3 rounded-[22px] shadow-[0_14px_30px_-8px_rgba(61,28,17,0.45)] flex items-center justify-between cursor-pointer btn-smooth-press"
+            >
+              <div className="flex items-center gap-3">
+                <div
+                  key={totalCartCount}
+                  data-ird-cart-drop-target="true"
+                  className="h-9 min-w-9 px-2.5 rounded-full bg-[#C44D27] text-white flex items-center justify-center font-bold text-xs font-mono tabular-nums zomato-qty-pop"
+                >
+                  {totalCartCount} {totalCartCount === 1 ? "item" : "items"}
+                </div>
+                <div className="text-left">
+                  <span className="block text-[10px] uppercase tracking-wider text-white/75 font-bold tabular-nums">
+                    Suite {roomNumber} · {formatPrice(subtotal)}
+                  </span>
+                  <span className="font-sans text-xs font-semibold text-white">Tap to review order</span>
+                </div>
               </div>
-              <div className="text-left">
-                <span className="block text-[10px] uppercase tracking-wider text-white/75 font-bold tabular-nums">
-                  Suite {roomNumber} · {formatPrice(subtotal)}
-                </span>
-                <span className="font-sans text-xs font-semibold text-white">Tap to review order</span>
-              </div>
-            </div>
 
-            <div className="flex items-center gap-1.5 rounded-full bg-[#FFFBF6] text-[#3D1C11] px-3.5 py-1.5 font-bold text-xs">
-              <span>View Cart</span>
-              <ArrowRight className="w-3.5 h-3.5 text-[#C44D27]" />
-            </div>
-          </button>
+              <div className="flex items-center gap-1.5 rounded-full bg-[#FFFBF6] text-[#3D1C11] px-3.5 py-1.5 font-bold text-xs">
+                <span>View Cart</span>
+                <ArrowRight className="w-3.5 h-3.5 text-[#C44D27]" />
+              </div>
+            </button>
+          </div>
         </div>
       )}
 
@@ -353,6 +378,11 @@ export function IrdGuestPortal({
         property={property}
         isSubmitting={isSubmittingOrder}
         onSubmitOrder={handlePlaceOrder}
+      />
+
+      <OrderConfirmedOverlay
+        order={confirmedOrder}
+        onDone={() => setConfirmedOrder(null)}
       />
     </>
   );

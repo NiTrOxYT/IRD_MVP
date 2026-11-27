@@ -1,5 +1,5 @@
 import React, { useRef } from "react";
-import { AlertCircle, PhoneCall, QrCode } from "lucide-react";
+import { AlertCircle, QrCode } from "lucide-react";
 import { SilverClocheTrayIcon } from "../ui/CustomResortIcons";
 import { gsap, useGSAP } from "../ui/gsap";
 import type { PropertySettings } from "../property/propertyTypes";
@@ -7,7 +7,6 @@ import type { PropertySettings } from "../property/propertyTypes";
 interface StayRequiredCardProps {
   property?: PropertySettings | null;
   fallbackName?: string | null;
-  fallbackContactNumber?: string | null;
   fallbackLogo?: string | null;
   fallbackBgUrl?: string | null;
   authError?: string | null;
@@ -16,7 +15,6 @@ interface StayRequiredCardProps {
 export function StayRequiredCard({
   property,
   fallbackName,
-  fallbackContactNumber,
   fallbackLogo,
   fallbackBgUrl,
   authError,
@@ -25,7 +23,6 @@ export function StayRequiredCard({
   const logoSrc = property?.logoUrl || fallbackLogo || "";
   const bgSrc = property?.suiteLoaderBgUrl || fallbackBgUrl || "/suite-loader-scene.jpg";
   const propertyTitle = property?.name?.trim() || fallbackName?.trim() || "Suite Portal";
-  const receptionPhone = property?.contactNumber?.trim() || fallbackContactNumber?.trim() || "";
 
   useGSAP(
     () => {
@@ -137,19 +134,10 @@ export function StayRequiredCard({
           </div>
         )}
 
-        <footer className="gsap-stay-req-item mt-6 flex flex-col items-center gap-2.5 text-center text-[12.5px] text-[#EADDCB]/78">
+        <footer className="gsap-stay-req-item mt-6 text-center text-[12.5px] text-[#EADDCB]/78">
           <p>
             Need help connecting? Dial <strong className="font-semibold text-[#FFF9EF]">Extension 0</strong> from your suite phone for Reception.
           </p>
-          {receptionPhone && (
-            <a
-              href={`tel:${receptionPhone.replace(/[^\d+]/g, "")}`}
-              className="inline-flex items-center gap-1.5 rounded-full border border-[#E2C98F]/30 bg-[#FFF9EF]/8 px-3.5 py-1.5 text-[12px] font-semibold text-[#E9C77D] transition-colors hover:bg-[#FFF9EF]/14 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#E9C77D]"
-            >
-              <PhoneCall className="h-3.5 w-3.5" />
-              <span>Call Reception</span>
-            </a>
-          )}
         </footer>
       </main>
     </div>

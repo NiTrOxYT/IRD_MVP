@@ -48,6 +48,26 @@ export function IrdCartModal({
       onClose={onClose}
       title={`Suite ${roomNumber || ""} Tray`}
       description="Review your culinary order and delivery requests"
+      footer={
+        <button
+          type="button"
+          onClick={onSubmitOrder}
+          disabled={isSubmitting || cart.length === 0}
+          className="w-full py-3.5 px-5 rounded-full font-bold text-xs bg-[#C44D27] hover:bg-[#B2411D] text-white flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 min-h-[46px] btn-smooth-press shadow-[0_10px_24px_-8px_rgba(196,77,39,0.55)]"
+        >
+          {isSubmitting ? (
+            <span className="flex items-center gap-2">
+              <span className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+              Transmitting to Kitchen...
+            </span>
+          ) : (
+            <>
+              <CheckCircle2 className="w-4 h-4" />
+              Confirm Order to Suite {roomNumber}
+            </>
+          )}
+        </button>
+      }
     >
       <div className="space-y-5 text-xs text-[#3D1C11]">
         <div className="max-h-56 overflow-y-auto rounded-[20px] bg-[#FAF3EA] border border-[#EAE0D4] divide-y divide-[#EDE1D3]">
@@ -143,25 +163,6 @@ export function IrdCartModal({
             </span>
           </div>
         </div>
-
-        <button
-          type="button"
-          onClick={onSubmitOrder}
-          disabled={isSubmitting || cart.length === 0}
-          className="w-full py-3.5 px-5 rounded-full font-bold text-xs bg-[#C44D27] hover:bg-[#B2411D] text-white flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 min-h-[46px] btn-smooth-press shadow-[0_10px_24px_-8px_rgba(196,77,39,0.55)]"
-        >
-          {isSubmitting ? (
-            <span className="flex items-center gap-2">
-              <span className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-              Transmitting to Kitchen...
-            </span>
-          ) : (
-            <>
-              <CheckCircle2 className="w-4 h-4" />
-              Confirm Order to Suite {roomNumber}
-            </>
-          )}
-        </button>
       </div>
     </Modal>
   );
